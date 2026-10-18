@@ -1,0 +1,31 @@
+FRIENDS SERVER (one-time, about 10 minutes, free)
+
+This gives everyone their own username and password, a live leaderboard and challenges.
+Friends do NOT need Claude or any account except the one they make inside Iron Ledger.
+Only public scores and challenge progress are stored. Workouts, height and weight stay on each phone.
+
+You do this once. Friends just open your invite link.
+
+1. Make a free Cloudflare account at dash.cloudflare.com (email + password).
+2. Create the storage:  Storage & databases -> KV -> Create a namespace. Name it ironledger.
+3. Create the server:  Workers & Pages -> Create -> Start with Hello World -> name it ironledger -> Deploy.
+4. Click Edit code. Delete everything in the editor, paste the whole of worker.js (in this folder), click Deploy.
+5. Connect the storage: open the Worker -> Settings -> Bindings -> Add -> KV namespace.
+   Variable name must be exactly   DB   and pick the ironledger namespace. Save/Deploy.
+6. Copy the Worker address shown at the top, like https://ironledger.yourname.workers.dev
+   Open it in a browser. You should see {"ok":true,"app":"iron-ledger","v":1}.
+
+Connect the app:
+ A. Open your Iron Ledger site -> Friends tab -> paste the address under "Live friends & challenges" -> Connect.
+ B. Make your account (username + password).
+ C. Friends tab -> Manage -> Copy invite link. Send that link to friends.
+    Opening it connects them to your server automatically; they just create an account.
+
+Optional: put the address in docs/config.js in the GitHub repo and commit. Then even the plain site link works.
+
+Good to know
+- Free plan is plenty for a friend group (a few dozen people). Scores refresh about every 20 seconds.
+- Passwords are stored scrambled (salted and stretched), never in plain text. There is no password reset: if a friend forgets,
+  they make a new username.
+- Anyone with your invite link can join and see the leaderboard, so only share it with people you want.
+- If you ever want to wipe everything: delete the KV namespace.
