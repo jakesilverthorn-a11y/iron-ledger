@@ -291,7 +291,7 @@ function defaultItem(name, goal) {
 function finishDraft(draft, now) {
   var ex = [];
   draft.ex.forEach(function (e) {
-    var sets = e.sets.filter(function (s) { return s.done && (+s.r > 0); }).map(function (s) { return { w: +s.w || 0, r: +s.r || 0 }; });
+    var sets = e.sets.filter(function (s) { return s.done && !s.wu && (+s.r > 0); }).map(function (s) { return { w: +s.w || 0, r: +s.r || 0 }; });
     if (sets.length) ex.push({ n: e.n, sets: sets });
   });
   return { id: draft.id, t: draft.t, dur: Math.max(60, Math.round((now - draft.t) / 1000)), ex: ex };
