@@ -5,6 +5,7 @@
 const ITER = 30000;               // password stretching; kept modest so it fits the free plan's CPU limit
 const MAX_USERS = 300, MAX_DOC = 16000, DAYS = 86400;
 const COLS = ['people', 'ch', 'cp'];
+const VISION = '@cf/meta/llama-3.2-11b-vision-instruct';
 const enc = new TextEncoder();
 let SECRET = null;                // signing key, created once and kept in KV
 
@@ -14,6 +15,7 @@ const same = (a, b) => { if (a.length !== b.length) return false; let r = 0; for
 const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Authorization, Content-Type', 'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS', 'Access-Control-Max-Age': '86400' };
 const out = (o, status = 200, extra = {}) => new Response(JSON.stringify(o), { status, headers: Object.assign({ 'Content-Type': 'application/json' }, CORS, extra) });
 const bad = (m, s = 400) => out({ error: m }, s);
+const out_ok = data => out({ ok: true, data });
 
 async function hmacKey(env) {
   if (!SECRET) {
@@ -111,6 +113,30 @@ export default {
         const i = (await readIdx(env)).filter(x => x !== uid); await env.DB.put('idx', JSON.stringify(i));
         ctx.waitUntil(caches.default.delete(new Request(url.origin + '/__all', { method: 'GET' })));
         return out({ ok: true });
+      }
+      if (req.method === 'POST' && path === '/analyze') {
+        if (!env.AI) return bad('AI is not turned on for this server. Add a Workers AI binding named AI.', 501);
+        const day = new Date().toISOString().slice(0, 10), ck = 'ai:' + uid + ':' + day, used = +(await env.DB.get(ck)) || 0;
+        if (used >= 8) return bad('Daily photo limit reached. Try again tomorrow.', 429);
+        const txt = await req.text(); if (txt.length > 2500000) return bad('Photo too large', 413);
+        let b; try { b = JSON.parse(txt); } catch (e) { return bad('Bad request'); }
+        const img = String(b.image || ''), prompt = String(b.prompt || '').slice(0, 4000);
+        if (!/^data:image\/(jpeg|png|webp);base64,/.test(img) || !prompt) return bad('Bad request');
+        await env.DB.put(ck, String(used + 1), { expirationTtl: 2 * DAYS });
+        const messages = [{ role: 'system', content: 'You are a careful, kind strength coach. You answer with JSON only.' }, { role: 'user', content: prompt }];
+        const run = () => env.AI.run(VISION, { messages, image: img, max_tokens: 700, temperature: 0.2 });
+        let r;
+        try { r = await run(); }
+        catch (e) {
+          // Meta's model needs a one-time licence agreement; accept it and retry once
+          if (/agree|licen[cs]e/i.test(String(e && e.message))) { try { await env.AI.run(VISION, { prompt: 'agree' }); } catch (e2) { } r = await run(); }
+          else throw e;
+        }
+        const out = typeof r === 'string' ? r : (r && (r.response || (r.result && (r.result.response || r.result)))) || '';
+        const m = String(typeof out === 'string' ? out : JSON.stringify(out)).match(/\{[\s\S]*\}/);
+        if (!m) return bad('The AI did not return a plan. Try another photo.', 502);
+        let data; try { data = JSON.parse(m[0]); } catch (e) { return bad('The AI answer could not be read. Try again.', 502); }
+        return out_ok(data);
       }
       return bad('Not found', 404);
     } catch (e) { return bad('Server error', 500); }

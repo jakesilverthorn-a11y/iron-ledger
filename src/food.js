@@ -168,6 +168,7 @@ function foodTargets() {
   }
   if (F.kcal > 800) out.kcal = +F.kcal;
   if (F.prot > 30) out.p = +F.prot;
+  var floor = B && B.sex === 'F' ? 1200 : 1500; if (out.kcal < floor) out.kcal = floor;
   out.p = Math.min(out.p, Math.round(out.kcal * 0.4 / 4));
   if (F.diet === 'keto') { out.c = 40; out.f = Math.max(40, Math.round((out.kcal - out.p * 4 - out.c * 4) / 9)); }
   else { out.f = Math.round(out.kcal * 0.28 / 9); out.c = Math.max(50, Math.round((out.kcal - out.p * 4 - out.f * 9) / 4)); }

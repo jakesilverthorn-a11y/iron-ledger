@@ -15,13 +15,17 @@ You do this once. Friends just open your invite link.
 6. Copy the Worker address shown at the top, like https://ironledger.yourname.workers.dev
    Open it in a browser. You should see {"ok":true,"app":"iron-ledger","v":1}.
 
+7. Optional, for photo analysis on the Body tab: open the Worker -> Settings -> Bindings -> Add -> Workers AI.
+   Variable name must be exactly   AI   . Save/Deploy. (Free daily allowance; each person gets up to 8 photo checks a day.
+   Photos are sent to Cloudflare's AI to read and are not saved by the server.)
+
 Connect the app:
  A. Open your Iron Ledger site -> Friends tab -> paste the address under "Live friends & challenges" -> Connect.
  B. Make your account (username + password).
  C. Friends tab -> Manage -> Copy invite link. Send that link to friends.
     Opening it connects them to your server automatically; they just create an account.
 
-Optional: put the address in docs/config.js in the GitHub repo and commit. Then even the plain site link works.
+Optional: edit config.js in the site folder and put the address there, then redeploy. Then even the plain site link works.
 
 Good to know
 - Free plan is plenty for a friend group (a few dozen people). Scores refresh about every 20 seconds.

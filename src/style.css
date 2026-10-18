@@ -318,3 +318,17 @@ details.card summary { list-style: none; } details.card summary::-webkit-details
 .gro.got .grow{text-decoration:line-through;color:var(--muted)}
 .gro.have .grow{text-decoration:none;color:var(--fg)}
 .gro.have:not(.got) .grow{color:var(--muted)}
+
+/* body */
+#tabs button { font-size: 10.5px; }
+#tabs button svg { width: 23px; height: 23px; }
+.filebtn{cursor:pointer;text-align:center}
+.pcmp{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
+.pcmp figure,.pgrid figure{margin:0;display:flex;flex-direction:column;gap:4px}
+.pcmp img,.pgrid img{width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:14px;background:var(--surface2)}
+.pcmp figcaption,.pgrid figcaption{font-size:12.5px;color:var(--muted);display:flex;justify-content:space-between}
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.focus{gap:10px}
+.fbadge{width:46px;height:46px;border-radius:14px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:24px;flex:none}
+.fex{display:flex;flex-direction:column;gap:6px}
+.fexr{display:flex;gap:10px;align-items:center;text-align:left;width:100%;font-size:14.5px}

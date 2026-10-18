@@ -30,3 +30,16 @@ r=await call('PUT','/c/people/jake',{u:'x'},tj); ok('deleted acct cannot write',
 r=await call('GET','/all',null,ts); ok('gone from all',!r.j.people.jake);
 r=await call('POST','/signup',{u:'Jake',p:'secret1'}); ok('name free again',r.s===200);
 console.log(f?'FAILURES '+f:'ALL PASS');
+// ---- /analyze ----
+{
+  const s2=await call('POST','/signup',{u:'Ana'+Date.now()%1000,p:'secret9'}); const ta=s2.j.token;
+  let r2=await call('POST','/analyze',{image:'data:image/jpeg;base64,AAAA',prompt:'x'},ta); ok('analyze 501 without AI',r2.s===501);
+  let calls=[]; env.AI={async run(m,inp){calls.push(inp); if(inp.prompt==='agree') return {response:'ok'}; if(calls.length===1) throw new Error('5016: Prior to using this model, you must submit the prompt: agree'); return {response:'Sure! {"ok":true,"focus":[{"area":"arms","why":"x"}]} done'};}};
+  r2=await call('POST','/analyze',{image:'data:image/jpeg;base64,AAAA',prompt:'x'},ta); ok('analyze agrees licence + parses JSON',r2.s===200&&r2.j.data.focus[0].area==='arms'&&calls.some(c=>c.prompt==='agree'));
+  r2=await call('POST','/analyze',{image:'not-an-image',prompt:'x'},ta); ok('analyze rejects non-image',r2.s===400);
+  r2=await call('POST','/analyze',{image:'data:image/jpeg;base64,AAAA',prompt:'x'}); ok('analyze needs login',r2.s===401);
+  for(let i=0;i<8;i++) r2=await call('POST','/analyze',{image:'data:image/jpeg;base64,AAAA',prompt:'x'},ta);
+  ok('daily limit',r2.s===429);
+  delete env.AI;
+  console.log(f?'FAILURES '+f:'ALL PASS (with analyze)');
+}

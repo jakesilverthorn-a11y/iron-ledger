@@ -64,6 +64,7 @@ function srvStart() {
   clearInterval(SRV.timer); SRV.timer = setInterval(function () { if (!document.hidden) srvPoll(); }, 20000);
   srvPoll();
   if (profB()) socClaim(SRV.name).then(function () { if (U.tab === 'friends') render(); });
+  if (typeof aiDetect === 'function') aiDetect();
 }
 function srvStop() {
   clearInterval(SRV.timer); SRV.timer = null; SRV.last = null; SRV.subs = { people: [], ch: [], cp: [] };
@@ -85,7 +86,7 @@ async function srvConnect(url) {
   } catch (e) { return 'Could not reach that address.'; }
   SRV.url = url; SRV.token = ''; SRV.uid = ''; SRV.name = ''; srvSave(); return null;
 }
-function srvSignOut() { srvStop(); SRV.token = ''; SRV.uid = ''; SRV.name = ''; srvSave(); }
+function srvSignOut() { srvStop(); if (typeof AI !== 'undefined' && AI.kind === 'server') AI.kind = null; SRV.token = ''; SRV.uid = ''; SRV.name = ''; srvSave(); }
 function srvForget() { srvSignOut(); SRV.url = ''; srvSave(); }
 function srvBoot() { srvLoad(); if (srvOn()) srvStart(); document.addEventListener('visibilitychange', function () { if (!document.hidden && srvOn()) srvPoll(); }); }
 
