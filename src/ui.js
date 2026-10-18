@@ -108,6 +108,7 @@ function ico(name) {
     plus: '<path d="M12 5v14M5 12h14"/>',
     up: '<path d="M12 5l-6 7h12z"/>',
     shuffle: '<path d="M3.5 7H7c3 0 4.5 2 5.5 5s2.5 5 5.5 5H20M3.5 17H7c1.6 0 2.8-.7 3.7-1.8M13.3 8.8C14.2 7.7 15.4 7 17 7h3"/><path d="M17.5 4.5L20 7l-2.5 2.5M17.5 14.5L20 17l-2.5 2.5"/>',
+    eat: '<path d="M7 3v7.5M4.5 3v5a2.5 2.5 0 005 0V3M7 10.5V21"/><path d="M17 21V3c-2.2 1.2-3.5 3.6-3.5 7 0 2 1 3.2 3.5 3.5"/>',
     users: '<circle cx="9" cy="8" r="3.2"/><path d="M3 19c0-3.2 2.7-5 6-5s6 1.8 6 5"/><circle cx="17" cy="9" r="2.5"/><path d="M17 14c2.6 0 4 1.5 4 4"/>'
   };
   return '<svg viewBox="0 0 24 24" aria-hidden="true">' + (P[name] || '') + '</svg>';
@@ -214,7 +215,7 @@ function openSheet(title, body, opts) {
   document.body.style.overflow = 'hidden';
   var b = $('#sheet-body'); if (opts.focus) { var f = $(opts.focus, b); if (f) f.focus(); }
 }
-function closeSheet() { $('#sheet-root').innerHTML = ''; document.body.style.overflow = ''; U.pickMode = null; U.socSheet = null; }
+function closeSheet() { $('#sheet-root').innerHTML = ''; document.body.style.overflow = ''; U.pickMode = null; U.socSheet = null; U.eatSheet = null; }
 function sheetOpen() { return !!$('#sheet-root').firstChild; }
 
 /* ===== exercise detail ===== */
@@ -311,7 +312,7 @@ function recoveryHTML(compact) {
 /* ===== views ===== */
 function render() {
   var y = window.scrollY, v = $('#view');
-  var map = { train: viewTrain, lib: viewLib, prog: viewProg, friends: viewFriends, settings: viewSettings };
+  var map = { train: viewTrain, lib: viewLib, prog: viewProg, eat: viewEat, friends: viewFriends, settings: viewSettings };
   var html = map[U.tab]();
   if (S.draft && U.tab !== 'train') html = '<div class="screen" style="padding-bottom:0"><button class="banner" style="width:100%;text-align:left" data-act="tab" data-t="train"><span><b>Workout in progress</b> · tap to continue</span><span class="num" style="font-size:20px" id="clock2"></span></button></div>' + html;
   v.innerHTML = html;
@@ -638,6 +639,7 @@ function finishWorkout() {
 document.addEventListener('click', function (ev) {
   var el = ev.target.closest('[data-act]'); if (!el) return;
   var a = el.dataset.act, d = el.dataset, st = S.settings;
+  if (a.indexOf('eat') === 0 && eatClick(a, d, el)) return;
   if (a === 'close') { closeSheet(); U.confirm = null; return; }
   if (a === 'doneSummary') { closeSheet(); U.tab = 'prog'; U.seg = 'muscles'; render(); window.scrollTo(0, 0); return; }
   if (a === 'tab') { U.tab = d.t; U.confirm = null; closeSheet(); render(); window.scrollTo(0, 0); return; }
@@ -806,6 +808,7 @@ document.addEventListener('click', function (ev) {
 });
 document.addEventListener('input', function (ev) {
   var t = ev.target;
+  if (eatInput(t)) return;
   if (t.id === 'time') { S.settings.minutes = +t.value; var b = $('#timebig'); if (b) b.textContent = t.value; persist({ settings: true }); return; }
   if (t.id === 'libq') { U.libQ = t.value; U.libShown = 40; refreshLibList(); return; }
   if (t.id === 'pickq') { U.pickQ = t.value; refreshPick(); return; }
@@ -822,6 +825,7 @@ document.addEventListener('input', function (ev) {
 });
 document.addEventListener('change', function (ev) {
   var t = ev.target;
+  if (eatChange(t)) return;
   if (t.id === 'libcat') { U.libCat = t.value; U.libShown = 40; refreshLibList(); }
   if (t.id === 'libitem') { U.libItem = t.value; U.libShown = 40; refreshLibList(); }
   if (t.id === 'nc-ex' && U.nc) { U.nc.ex = t.value; return; }
@@ -911,7 +915,7 @@ function restoreFrom(txt) {
 /* ===== boot ===== */
 loadLocal();
 document.body.classList.toggle('lift', S.settings.lift !== false);
-document.querySelectorAll('#tabs button').forEach(function (b) { b.insertAdjacentHTML('afterbegin', ico({ train: 'train', lib: 'lib', prog: 'prog', friends: 'users', settings: 'set' }[b.dataset.t])); });
+document.querySelectorAll('#tabs button').forEach(function (b) { b.insertAdjacentHTML('afterbegin', ico({ train: 'train', lib: 'lib', prog: 'prog', eat: 'eat', friends: 'users', settings: 'set' }[b.dataset.t])); });
 render();
 setInterval(tick, 1000);
 keepAwake();

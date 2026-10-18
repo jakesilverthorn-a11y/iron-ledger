@@ -1,7 +1,8 @@
 # Iron Ledger
 
 A workout tracker that runs as an iPhone Home Screen app: 876 exercises with cartoon demos, auto-built workouts,
-strength ranks vs. people your size, muscle recovery map, friends leaderboard and challenges.
+strength ranks vs. people your size, muscle recovery map, friends leaderboard and challenges,
+and an Eat tab with calorie and protein goals and meal ideas built from the foods you have.
 
 **Live app:** served by GitHub Pages from the `docs/` folder.
 On iPhone open the link in Safari → Share → **Add to Home Screen**.
@@ -10,7 +11,7 @@ On iPhone open the link in Safari → Share → **Add to Home Screen**.
 | Folder | What it is |
 |---|---|
 | `docs/` | The built app that GitHub Pages serves. Don't edit by hand. |
-| `src/` | Source: `logic.js` (data + scoring), `figure.js` (cartoon demos), `social.js` + `server.js` (friends & challenges), `ui.js`, styles. |
+| `src/` | Source: `logic.js` (data + scoring), `figure.js` (cartoon demos), `social.js` + `server.js` (friends & challenges), `food.js` (Eat tab), `ui.js`, styles. |
 | `assets/` | Exercise photo sprite sheets copied into `docs/`. |
 | `friends-server/` | Optional Cloudflare Worker for usernames, passwords and live challenges. See `SERVER-SETUP.txt`. |
 | `tools/build.py` | Rebuilds `docs/` from `src/`. |
