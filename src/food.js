@@ -111,6 +111,19 @@ var FOODS = (function () {
   ];
 })();
 var FOOD_BY = {}; FOODS.forEach(function (f) { FOOD_BY[f.id] = f; });
+var CUSTOM_USE = [['main', 'Main protein'], ['carb', 'Carb side'], ['veg', 'Vegetable'], ['bfast', 'Breakfast'], ['snack', 'Snack'], ['none', 'Just for logging']];
+var CUSTOM_HAS = [['meat', 'Meat'], ['poultry', 'Poultry'], ['fish', 'Fish'], ['pork', 'Pork'], ['dairy', 'Dairy'], ['egg', 'Egg'], ['gluten', 'Gluten'], ['nuts', 'Nuts'], ['peanuts', 'Peanuts'], ['soy', 'Soy']];
+var CUSTOM_KEY = null;
+function syncCustom(F) {
+  var key = JSON.stringify(F.custom || []); if (key === CUSTOM_KEY) return; CUSTOM_KEY = key;
+  for (var i = FOODS.length - 1; i >= 0; i--) if (FOODS[i].custom) { delete FOOD_BY[FOODS[i].id]; FOODS.splice(i, 1); }
+  (F.custom || []).forEach(function (c) {
+    var roles = { main: ['main'], carb: ['grain', 'potato'], veg: ['veg'], bfast: ['cbf'], snack: ['snackP'], none: [] }[c.use] || [];
+    var cat = { main: 'protein', carb: 'carb', veg: 'veg', bfast: 'protein', snack: 'extra', none: 'extra' }[c.use] || 'extra';
+    var fd = { id: c.id, n: c.n, e: c.e || '🍽️', cat: cat, r: roles, u: c.u || 'serving', g: 0, k: +c.k || 0, p: +c.p || 0, c: +c.c || 0, f: +c.f || 0, x: c.x || [], st: 0.5, mn: c.use === 'veg' ? 1 : 0.5, mx: c.use === 'main' || c.use === 'carb' ? 3 : 2, custom: 1 };
+    FOODS.push(fd); FOOD_BY[fd.id] = fd;
+  });
+}
 
 var DIETS = {
   any: { n: 'Anything', no: [] },
@@ -133,11 +146,12 @@ var MEALSETS = { 3: ['b', 'l', 'd'], 4: ['b', 'l', 'd', 's'], 5: ['b', 's', 'l',
 var MEALN = { b: 'Breakfast', l: 'Lunch', d: 'Dinner', s: 'Snack' };
 var MSPLIT = { 3: { b: .3, l: .35, d: .35 }, 4: { b: .25, l: .3, d: .32, s: .13 }, 5: { b: .22, l: .27, d: .3, s: .105 } };
 
-function foodDefaults() { return { setup: false, age: 30, act: 1.55, goal: 'maintain', diet: 'any', avoid: [], cuisines: [], have: [], never: [], meals: 4, onlyHave: true, simple: false, kcal: null, prot: null, plan: null, log: {} }; }
+function foodDefaults() { return { setup: false, age: 30, act: 1.55, goal: 'maintain', diet: 'any', avoid: [], cuisines: [], have: [], never: [], meals: 4, onlyHave: true, simple: false, kcal: null, prot: null, days: {}, log: {}, custom: [], bought: [] }; }
 function FS() {
   var f = S.settings.food;
   if (!f || typeof f !== 'object') f = S.settings.food = foodDefaults();
   var d = foodDefaults(); for (var k in d) if (f[k] === undefined) f[k] = d[k];
+  syncCustom(f);
   return f;
 }
 function dayKey(t) { var d = new Date(t || Date.now()); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
@@ -185,6 +199,7 @@ var MEALT = [
   { id: 'tofuscr', m: 'b', cu: 'american', slots: [['p', 'tofu', 'P'], ['v', 'veg', 'V'], ['c', 'bread', 'C']], name: function (s) { return 'Tofu scramble with ' + low(s.v) + ' and toast'; }, how: ['Crumble the tofu into a hot pan with the {v}.', 'Season with salt, pepper and a pinch of turmeric. Serve with {c}.'] },
   { id: 'avotoast', m: 'b', cu: 'american', slots: [['p', 'egg', 'P'], ['c', 'bread', 'C'], ['x', 'avo', 'X', 1]], name: function (s) { return 'Avocado toast with eggs'; }, how: ['Toast the {c} and mash the avocado on top.', 'Add the eggs, fried, poached or boiled.'] },
   { id: 'brekburrito', m: 'b', cu: 'mexican', slots: [['p', 'egg', 'P'], ['c', 'wrap', 'C'], ['x', 'cheese', 'O'], ['s', 'mexican', 'O'], ['v', 'veg', 'V']], name: function (s) { return 'Breakfast burrito with ' + low(s.v); }, how: ['Scramble the eggs with the {v}.', 'Wrap in the tortilla{?x: with %}{?s: and %}.'] },
+  { id: 'custombf', m: 'b', cu: 'any', slots: [['p', 'cbf', 'P'], ['f', 'fruit', 'O']], name: function (s) { return low(s.p, 1) + j(' with ', s.f); }, how: [] },
   { id: 'bowl', m: 'ld', cu: 'any', slots: [['p', 'main', 'P'], ['c', 'grain', 'C'], ['v', 'veg', 'V'], ['v2', 'veg', 'V'], ['s', 'sauce', 'O'], ['o', 'oil', 'O']], name: function (s) { return low(s.p, 1) + ' bowl with ' + low(s.c) + (s.v2 ? ', ' + low(s.v) + ' and ' + low(s.v2) : ' and ' + low(s.v)); }, how: ['Cook the {c}.', 'Cook the {p}{?o: in %} and season with salt and pepper.', 'Roast or steam the {v}{?v2: and %}. Pile it all in a bowl{?s: and top with %}.'] },
   { id: 'plate', m: 'd', cu: 'american', slots: [['p', 'main', 'P'], ['c', 'potato', 'C'], ['v', 'veg', 'V'], ['o', 'oil', 'X']], name: function (s) { return low(s.p, 1) + ' with ' + low(s.c) + ' and ' + low(s.v); }, how: ['Bake the {c} at 425°F / 220°C for 25–35 minutes{?o: with a little %}.', 'Grill or pan-sear the {p}.', 'Steam or roast the {v}.'] },
   { id: 'stirfry', m: 'ld', cu: 'asian', slots: [['p', 'main', 'P'], ['c', 'grain', 'C'], ['v', 'veg', 'V'], ['v2', 'veg', 'V'], ['s', 'asian', 'X', 1], ['o', 'oil', 'X']], name: function (s) { return low(s.p, 1) + ' stir-fry with ' + low(s.v) + ' over ' + low(s.c); }, how: ['Cut the {p} into bite-size pieces and stir-fry{?o: in %} on high heat.', 'Add the {v}{?v2: and %} for 3–4 minutes{?s:, then the %}.', 'Serve over the {c}.'] },
@@ -250,6 +265,7 @@ function sizeMeal(t, sel, K, P) {
       // no carb slot (keto or protein snack): grow fats/extras toward calories
       var room = K - tot('k'), fx = items.filter(function (it) { return it.kind === 'X' && it.f.k > 20; })[0];
       if (fx && room > 60) fx.q = Math.min(fx.f.mx, Math.max(fx.f.mn, roundTo(fx.q + room / fx.f.k, fx.f.st)));
+      else if (Pi && room > 80) { var pc = (P * 1.6 - (tot('p') - Pi.f.p * Pi.q)) / Pi.f.p; Pi.q = Math.max(Pi.q, roundTo(Math.min(Pi.f.mx, pc, Pi.q + room / Pi.f.k), Pi.f.st)); }
     }
   }
   var k = tot('k'), p = tot('p');
@@ -266,6 +282,7 @@ function mealHow(meal) {
 }
 function qtyText(id, q) {
   var f = FOOD_BY[id]; if (!f) return '';
+  if (f.custom) return (q === 1 ? '' : (q === 0.5 ? '½' : String(q).replace('.5', '½')) + ' × ') + f.u;
   if (f.u === 'g') { var oz = unit() === 'lb' && (f.cat === 'protein' || f.cat === 'carb') ? ' (' + (Math.round(q / 28.35 * 2) / 2) + ' oz)' : ''; return q + ' g' + oz; }
   var n = q === 0.5 ? '½' : q === 1.5 ? '1½' : String(q).replace('.5', '½');
   var u = f.u; if (q > 1 && u !== 'tbsp' && u !== 'tsp') u = u + 's';
@@ -277,17 +294,25 @@ function buildMealAny(m, K, P, ex) {
   if (!ml && F.onlyHave && F.have.length >= 4) { F.onlyHave = false; try { ml = buildMeal(m, K, P, ex); } finally { F.onlyHave = true; } if (ml) ml.shop = 1; }
   return ml;
 }
-/* ----- plan for today ----- */
-function planToday(force) {
-  var F = FS(), dk = dayKey();
-  if (!force && F.plan && F.plan.d === dk && F.plan.meals && F.plan.meals.length === (MEALSETS[F.meals] || MEALSETS[4]).length) return F.plan;
+/* ----- plans: one per day (today and the coming week) ----- */
+function dayAdd(dk, n) { var p = dk.split('-'); var d = new Date(+p[0], +p[1] - 1, +p[2] + n); return dayKey(d.getTime()); }
+function planFor(dk, force) {
+  var F = FS(), want = (MEALSETS[F.meals] || MEALSETS[4]).length, cur = F.days[dk];
+  if (!force && cur && cur.meals && cur.meals.length === want) return cur;
   var T = foodTargets(), slots = MEALSETS[F.meals] || MEALSETS[4], split = MSPLIT[F.meals] || MSPLIT[4], used = [];
+  // avoid repeating yesterday's ideas
+  var y = F.days[dayAdd(dk, -1)]; if (y && y.meals) y.meals.forEach(function (x) { if (x.meal) used.push(x.meal.t); });
   var meals = slots.map(function (m) { var ml = buildMealAny(m, T.kcal * split[m], T.p * split[m], used); if (ml) used.push(ml.t); return { m: m, meal: ml }; });
-  F.plan = { d: dk, meals: meals }; persist({ settings: true });
-  return F.plan;
+  F.days[dk] = { d: dk, meals: meals };
+  var today = dayKey(); Object.keys(F.days).forEach(function (k) { if (k < dayAdd(today, -1) || k > dayAdd(today, 13)) delete F.days[k]; });
+  persist({ settings: true });
+  return F.days[dk];
 }
-function reshuffle(i) {
-  var F = FS(), pl = planToday(), T = foodTargets(), split = MSPLIT[F.meals] || MSPLIT[4], slot = pl.meals[i]; if (!slot) return;
+function planToday(force) { return planFor(dayKey(), force); }
+function planWeek(force) { var t = dayKey(), out = []; for (var i = 0; i < 7; i++) out.push(planFor(dayAdd(t, i), force)); return out; }
+function reshuffle(i, dk) {
+  dk = dk || dayKey();
+  var F = FS(), pl = planFor(dk), T = foodTargets(), split = MSPLIT[F.meals] || MSPLIT[4], slot = pl.meals[i]; if (!slot) return;
   var prev = slot.meal ? slot.meal.t : null, others = pl.meals.map(function (x) { return x.meal && x.meal.t; }).filter(Boolean);
   var best = null;
   for (var k = 0; k < 6 && !best; k++) { var ml = buildMealAny(slot.m, T.kcal * split[slot.m], T.p * split[slot.m], others); if (ml && (ml.t !== prev || k > 3)) best = ml; }
@@ -320,7 +345,9 @@ function viewEat() {
     (logL.length ? '<div class="card" style="padding:0 14px">' + logL.map(function (e, i) { return '<div class="lrow"><span class="grow">' + esc(e.n) + '</span><span class="num" style="font-size:16px">' + Math.round(e.k) + ' kcal · ' + Math.round(e.p) + ' g P</span><button class="icon-btn" data-act="eatUnlog" data-i="' + i + '" aria-label="Remove ' + esc(e.n) + '">' + ico('x') + '</button></div>'; }).join('') + '</div>' : '<div class="note">Tap "I ate this" on a meal, or add any food.</div>') + '</div>';
   var foodsBtn = '<div class="card row" style="gap:12px"><div class="grow"><div class="xname">My foods</div><div class="xmeta">' + (pantryN ? pantryN + ' foods ticked' + (F.onlyHave && pantryN >= 4 ? ' · ideas use only these' : '') : 'Tick what you have and meal ideas will use it') + '</div></div><button class="btn small" data-act="eatFoods">' + (pantryN ? 'Edit' : 'Pick foods') + '</button></div>';
   var prefsBtn = '<div class="card row" style="gap:12px"><div class="grow"><div class="xname">Preferences</div><div class="xmeta">' + esc(prefSummary()) + '</div></div><button class="btn small" data-act="eatPrefs">Edit</button></div>';
-  return '<div class="screen">' + head + top + '<div class="section"><div class="row"><h2 class="grow">Today\'s meals</h2><button class="btn small ghost" data-act="eatShuffleAll">' + ico('shuffle') + ' Shuffle all</button></div>' + meals + '</div>' + shop + logHTML + foodsBtn + prefsBtn +
+  var seg = '<div class="seg" role="group" aria-label="Plan view"><button aria-pressed="' + (U.eatView !== 'week') + '" data-act="eatView" data-k="today">Today</button><button aria-pressed="' + (U.eatView === 'week') + '" data-act="eatView" data-k="week">This week</button></div>';
+  var planPart = U.eatView === 'week' ? weekHTML() : '<div class="section"><div class="row"><h2 class="grow">Today\'s meals</h2><button class="btn small ghost" data-act="eatShuffleAll">' + ico('shuffle') + ' Shuffle all</button></div>' + meals + '</div>' + shop;
+  return '<div class="screen">' + head + top + seg + planPart + logHTML + foodsBtn + prefsBtn +
     '<div class="note">Calories and protein are estimates from typical nutrition values and the Mifflin-St Jeor formula. Adjust them under Goals if your weight is not moving the way you want after 2–3 weeks.</div></div>';
 }
 function prefSummary() {
@@ -332,16 +359,17 @@ function prefSummary() {
   a.push(F.meals + ' meals a day');
   return a.join(' · ');
 }
-function mealCard(s, i) {
+function mealCard(s, i, dk) {
+  dk = dk || dayKey(); var isToday = dk === dayKey(), dka = ' data-dk="' + dk + '"';
   var ml = s.meal, label = MEALN[s.m];
-  if (!ml) return '<div class="card section meal"><div class="row"><div class="grow"><div class="mtag">' + label + '</div><div class="xname">No idea fits yet</div></div><button class="icon-btn" data-act="eatShuffle" data-i="' + i + '" aria-label="Try again">' + ico('shuffle') + '</button></div><div class="note">Tick a few more foods under My foods, or loosen your preferences.</div></div>';
+  if (!ml) return '<div class="card section meal"><div class="row"><div class="grow"><div class="mtag">' + label + '</div><div class="xname">No idea fits yet</div></div><button class="icon-btn" data-act="eatShuffle" data-i="' + i + '"' + dka + ' aria-label="Try again">' + ico('shuffle') + '</button></div><div class="note">Tick a few more foods under My foods, or loosen your preferences.</div></div>';
   var emo = ml.it.map(function (x) { return FOOD_BY[x.id] ? FOOD_BY[x.id].e : ''; }).join('');
   var lst = ml.it.map(function (x) { var f = FOOD_BY[x.id]; if (!f) return ''; var miss = FS().have.length && FS().have.indexOf(f.id) < 0; return '<li><span class="grow">' + f.e + ' ' + esc(f.n) + (miss ? ' <span class="tag">buy</span>' : '') + '</span><span class="faint">' + qtyText(f.id, x.q) + '</span></li>'; }).join('');
-  var how = mealHow(ml), logged = !!todayLog().filter(function (e) { return e.mi === i && e.t === ml.t; }).length;
-  return '<div class="card section meal"><div class="row" style="gap:10px;align-items:flex-start"><div class="grow"><div class="mtag">' + label + ' · ' + ml.k + ' kcal · ' + ml.p + ' g protein</div><div class="xname" style="font-size:18px">' + esc(ml.n) + '</div><div class="memo" aria-hidden="true">' + emo + '</div></div><button class="icon-btn" data-act="eatShuffle" data-i="' + i + '" aria-label="Shuffle ' + label + '">' + ico('shuffle') + '</button></div>' +
+  var how = mealHow(ml), logged = isToday && !!todayLog().filter(function (e) { return e.mi === i && e.t === ml.t; }).length;
+  return '<div class="card section meal"><div class="row" style="gap:10px;align-items:flex-start"><div class="grow"><div class="mtag">' + label + ' · ' + ml.k + ' kcal · ' + ml.p + ' g protein</div><div class="xname" style="font-size:18px">' + esc(ml.n) + '</div><div class="memo" aria-hidden="true">' + emo + '</div></div><button class="icon-btn" data-act="eatShuffle" data-i="' + i + '"' + dka + ' aria-label="Shuffle ' + label + '">' + ico('shuffle') + '</button></div>' +
     '<ul class="ings">' + lst + '</ul>' +
     (how.length ? '<details class="how"><summary>How to make it</summary><ol>' + how.map(function (h) { return '<li>' + esc(h) + '</li>'; }).join('') + '</ol></details>' : '') +
-    '<div class="row"><span class="xmeta grow">C ' + ml.c + ' g · F ' + ml.f + ' g</span><button class="btn small ' + (logged ? 'ghost' : 'primary') + '" data-act="eatLog" data-i="' + i + '"' + (logged ? ' disabled' : '') + '>' + (logged ? 'Logged ✓' : 'I ate this') + '</button></div></div>';
+    '<div class="row"><span class="xmeta grow">C ' + ml.c + ' g · F ' + ml.f + ' g</span>' + (isToday ? '<button class="btn small ' + (logged ? 'ghost' : 'primary') + '" data-act="eatLog" data-i="' + i + '"' + (logged ? ' disabled' : '') + '>' + (logged ? 'Logged ✓' : 'I ate this') + '</button>' : '') + '</div></div>';
 }
 function shoppingList(pl) {
   var F = FS(); if (!F.have.length) return '';
@@ -388,12 +416,12 @@ function foodsSheet() {
     '<div class="note">' + (mode === 'have' ? 'Tick what is in your kitchen. Meal ideas are built from these.' : 'Tap foods you won\'t eat. They are never suggested.') + '</div>' +
     '<div class="row" style="gap:8px"><button class="btn small ghost grow" data-act="eatStaples">Tick common staples</button><button class="btn small ghost grow" data-act="eatClear">Clear</button></div>' +
     FOOD_CATS.map(function (c) {
-      var list = FOODS.filter(function (f) { return f.cat === c[0]; });
+      var list = FOODS.filter(function (f) { return f.cat === c[0] && !f.custom; });
       return '<div class="section" style="gap:8px"><h3 style="font-size:18px">' + c[1] + '</h3><div class="fgrid">' + list.map(function (f) {
         var on = mode === 'have' ? F.have.indexOf(f.id) >= 0 : F.never.indexOf(f.id) >= 0, dis = mode === 'have' && !foodOK(f);
         return '<button class="ftile' + (on ? ' on' : '') + (mode === 'never' ? ' nv' : '') + (dis ? ' dis' : '') + '" data-act="eatToggle" data-id="' + f.id + '" aria-pressed="' + on + '"><span class="fe">' + f.e + '</span><span class="fn">' + esc(f.n) + '</span></button>';
       }).join('') + '</div></div>';
-    }).join('') + '<button class="btn primary block" data-act="eatFoodsDone">Done</button>';
+    }).join('') + customSection() + '<button class="btn primary block" data-act="eatFoodsDone">Done</button>';
   openSheet('My foods', body);
 }
 var STAPLES = ['chicken', 'beef', 'egg', 'greekyog', 'tuna', 'whey', 'rice', 'oats', 'pasta', 'wwbread', 'tortilla', 'potato', 'banana', 'apple', 'berries', 'broccoli', 'spinach', 'pepper', 'onion', 'carrot', 'milk', 'cheddar', 'oil', 'butter', 'pb', 'almonds', 'salsa', 'soy', 'marinara'];
@@ -417,18 +445,39 @@ function eatClick(a, d, el) {
   var F = FS();
   function tog(arr, v) { var i = arr.indexOf(v); if (i >= 0) arr.splice(i, 1); else arr.push(v); }
   switch (a) {
-    case 'eatStart': F.setup = true; F.plan = null; persist({ settings: true }); render(); window.scrollTo(0, 0); toast('Your plan is ready. Tick your foods to tailor the ideas.'); return true;
+    case 'eatView': U.eatView = d.k; if (d.k === 'week') planWeek(); render(); return true;
+    case 'eatDay': daySheet(d.dk); return true;
+    case 'eatShuffleDay': planFor(d.dk, true); if (sheetOpen()) eatRefreshSheet(); render(); return true;
+    case 'eatShuffleWeek': planWeek(true); render(); toast('New ideas for the week'); return true;
+    case 'eatGrocery': grocerySheet(); return true;
+    case 'eatGot': { tog(F.have, d.id); if (F.have.indexOf(d.id) >= 0 && F.never.indexOf(d.id) >= 0) F.never.splice(F.never.indexOf(d.id), 1); persist({ settings: true }); var on = F.have.indexOf(d.id) >= 0; el.classList.toggle('got', on); el.setAttribute('aria-pressed', on); return true; }
+    case 'eatGroceryCopy': copyText(groceryText()); return true;
+    case 'eatGroceryDone': closeSheet(); render(); return true;
+    case 'eatCustomNew': U.cf = { n: '', e: '', u: '1 serving', k: '', p: '', c: '', f: '', use: 'main', x: [] }; customSheet(); return true;
+    case 'eatCustomEdit': { var cf = F.custom.filter(function (x) { return x.id === d.id; })[0]; if (cf) { U.cf = JSON.parse(JSON.stringify(cf)); customSheet(); } return true; }
+    case 'eatCfUse': customRead(); U.cf.use = d.k; customSheet(); return true;
+    case 'eatCfHas': customRead(); tog(U.cf.x, d.k); customSheet(); return true;
+    case 'eatCfSave': { customRead(); var c = U.cf, er = $('#cf-err');
+      if (!c.n.trim()) { if (er) er.textContent = 'Give it a name.'; return true; }
+      if (!(+c.k >= 0) || c.k === '') { if (er) er.textContent = 'Enter the calories per serving.'; return true; }
+      c.n = c.n.trim().slice(0, 40); c.u = (c.u || '1 serving').trim().slice(0, 24); c.k = Math.round(+c.k); c.p = Math.round(+c.p || 0); c.c = Math.round(+c.c || 0); c.f = Math.round(+c.f || 0);
+      if (!c.id) { c.id = 'c_' + Date.now().toString(36); F.custom.push(c); if (F.have.indexOf(c.id) < 0) F.have.push(c.id); }
+      else F.custom = F.custom.map(function (x) { return x.id === c.id ? c : x; });
+      F.days = {}; persist({ settings: true }); syncCustom(F); U.cf = null; foodsSheet(); toast('Saved ' + c.n); return true; }
+    case 'eatCfDel': { var id = U.cf && U.cf.id; F.custom = F.custom.filter(function (x) { return x.id !== id; }); F.have = F.have.filter(function (x) { return x !== id; }); F.days = {}; persist({ settings: true }); syncCustom(F); U.cf = null; foodsSheet(); toast('Deleted'); return true; }
+    case 'eatCfBack': U.cf = null; foodsSheet(); return true;
+    case 'eatStart': F.setup = true; F.days = {}; persist({ settings: true }); render(); window.scrollTo(0, 0); toast('Your plan is ready. Tick your foods to tailor the ideas.'); return true;
     case 'eatGoal': F.goal = d.k; persist({ settings: true }); if (sheetOpen()) eatRefreshSheet(); else render(); return true;
-    case 'eatDiet': F.diet = d.k; F.plan = null; persist({ settings: true }); if (sheetOpen()) eatRefreshSheet(); else render(); return true;
-    case 'eatAvoid': tog(F.avoid, d.k); F.plan = null; persist({ settings: true }); eatRefreshSheet(); return true;
-    case 'eatCu': tog(F.cuisines, d.k); F.plan = null; persist({ settings: true }); eatRefreshSheet(); return true;
-    case 'eatSimple': F.simple = !F.simple; F.plan = null; persist({ settings: true }); eatRefreshSheet(); return true;
-    case 'eatOnly': F.onlyHave = !F.onlyHave; F.plan = null; persist({ settings: true }); eatRefreshSheet(); return true;
+    case 'eatDiet': F.diet = d.k; F.days = {}; persist({ settings: true }); if (sheetOpen()) eatRefreshSheet(); else render(); return true;
+    case 'eatAvoid': tog(F.avoid, d.k); F.days = {}; persist({ settings: true }); eatRefreshSheet(); return true;
+    case 'eatCu': tog(F.cuisines, d.k); F.days = {}; persist({ settings: true }); eatRefreshSheet(); return true;
+    case 'eatSimple': F.simple = !F.simple; F.days = {}; persist({ settings: true }); eatRefreshSheet(); return true;
+    case 'eatOnly': F.onlyHave = !F.onlyHave; F.days = {}; persist({ settings: true }); eatRefreshSheet(); return true;
     case 'eatGoals': goalsSheet(); return true;
     case 'eatPrefs': prefsSheet(); return true;
     case 'eatFoods': foodsSheet(); return true;
-    case 'eatGoalsDone': case 'eatPrefsDone': F.plan = null; closeSheet(); U.eatSheet = null; render(); return true;
-    case 'eatFoodsDone': F.plan = null; persist({ settings: true }); closeSheet(); U.eatSheet = null; render(); return true;
+    case 'eatGoalsDone': case 'eatPrefsDone': F.days = {}; closeSheet(); U.eatSheet = null; render(); return true;
+    case 'eatFoodsDone': F.days = {}; persist({ settings: true }); closeSheet(); U.eatSheet = null; render(); return true;
     case 'eatMode': U.eatMode = d.k; eatRefreshSheet(); return true;
     case 'eatToggle': {
       var arr = (U.eatMode || 'have') === 'have' ? F.have : F.never; tog(arr, d.id);
@@ -440,7 +489,7 @@ function eatClick(a, d, el) {
     case 'eatStaples': STAPLES.forEach(function (id) { if (F.have.indexOf(id) < 0 && F.never.indexOf(id) < 0 && foodOK(FOOD_BY[id])) F.have.push(id); }); persist({ settings: true }); eatRefreshSheet(); return true;
     case 'eatClear': if ((U.eatMode || 'have') === 'have') F.have = []; else F.never = []; persist({ settings: true }); eatRefreshSheet(); return true;
     case 'eatHave': if (F.have.indexOf(d.id) < 0) F.have.push(d.id); persist({ settings: true }); render(); return true;
-    case 'eatShuffle': reshuffle(+d.i); render(); return true;
+    case 'eatShuffle': reshuffle(+d.i, d.dk); if (U.eatSheet && sheetOpen()) eatRefreshSheet(); render(); return true;
     case 'eatShuffleAll': planToday(true); render(); toast('New ideas for today'); return true;
     case 'eatLog': { var s = planToday().meals[+d.i]; if (!s || !s.meal) return true; logAdd({ n: MEALN[s.m] + ': ' + s.meal.n, k: s.meal.k, p: s.meal.p, c: s.meal.c, f: s.meal.f, mi: +d.i, t: s.meal.t }); render(); toast('Logged ' + s.meal.k + ' kcal'); return true; }
     case 'eatUnlog': { var L = todayLog(); L.splice(+d.i, 1); persist({ settings: true }); render(); return true; }
@@ -465,6 +514,74 @@ function eatInput(t) {
 function eatChange(t) {
   var F = FS();
   if (t.id === 'eat-act') { F.act = +t.value; persist({ settings: true }); return true; }
-  if (t.id === 'eat-meals') { F.meals = +t.value; F.plan = null; persist({ settings: true }); return true; }
+  if (t.id === 'eat-meals') { F.meals = +t.value; F.days = {}; persist({ settings: true }); return true; }
   return false;
+}
+
+/* ----- week view ----- */
+function weekHTML() {
+  var F = FS(), days = planWeek(), T = foodTargets();
+  var cards = days.map(function (pl, di) {
+    var dt = new Date(pl.d + 'T12:00:00'), lbl = di === 0 ? 'Today' : di === 1 ? 'Tomorrow' : DOW[dt.getDay()];
+    var k = 0, p = 0; pl.meals.forEach(function (s) { if (s.meal) { k += s.meal.k; p += s.meal.p; } });
+    return '<div class="card section wday"><div class="row"><button class="grow" style="text-align:left" data-act="eatDay" data-dk="' + pl.d + '"><div class="xname">' + lbl + ' <span class="faint" style="font-weight:500">' + MON[dt.getMonth()] + ' ' + dt.getDate() + '</span></div><div class="xmeta">' + k + ' kcal · ' + p + ' g protein</div></button><button class="icon-btn" data-act="eatShuffleDay" data-dk="' + pl.d + '" aria-label="Shuffle ' + lbl + '">' + ico('shuffle') + '</button></div>' +
+      pl.meals.map(function (s) { return '<button class="wmeal" data-act="eatDay" data-dk="' + pl.d + '"><span class="mtag">' + MEALN[s.m] + '</span><span class="grow">' + (s.meal ? esc(s.meal.n) : 'No idea fits') + '</span><span class="faint">' + (s.meal ? s.meal.k : '') + '</span></button>'; }).join('') + '</div>';
+  }).join('');
+  return '<div class="section"><div class="row"><h2 class="grow">Next 7 days</h2><button class="btn small ghost" data-act="eatShuffleWeek">' + ico('shuffle') + ' Shuffle week</button></div>' +
+    '<button class="btn primary block" data-act="eatGrocery">Grocery list for the week</button>' + cards + '</div>';
+}
+function daySheet(dk) {
+  var pl = planFor(dk), dt = new Date(dk + 'T12:00:00');
+  U.eatSheet = function () { daySheet(dk); };
+  openSheet(DOW[dt.getDay()] + ', ' + MON[dt.getMonth()] + ' ' + dt.getDate(), pl.meals.map(function (s, i) { return mealCard(s, i, dk); }).join('') + '<button class="btn block" data-act="eatShuffleDay" data-dk="' + dk + '">' + ico('shuffle') + ' Shuffle this day</button>');
+}
+function groceryItems() {
+  var days = planWeek(), tot = {};
+  days.forEach(function (pl) { pl.meals.forEach(function (s) { if (s.meal) s.meal.it.forEach(function (x) { tot[x.id] = (tot[x.id] || 0) + x.q; }); }); });
+  return Object.keys(tot).filter(function (id) { return FOOD_BY[id]; }).map(function (id) { return { id: id, q: Math.round(tot[id] * 100) / 100, f: FOOD_BY[id] }; })
+    .sort(function (a, b) { var ca = FOOD_CATS.map(function (c) { return c[0]; }); return ca.indexOf(a.f.cat) - ca.indexOf(b.f.cat) || a.f.n.localeCompare(b.f.n); });
+}
+function groceryQty(it) {
+  var f = it.f, q = it.q;
+  if (f.u === 'g') { if (unit() === 'lb') { var lb = q / 453.6; return lb >= 1 ? (Math.round(lb * 10) / 10) + ' lb' : Math.round(q / 28.35) + ' oz'; } return q >= 1000 ? (Math.round(q / 100) / 10) + ' kg' : Math.round(q) + ' g'; }
+  return qtyText(f.id, Math.ceil(q * 2) / 2);
+}
+function groceryText() {
+  var F = FS(), its = groceryItems().filter(function (it) { return F.have.indexOf(it.id) < 0; });
+  return 'Grocery list (next 7 days)\n' + (its.length ? its.map(function (it) { return '- ' + it.f.n + ': ' + groceryQty(it); }).join('\n') : 'Nothing to buy.');
+}
+function grocerySheet() {
+  var F = FS(), its = groceryItems(), need = its.filter(function (it) { return F.have.indexOf(it.id) < 0; }), have = its.filter(function (it) { return F.have.indexOf(it.id) >= 0; }), haveIds = have.map(function (it) { return it.id; });
+  function row(it) { var on = F.have.indexOf(it.id) >= 0; return '<button class="gro' + (on ? ' got' : '') + (haveIds.indexOf(it.id) >= 0 ? ' have' : '') + '" data-act="eatGot" data-id="' + it.id + '" aria-pressed="' + on + '"><span class="gbox">' + ico('check') + '</span><span class="grow">' + it.f.e + ' ' + esc(it.f.n) + '</span><span class="faint">' + groceryQty(it) + '</span></button>'; }
+  U.eatSheet = grocerySheet;
+  openSheet('Grocery list', '<div class="note">Totals for the next 7 days of meal ideas. Tick items as you buy them, and they are added to My foods.</div>' +
+    (need.length ? '<div class="section" style="gap:4px"><h3 style="font-size:18px">To buy</h3>' + need.map(row).join('') + '</div>' : '<div class="note"><b>You have everything.</b></div>') +
+    (have.length ? '<div class="section" style="gap:4px"><h3 style="font-size:18px">Already have (check you have enough)</h3>' + have.map(row).join('') + '</div>' : '') +
+    '<div class="row"><button class="btn grow" data-act="eatGroceryCopy">Copy list</button><button class="btn primary grow" data-act="eatGroceryDone">Done</button></div>');
+}
+
+/* ----- your own foods ----- */
+function customSection() {
+  var F = FS();
+  return '<div class="section" style="gap:8px"><h3 style="font-size:18px">Your own foods</h3><div class="note">Add things you eat often, like your protein pancakes or a favourite takeout order. Tap one to edit it.</div>' +
+    (F.custom.length ? '<div class="fgrid">' + F.custom.map(function (c) { var on = (U.eatMode || 'have') === 'have' ? F.have.indexOf(c.id) >= 0 : F.never.indexOf(c.id) >= 0; return '<button class="ftile' + (on ? ' on' : '') + '" data-act="eatCustomEdit" data-id="' + c.id + '"><span class="fe">' + esc(c.e || '🍽️') + '</span><span class="fn">' + esc(c.n) + '</span><span class="faint" style="font-size:11.5px">' + c.k + ' kcal · ' + c.p + ' g P</span></button>'; }).join('') + '</div>' : '') +
+    '<button class="btn block" data-act="eatCustomNew">+ Add your own food</button></div>';
+}
+function customRead() {
+  var c = U.cf; if (!c) return;
+  ['n', 'e', 'u', 'k', 'p', 'c', 'f'].forEach(function (k) { var el = $('#cf-' + k); if (el) c[k] = el.value; });
+}
+function customSheet() {
+  var c = U.cf; U.eatSheet = null;
+  function inp(k, ph, mode, lbl) { return '<label class="grow"><span class="field-label">' + lbl + '</span><input class="input" id="cf-' + k + '"' + (mode ? ' inputmode="' + mode + '"' : '') + ' placeholder="' + ph + '" value="' + esc(String(c[k] == null ? '' : c[k])) + '"></label>'; }
+  openSheet(c.id ? 'Edit food' : 'Add your own food',
+    '<div class="row" style="gap:10px">' + inp('n', 'e.g. Protein pancakes', '', 'Name') + '<label style="width:76px"><span class="field-label">Emoji</span><input class="input" id="cf-e" maxlength="4" placeholder="🥞" value="' + esc(c.e || '') + '" style="text-align:center"></label></div>' +
+    inp('u', '1 serving, 1 cup, 3 pancakes…', '', 'One serving is') +
+    '<div class="row" style="gap:10px">' + inp('k', '0', 'numeric', 'Calories') + inp('p', '0', 'numeric', 'Protein g') + '</div>' +
+    '<div class="row" style="gap:10px">' + inp('c', '0', 'numeric', 'Carbs g') + inp('f', '0', 'numeric', 'Fat g') + '</div>' +
+    '<div><span class="field-label">Use it in meal ideas as</span><div class="chips">' + CUSTOM_USE.map(function (u) { return '<button class="chip" aria-pressed="' + (c.use === u[0]) + '" data-act="eatCfUse" data-k="' + u[0] + '">' + u[1] + '</button>'; }).join('') + '</div></div>' +
+    '<div><span class="field-label">Contains (so diet and allergy filters work)</span><div class="chips">' + CUSTOM_HAS.map(function (u) { return '<button class="chip" aria-pressed="' + (c.x.indexOf(u[0]) >= 0) + '" data-act="eatCfHas" data-k="' + u[0] + '">' + u[1] + '</button>'; }).join('') + '</div></div>' +
+    '<div class="note" id="cf-err" style="color:var(--down);min-height:0"></div>' +
+    '<div class="row"><button class="btn grow" data-act="eatCfBack">Back</button><button class="btn primary grow" data-act="eatCfSave">Save</button></div>' +
+    (c.id ? '<button class="btn block ghost danger" data-act="eatCfDel">Delete this food</button>' : ''));
 }

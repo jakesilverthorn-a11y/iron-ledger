@@ -306,3 +306,15 @@ details.card summary { list-style: none; } details.card summary::-webkit-details
 .ftile.nv.on .fe{filter:grayscale(1);opacity:.6}
 .ftile.dis{opacity:.4}
 .btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;vertical-align:-3px}
+
+.wday{gap:6px}
+.wmeal{display:flex;gap:10px;align-items:baseline;text-align:left;padding:6px 0;border-top:1px solid var(--line);font-size:14.5px;width:100%}
+.wmeal .mtag{width:70px;flex:none;margin:0}
+.gro{display:flex;gap:12px;align-items:center;width:100%;text-align:left;padding:10px 2px;border-bottom:1px solid var(--line);font-size:15px}
+.gbox{flex:none;width:24px;height:24px;border-radius:7px;border:2px solid var(--line2);display:flex;align-items:center;justify-content:center}
+.gbox svg{width:16px;height:16px;stroke:transparent;fill:none;stroke-width:3}
+.gro.got .gbox{background:var(--accent);border-color:var(--accent)}
+.gro.got .gbox svg{stroke:var(--on-accent)}
+.gro.got .grow{text-decoration:line-through;color:var(--muted)}
+.gro.have .grow{text-decoration:none;color:var(--fg)}
+.gro.have:not(.got) .grow{color:var(--muted)}
