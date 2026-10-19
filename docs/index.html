@@ -436,10 +436,17 @@ function fmtW(lb, unit) { if (!lb) return '0'; return toDisp(lb, unit); }
 
 /* ---------- strength metric ---------- */
 function isBW(ex) { return ex && ex.eq === 'Bodyweight'; }
+/* weighted bodyweight work: added weight is turned into "bodyweight-equivalent reps" so a vest, belt or plate counts.
+   BW_FRAC is roughly how much of your bodyweight each movement moves. */
+var BW_FRAC = { pullup: 1, dip: 0.95, pushup: 0.65, situp: 0.35, calfbw: 1, hangleg: 0.35 };
+var metricBW = function () { return 0; };   // the UI points this at the current body weight (lb)
+function bwFrac(ex) { var k = parseK(ex && ex.k); return (k && BW_FRAC[k.cls]) || 0.6; }
+function bwEqReps(ex, w, r) { var B = metricBW(); if (!(w > 0) || !(B > 0)) return r; var base = bwFrac(ex) * B; return Math.min(300, 30 * w / base + r * (base + w) / base); }
+function repsAtLoad(ex, eqReps, w) { var B = metricBW(); if (!(w > 0) || !(B > 0)) return eqReps; var base = bwFrac(ex) * B; return (eqReps - 30 * w / base) * base / (base + w); }
 function setMetric(ex, s) {
   var r = +s.r || 0, w = +s.w || 0;
   if (r <= 0) return 0;
-  if (isBW(ex)) return r;                  // bodyweight work is tracked in reps
+  if (isBW(ex)) return w > 0 ? bwEqReps(ex, w, r) : r;   // bodyweight work is tracked in (equivalent) reps
   if (w <= 0) return 0;
   return w * (1 + Math.min(r, 15) / 30);   // Epley estimated 1RM
 }
@@ -2928,6 +2935,7 @@ function bodyChange(t) {
 var LS_KEY = 'ironledger.v1';
 function defaults() { return { unit: 'lb', profile: 'gym', gear: { gym: GYM_GEAR.slice(), home: HOME_GEAR.slice() }, body: { sex: null, h: null, w: null, log: [] }, level: 'intermediate', goal: 'strength', minutes: 45, groups: ['Chest', 'Shoulders', 'Triceps'], deleted: [], friends: [], cfriends: [], handle: '', notes: {}, weekGoal: 3, bar: null, lift: !!window.claude, lastBackup: 0 }; }
 var S = { settings: defaults(), workouts: [], draft: null, at: { settings: 0, draft: 0 } };
+metricBW = function () { var B = S.settings && profB(); return B ? curWeightLb(B) : 0; };
 var U = { tab: 'train', seg: 'muscles', libQ: '', libGroups: [], libGear: 'all', libCat: 'all', libItem: 'all', bsex: null, libShown: 40, plan: null, seed: 1, hist: null, pickQ: '', pickGroups: [], pickMode: null, rest: null, openHist: null, confirm: null };
 var dbCol = null, dbState = 'pending', dirtySettings = false, dirtyDraft = false, dirtyMonths = {}, pushing = false, again = false, syncTimer = null;
 
@@ -3160,7 +3168,7 @@ function exerciseSheet(name, ctx) {
   var lv = loadInfo(ex), logBox = lv.l ? '<div class="card section loadbox"><div class="xname">⚖️ How to log the weight' + (lv.s ? ': ' + esc(lv.s.toLowerCase()) : '') + '</div><div class="note" style="font-size:14.5px">' + esc(lv.l) + '</div></div>' : '';
   var body = '<div class="demo-wrap" id="demowrap">' + demoInner(ex) + '</div>' + (S.draft ? logBox : '') +
     '<div>' + tagsHTML(ex) + '<span class="tag">' + esc(titleCase(ex.l)) + '</span>' + (ex.m ? '<span class="tag">' + esc(titleCase(ex.m)) + '</span>' : '') + '</div>' + add +
-    '<div class="section"><h3 style="font-size:20px">Equipment</h3><div class="gear-grid">' + ex.gear.map(function (g) { return ITEM_BY[g] ? gearTile(ITEM_BY[g], true, true) : ''; }).join('') + '</div></div>' +
+    liftRankCard(name, allHistories(realWorkouts())[name]) + '<div class="section"><h3 style="font-size:20px">Equipment</h3><div class="gear-grid">' + ex.gear.map(function (g) { return ITEM_BY[g] ? gearTile(ITEM_BY[g], true, true) : ''; }).join('') + '</div></div>' +
     '<div class="section"><h3 style="font-size:20px">Your notes</h3><textarea class="input" id="exnote" data-n="' + esc(name) + '" rows="2" maxlength="200" style="padding:10px 14px;min-height:64px" placeholder="Seat height, grip, cues… shows up during workouts">' + esc(S.settings.notes[name] || '') + '</textarea></div>' + '<div class="section"><h3 style="font-size:20px">How to do it</h3><ol class="steps">' + ex.i.map(function (s) { return '<li>' + esc(s) + '</li>'; }).join('') + '</ol></div>' + (S.draft ? '' : logBox) + extra;
   openSheet(ex.n, body); startDemo(ex);
 }
@@ -3401,7 +3409,8 @@ function liftSheet(name, metric) {
   var bw = isBW(ex), u = unit(), conv = function (lb) { return u === 'kg' ? lb / LB : lb; };
   var pts = H.map(function (x) { return { t: x.t, v: metric === 'vol' ? conv(x.vol) : metric === 'top' ? (bw ? x.topR : conv(x.topW)) : (bw ? x.best : conv(x.best)) }; });
   var first = H[0].best, cur = H[H.length - 1].best, best = Math.max.apply(null, H.map(function (x) { return x.best; }));
-  var fmtv = function (lb) { return bw ? Math.round(lb) + ' reps' : toDisp(lb, u) + ' ' + uLabel(); };
+  var wtd = bw && H.some(function (x) { return x.topW > 0; });
+  var fmtv = function (lb) { return bw ? (wtd ? '≈' : '') + Math.round(lb) + ' reps' : toDisp(lb, u) + ' ' + uLabel(); };
   var segs = bw ? '' : '<div class="seg" role="group"><button aria-pressed="' + (metric === 'e1rm') + '" data-act="liftMetric" data-n="' + esc(name) + '" data-k="e1rm">Est. 1RM</button><button aria-pressed="' + (metric === 'top') + '" data-act="liftMetric" data-n="' + esc(name) + '" data-k="top">Top weight</button><button aria-pressed="' + (metric === 'vol') + '" data-act="liftMetric" data-n="' + esc(name) + '" data-k="vol">Volume</button></div>';
   var body = segs + lineChart(pts, { label: name + ' trend', fmt: function (v) { return metric === 'vol' ? (v >= 1000 ? Math.round(v / 100) / 10 + 'k' : Math.round(v)) : Math.round(v * 10) / 10; } }) +
     '<div class="grid2"><div class="stat"><div class="v">' + fmtv(best) + '</div><div class="k">Best' + (bw ? '' : ' (est. 1RM)') + '</div></div><div class="stat"><div class="v">' + (H.length > 1 ? (cur >= first ? '+' : '') + Math.round((cur / first - 1) * 100) + '%' : '–') + '</div><div class="k">Since first session</div></div><div class="stat"><div class="v">' + fmtv(first) + '</div><div class="k">First session</div></div><div class="stat"><div class="v">' + H.length + '</div><div class="k">Sessions</div></div></div>' +
@@ -3411,14 +3420,32 @@ function liftSheet(name, metric) {
   openSheet(name, body);
 }
 function liftRankCard(name, H) {
-  var ex = BYNAME[name], k = parseK(ex.k); if (!k || !DATA.std[k.cls]) return '<div class="note">This exercise has no strength standard, so it does not affect your rank.</div>';
+  var ex = BYNAME[name], k = parseK(ex.k); if (!k || !DATA.std[k.cls]) return '<div class="note">This exercise has no strength standard for your size, so it does not affect your rank.</div>';
   var B = profB();
-  if (!B) return '<div class="card section" style="gap:10px"><div class="note">Add your height and weight to see how this lift ranks against people your size.</div><button class="btn small" data-act="bodyEdit">Add height &amp; weight</button></div>';
-  var r = exerciseRank(name, H, B, Date.now()); if (!r) return '';
+  if (!B) return '<div class="card section" style="gap:10px"><div class="xname">Targets for your size</div><div class="note">Add your height, weight and sex to see what novice to elite looks like for someone your size on this lift.</div><button class="btn small" data-act="bodyEdit">Add height &amp; weight</button></div>';
+  var now = Date.now(), r = H && H.length ? exerciseRank(name, H, B, now) : null;
+  var a = r ? r.anchors : stdAt(k.cls, B.sex, effBW(B.sex, B.h, curWeightLb(B))); if (!a) return '';
   var rep = DATA.std[k.cls].u === 'reps', lbls = ['Novice', 'Intermediate', 'Advanced', 'Elite'], pd = DATA.std[k.cls].pd;
-  var tbl = lbls.map(function (l, i) { var v = r.anchors[i + 1] * k.m; return '<div class="lrow"><span>' + l + '</span><span class="num" style="font-size:18px">' + (rep ? Math.max(1, Math.round(v)) + ' reps' : toDisp(v, unit()) + ' ' + uLabel() + (pd && ex.eq !== 'barbell' ? ' each' : '')) + '</span></div>'; }).join('');
-  return '<div class="card section" style="gap:10px"><div class="row" style="gap:14px"><div class="num" style="font-size:52px;line-height:.9">' + (r.est ? '≈' : '') + r.score + '</div><div class="grow"><div class="xname">' + tierOf(r.score) + ' for your size</div><div class="note">Stronger than about ' + Math.round(r.pct) + '% of ' + esc(bodyText(B)) + (r.est ? '. Estimated from the ' + CLASS_NAME[r.cls].toLowerCase() + ' standard.' : '.') + '</div></div></div>' +
-    '<div><span class="field-label" style="margin-bottom:2px">Targets for your size' + (rep ? '' : ' (est. 1-rep max)') + '</span>' + tbl + '</div></div>';
+  var each = pd && ex.eq !== 'barbell' ? ' each' : '', u = uLabel();
+  // weight used last time, for "reps at your weight" on weighted bodyweight moves
+  var lastW = 0; if (rep && H && H.length) lastW = H[H.length - 1].topW || 0;
+  var tbl = lbls.map(function (l, i) {
+    var v = a[i + 1] * k.m, right;
+    if (rep) {
+      var rr = Math.max(1, Math.round(v));
+      right = rr + ' reps' + (lastW > 0 ? '<span class="faint" style="font-size:13px;display:block;text-align:right">or ' + Math.max(1, Math.round(repsAtLoad(ex, v, lastW))) + ' reps with +' + toDisp(lastW, unit()) + ' ' + u + '</span>' : '');
+    } else {
+      var rw = function (lb) { var st = unit() === 'kg' ? 2.5 : 5, d = unit() === 'kg' ? lb / LB : lb; return Math.round(d / st) * st; };
+      right = rw(v) + ' ' + u + each + '<span class="faint" style="font-size:13px;display:block;text-align:right">≈ ' + rw(v / (1 + 8 / 30)) + ' ' + u + each + ' × 8</span>';
+    }
+    var hit = r && r.eq * k.m >= v;
+    return '<div class="lrow"><span>' + (hit ? '✓ ' : '') + l + '</span><span class="num" style="font-size:18px">' + right + '</span></div>';
+  }).join('');
+  var head = r ? '<div class="row" style="gap:14px"><div class="num" style="font-size:52px;line-height:.9">' + (r.est ? '≈' : '') + r.score + '</div><div class="grow"><div class="xname">' + tierOf(r.score) + ' for your size</div><div class="note">Stronger than about ' + Math.round(r.pct) + '% of ' + esc(bodyText(B)) + (r.est ? '. Estimated from the ' + CLASS_NAME[r.cls].toLowerCase() + ' standard.' : '.') + '</div></div></div>'
+    : '<div class="xname">Targets for your size</div><div class="note">For ' + esc(bodyText(B)) + '. Log this lift once to get your own rank.</div>';
+  var bwNote = rep && isBW(ex) ? '<div class="note">Added weight counts. A vest, belt or plate turns into extra bodyweight reps, e.g. ' + (function () { var w = unit() === 'kg' ? 10 * LB : 25, r0 = 10, eq = Math.round(bwEqReps(ex, w, r0)); return '+' + toDisp(w, unit()) + ' ' + u + ' × ' + r0 + ' counts as about ' + eq + ' reps'; })() + ' for you.</div>' : '';
+  return '<div class="card section" style="gap:10px">' + head +
+    '<div><span class="field-label" style="margin-bottom:2px">' + (r ? 'Targets for your size' : 'Levels') + (rep ? ' (reps in one set)' : ' (est. 1-rep max, and what that means for 8 reps)') + '</span>' + tbl + '</div>' + bwNote + '</div>';
 }
 function groupSheet(g) {
   var B = profB();

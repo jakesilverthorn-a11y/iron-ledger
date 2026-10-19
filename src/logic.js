@@ -44,10 +44,17 @@ function fmtW(lb, unit) { if (!lb) return '0'; return toDisp(lb, unit); }
 
 /* ---------- strength metric ---------- */
 function isBW(ex) { return ex && ex.eq === 'Bodyweight'; }
+/* weighted bodyweight work: added weight is turned into "bodyweight-equivalent reps" so a vest, belt or plate counts.
+   BW_FRAC is roughly how much of your bodyweight each movement moves. */
+var BW_FRAC = { pullup: 1, dip: 0.95, pushup: 0.65, situp: 0.35, calfbw: 1, hangleg: 0.35 };
+var metricBW = function () { return 0; };   // the UI points this at the current body weight (lb)
+function bwFrac(ex) { var k = parseK(ex && ex.k); return (k && BW_FRAC[k.cls]) || 0.6; }
+function bwEqReps(ex, w, r) { var B = metricBW(); if (!(w > 0) || !(B > 0)) return r; var base = bwFrac(ex) * B; return Math.min(300, 30 * w / base + r * (base + w) / base); }
+function repsAtLoad(ex, eqReps, w) { var B = metricBW(); if (!(w > 0) || !(B > 0)) return eqReps; var base = bwFrac(ex) * B; return (eqReps - 30 * w / base) * base / (base + w); }
 function setMetric(ex, s) {
   var r = +s.r || 0, w = +s.w || 0;
   if (r <= 0) return 0;
-  if (isBW(ex)) return r;                  // bodyweight work is tracked in reps
+  if (isBW(ex)) return w > 0 ? bwEqReps(ex, w, r) : r;   // bodyweight work is tracked in (equivalent) reps
   if (w <= 0) return 0;
   return w * (1 + Math.min(r, 15) / 30);   // Epley estimated 1RM
 }
