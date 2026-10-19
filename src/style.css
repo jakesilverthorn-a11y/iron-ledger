@@ -332,3 +332,9 @@ details.card summary { list-style: none; } details.card summary::-webkit-details
 .fbadge{width:46px;height:46px;border-radius:14px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:24px;flex:none}
 .fex{display:flex;flex-direction:column;gap:6px}
 .fexr{display:flex;gap:10px;align-items:center;text-align:left;width:100%;font-size:14.5px}
+
+.xlink{text-align:left;padding:0;color:inherit;display:inline;font-family:inherit;background:none;border:0;cursor:pointer}
+.info-i{display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;border-radius:50%;border:1.5px solid var(--muted);color:var(--muted);font-size:11px;font-weight:700;font-style:italic;font-family:Georgia,serif;vertical-align:2px;margin-left:2px}
+.loadhint{display:inline-flex;gap:4px;align-items:center;margin-top:4px;padding:3px 9px;border-radius:999px;background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent-ink);font-size:12.5px;font-weight:600}
+.loadbox{gap:6px;border-color:color-mix(in srgb,var(--accent) 45%,var(--line))}
+.sets .hd{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
