@@ -573,6 +573,7 @@ function viewSettings() {
   var status = dbState === 'synced' ? 'Saved to your Claude account and this device.' : dbState === 'error' ? 'Could not reach your account just now. Saved on this device and retrying.' : dbState === 'pending' ? 'Connecting…' : 'Saved on this device only. Back up regularly.';
   return '<div class="screen"><div class="screen-head"><h1>Settings</h1></div>' +
     '<div class="section"><span class="field-label">Weight units</span><div class="seg" role="group"><button aria-pressed="' + (st.unit === 'lb') + '" data-act="unit" data-k="lb">Pounds</button><button aria-pressed="' + (st.unit === 'kg') + '" data-act="unit" data-k="kg">Kilograms</button></div></div>' +
+    '<div class="section"><span class="field-label">Rest timer chime</span><div class="seg" role="group" aria-label="Rest timer chime"><button aria-pressed="' + (st.chime !== false) + '" data-act="chimeOpt" data-k="on">On</button><button aria-pressed="' + (st.chime === false) + '" data-act="chimeOpt" data-k="off">Off</button></div><div class="note">A short chime when rest is over, through your headphones or speaker. Keep the app open on screen (it stays awake during workouts); iPhones pause web apps that are in the background.</div></div>' +
     '<div class="section"><span class="field-label">Bottom corner</span><div class="seg" role="group" aria-label="Bottom corner space"><button aria-pressed="' + (st.lift !== false) + '" data-act="liftOpt" data-k="on">Keep clear</button><button aria-pressed="' + (st.lift === false) + '" data-act="liftOpt" data-k="off">Off</button></div><div class="note">Leaves room under the tab bar so a hosting badge (like "Powered by Netlify") cannot cover buttons.</div></div>' +
     '<div class="section"><h2>Your body</h2>' + bodyCard() + '</div>' +
     '<div class="section"><h2>Equipment</h2><div class="seg" role="group" aria-label="Which place to edit"><button aria-pressed="' + (st.profile === 'gym') + '" data-act="profile" data-k="gym">Gym</button><button aria-pressed="' + (st.profile === 'home') + '" data-act="profile" data-k="home">Home</button></div><div class="note">Tick what is available at your ' + profName().toLowerCase() + '. Built workouts only use ticked equipment; the Train tab switches between Gym and Home.</div>' + gearGrid() + '</div>' +
@@ -593,10 +594,10 @@ function tick() {
   var rb = $('#restbar');
   if (!rb) return;
   document.body.classList.toggle('resting', !!U.rest);
-  if (!U.rest) { if (!rb.hidden) { rb.hidden = true; rb.dataset.k = ''; } return; }
+  if (!U.rest) { if (!rb.hidden || rb.innerHTML) { rb.hidden = true; rb.dataset.k = ''; rb.innerHTML = ''; } return; }
   var left = Math.ceil((U.rest.end - Date.now()) / 1000);
   if (left <= 0 && !U.rest.done) { U.rest.done = true; U.rest.doneAt = Date.now(); beep(); try { if (navigator.vibrate) navigator.vibrate([220, 120, 220]); } catch (e) { } }
-  if (U.rest.done && Date.now() - U.rest.doneAt > 9000) { U.rest = null; rb.hidden = true; rb.dataset.k = ''; return; }
+  if (U.rest.done && Date.now() - U.rest.doneAt > 9000) { U.rest = null; rb.hidden = true; rb.dataset.k = ''; rb.innerHTML = ''; document.body.classList.remove('resting'); return; }
   var key = (U.rest.done ? 'd' : 'r') + U.rest.end0;
   if (rb.dataset.k !== key || rb.hidden) {
     rb.hidden = false; rb.dataset.k = key;
@@ -606,12 +607,45 @@ function tick() {
   var pct = U.rest.done ? 100 : Math.max(0, Math.min(100, (1 - left / U.rest.total) * 100));
   $('#rt').textContent = U.rest.done ? 'GO' : fmtDur(left); $('#rl').textContent = U.rest.done ? 'Rest is over' : 'Rest'; $('#rbar').style.width = pct + '%';
 }
-function unlockAudio() { try { var AC = window.AudioContext || window.webkitAudioContext; if (!AC) return; beep.ctx = beep.ctx || new AC(); if (beep.ctx.state === 'suspended') beep.ctx.resume(); } catch (e) { } }
+/* rest-over chime: a short three-note bell rendered to a WAV once, played through an <audio> element
+   (that plays through headphones and, unlike Web Audio, is not silenced by the iPhone ring/silent switch) */
+var CHIME = { el: null, url: null, unlocked: false };
+function chimeURL() {
+  if (CHIME.url) return CHIME.url;
+  var sr = 22050, dur = 1.1, n = Math.floor(sr * dur), data = new Int16Array(n);
+  var notes = [[0, 1318.5], [0.14, 1760], [0.28, 2093]];
+  for (var i = 0; i < n; i++) {
+    var t = i / sr, v = 0;
+    notes.forEach(function (nt) { var dt = t - nt[0]; if (dt < 0) return; var env = Math.min(1, dt / 0.006) * Math.exp(-dt * 5.5); v += env * (Math.sin(2 * Math.PI * nt[1] * dt) * 0.7 + Math.sin(4 * Math.PI * nt[1] * dt) * 0.18); });
+    data[i] = Math.max(-1, Math.min(1, v * 0.42)) * 32767;
+  }
+  var buf = new ArrayBuffer(44 + n * 2), dv = new DataView(buf);
+  function str(o, s2) { for (var k = 0; k < s2.length; k++) dv.setUint8(o + k, s2.charCodeAt(k)); }
+  str(0, 'RIFF'); dv.setUint32(4, 36 + n * 2, true); str(8, 'WAVE'); str(12, 'fmt '); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
+  dv.setUint32(24, sr, true); dv.setUint32(28, sr * 2, true); dv.setUint16(32, 2, true); dv.setUint16(34, 16, true); str(36, 'data'); dv.setUint32(40, n * 2, true);
+  for (var m = 0; m < n; m++) dv.setInt16(44 + m * 2, data[m], true);
+  CHIME.url = URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
+  return CHIME.url;
+}
+function chimeEl() { if (!CHIME.el) { try { CHIME.el = new Audio(chimeURL()); CHIME.el.preload = 'auto'; CHIME.el.setAttribute('playsinline', ''); } catch (e) { CHIME.el = null; } } return CHIME.el; }
+function unlockAudio() {
+  // called from a tap: lets the chime play later without a tap (iOS rule)
+  if (S.settings.chime === false) return;
+  var el = chimeEl(); if (!el || CHIME.unlocked) return;
+  try { el.muted = true; var pr = el.play(); if (pr && pr.then) pr.then(function () { el.pause(); el.currentTime = 0; el.muted = false; CHIME.unlocked = true; }, function () { el.muted = false; }); } catch (e) { }
+}
 function beep() {
+  if (S.settings.chime === false) return;
+  try { if (navigator.audioSession) navigator.audioSession.type = 'transient'; } catch (e) { }
+  var el = chimeEl();
+  if (el) { try { el.muted = false; el.currentTime = 0; var pr = el.play(); if (pr && pr.catch) pr.catch(beepWA); return; } catch (e) { } }
+  beepWA();
+}
+function beepWA() {
   try {
     var AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
-    beep.ctx = beep.ctx || new AC(); var c = beep.ctx, o = c.createOscillator(), g = c.createGain();
-    o.frequency.value = 880; g.gain.value = 0.08; o.connect(g); g.connect(c.destination); o.start(); o.stop(c.currentTime + 0.25);
+    beep.ctx = beep.ctx || new AC(); var c = beep.ctx;
+    [[0, 1318.5], [0.14, 1760], [0.28, 2093]].forEach(function (nt) { var o = c.createOscillator(), g = c.createGain(), t0 = c.currentTime + nt[0]; o.frequency.value = nt[1]; g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.25, t0 + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.7); o.connect(g); g.connect(c.destination); o.start(t0); o.stop(t0 + 0.75); });
   } catch (e) { }
 }
 var wakeLock = null;
@@ -628,7 +662,7 @@ function finishWorkout() {
   if (!w.ex.length) { toast('Check off at least one set first.'); return; }
   var prs = findPRs(realWorkouts(), w);
   S.workouts.push(w); S.workouts.sort(function (a, b) { return a.t - b.t; });
-  S.draft = null; U.rest = null; U.plan = null; U.confirm = null;
+  S.draft = null; U.rest = null; U.plan = null; U.confirm = null; tick();
   persist({ draft: true, month: w.t });
   try { if (wakeLock) wakeLock.release(); } catch (e) { } wakeLock = null;
   var body = '<div class="grid2"><div class="stat"><div class="v">' + Math.round(w.dur / 60) + ' min</div><div class="k">Time</div></div><div class="stat"><div class="v">' + workoutSets(w) + '</div><div class="k">Sets</div></div><div class="stat"><div class="v">' + volDisp(workoutVolume(w)) + '</div><div class="k">Volume (' + uLabel() + ')</div></div><div class="stat"><div class="v">' + prs.length + '</div><div class="k">New bests</div></div></div>' +
@@ -692,9 +726,10 @@ document.addEventListener('click', function (ev) {
   if (a === 'finish') { finishWorkout(); return; }
   if (a === 'discard') { U.confirm = 'discard'; render(); return; }
   if (a === 'noconfirm') { U.confirm = null; render(); return; }
-  if (a === 'discard2') { S.draft = null; U.rest = null; U.confirm = null; persist({ draft: true }); render(); return; }
+  if (a === 'discard2') { S.draft = null; U.rest = null; U.confirm = null; persist({ draft: true }); render(); tick(); return; }
   if (a === 'restAdd') { if (U.rest) { U.rest.end += +d.v * 1000; U.rest.total = Math.max(15, U.rest.total + +d.v); tick(); } return; }
   if (a === 'restSkip') { U.rest = null; tick(); return; }
+  if (a === 'chimeOpt') { st.chime = d.k === 'on'; persist({ settings: true }); render(); if (st.chime) { unlockAudio(); setTimeout(beep, 120); } return; }
   if (a === 'libGroup') { var j = U.libGroups.indexOf(d.g); if (j >= 0) U.libGroups.splice(j, 1); else U.libGroups.push(d.g); U.libShown = 40; render(); return; }
   if (a === 'libGear') { U.libGear = d.k; U.libShown = 40; render(); return; }
   if (a === 'libMore') { U.libShown += 60; refreshLibList(); return; }
@@ -925,6 +960,7 @@ render();
 setInterval(tick, 1000);
 keepAwake();
 initDb();
+if (typeof photosInit === 'function') photosInit();
 setTimeout(function () { aiDetect().then(function () { if (U.tab === 'body') render(); }); }, 50);
 try { if (!window.claude && 'serviceWorker' in navigator && /^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js'); } catch (e) { }
 

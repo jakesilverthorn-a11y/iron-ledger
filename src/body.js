@@ -15,9 +15,39 @@ var FOCUS = {
   posture: { n: 'Posture', e: '🧍', g: ['Back', 'Shoulders'], ex: ['Face Pull', 'Reverse Flyes', 'Band Pull Apart', 'Seated Cable Rows', 'Hyperextensions (Back Extensions)', 'Plank'], tip: 'Rounded shoulders usually mean the upper back and rear shoulders need work. Pull more than you push for a while.' }
 };
 var FOCUS_IDS = Object.keys(FOCUS);
-var PHOTO_KEY = 'ironledger.photos';
-function photosLoad() { try { var a = JSON.parse(localStorage.getItem(PHOTO_KEY) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
-function photosSave(a) { try { localStorage.setItem(PHOTO_KEY, JSON.stringify(a.slice(-8))); return true; } catch (e) { toast('Not enough space on this phone for another photo. Delete an old one.'); return false; } }
+var PHOTO_KEY = 'ironledger.photos', PHOTOS = null, PHOTO_MAX = 60, PHOTO_IDB = null;
+/* photos live in IndexedDB (room for many); older versions kept a few in localStorage, which we move over once */
+function idbOpen() {
+  return new Promise(function (ok, bad) {
+    if (!window.indexedDB) { bad(new Error('no idb')); return; }
+    var r = indexedDB.open('ironledger', 1);
+    r.onupgradeneeded = function () { r.result.createObjectStore('kv'); };
+    r.onsuccess = function () { ok(r.result); }; r.onerror = function () { bad(r.error); };
+  });
+}
+function idbGet(k) { return idbOpen().then(function (db) { return new Promise(function (ok, bad) { var q = db.transaction('kv').objectStore('kv').get(k); q.onsuccess = function () { ok(q.result); }; q.onerror = function () { bad(q.error); }; }); }); }
+function idbSet(k, v) { return idbOpen().then(function (db) { return new Promise(function (ok, bad) { var tx = db.transaction('kv', 'readwrite'); tx.objectStore('kv').put(v, k); tx.oncomplete = function () { ok(); }; tx.onerror = function () { bad(tx.error); }; }); }); }
+function legacyPhotos() { try { var a = JSON.parse(localStorage.getItem(PHOTO_KEY) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+function photosInit() {
+  return idbGet('photos').then(function (a) {
+    PHOTO_IDB = true; var old = legacyPhotos();
+    PHOTOS = Array.isArray(a) ? a : [];
+    if (old.length) { var have = {}; PHOTOS.forEach(function (x) { have[x.t] = 1; }); old.forEach(function (x) { if (!have[x.t]) PHOTOS.push(x); }); PHOTOS.sort(function (x, y) { return x.t - y.t; }); return idbSet('photos', PHOTOS).then(function () { try { localStorage.removeItem(PHOTO_KEY); } catch (e) { } }); }
+  }).catch(function () { PHOTO_IDB = false; PHOTOS = legacyPhotos(); }).then(function () { if (U.tab === 'body') render(); });
+}
+function photosLoad() { return PHOTOS || legacyPhotos(); }
+function photosSave(a) {
+  if (PHOTO_IDB) { PHOTOS = a.slice(-PHOTO_MAX); idbSet('photos', PHOTOS).catch(function () { toast('Could not save the photo. Your phone may be out of space.'); }); return true; }
+  try { PHOTOS = a.slice(-8); localStorage.setItem(PHOTO_KEY, JSON.stringify(PHOTOS)); return true; } catch (e) { toast('Not enough space on this phone for another photo. Delete an old one.'); return false; }
+}
+async function savePhotoFile(p) {
+  var blob = dataURLBlob(p.d), name = 'progress-' + new Date(p.t).toISOString().slice(0, 10) + '.jpg';
+  await saveBlob(blob, name, 'image/jpeg', 'Photo saved');
+}
+async function saveBlob(blob, name, type, okMsg) {
+  try { var f = new File([blob], name, { type: type }); if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f] }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+  try { var url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function () { URL.revokeObjectURL(url); }, 5000); toast(okMsg); } catch (e) { toast('Could not save it.'); }
+}
 function BS() { var b = S.settings.bodyFocus; if (!b || typeof b !== 'object') b = S.settings.bodyFocus = { res: null, goal: 'both', pick: [] }; if (!b.pick) b.pick = []; return b; }
 
 function shrinkImage(file, max, q) {
@@ -33,7 +63,7 @@ function shrinkImage(file, max, q) {
     img.src = url;
   });
 }
-function dataURLBlob(du) { var p = du.split(','), b = atob(p[1]), a = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) a[i] = b.charCodeAt(i); return new Blob([a], { type: 'image/jpeg' }); }
+function dataURLBlob(du) { var p = du.split(','), m = (p[0].match(/data:([^;]+)/) || [])[1] || 'image/jpeg', b = atob(p[1]), a = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) a[i] = b.charCodeAt(i); return new Blob([a], { type: m }); }
 
 /* what the strength numbers say */
 function weakGroups() {
@@ -148,7 +178,7 @@ function viewBody() {
     (last ? (AI.kind ? '<button class="btn primary block" data-act="bodyAnalyze"' + (AI.busy ? ' disabled' : '') + '>' + (AI.busy ? 'Looking at your photo…' : 'Analyze my latest photo') + '</button>' : '<div class="note">Photo analysis works in the Claude-hosted version, or when you are signed in to a friends server with AI turned on. Use the self-check below meanwhile.</div>') : '') +
     (AI.busy && AI.kind === 'claude' ? '<button class="btn small ghost" data-act="bodyStop">Stop</button>' : '') +
     (AI.err ? '<div class="banner"><span>' + esc(AI.err) + '</span></div>' : '') +
-    (photos.length ? '<button class="btn small ghost" data-act="bodyPhotos">Manage photos (' + photos.length + ')</button>' : '') +
+    (photos.length ? '<div class="row" style="gap:8px">' + (photos.length > 1 ? '<button class="btn grow" data-act="bodyTimeline">▶ Timeline</button>' : '') + '<button class="btn grow" data-act="bodyPhotos">All photos (' + photos.length + ')</button></div>' : '') +
     '<div class="note">Photos stay on this phone. When you tap Analyze, the photo is sent once to ' + (AI.kind === 'server' ? 'your friends server\'s AI' : 'Claude') + ' to read it, and the app does not keep it anywhere else.</div></div>';
   var self = '<div class="card section" style="gap:12px"><h2>Self-check</h2><div class="note">No photo needed. Tap what you want to improve. Your strength numbers fill in the rest.</div>' +
     '<div><span class="field-label">Main goal</span><div class="seg" role="group"><button aria-pressed="' + (F.goal === 'lose') + '" data-act="bodyGoal" data-k="lose">Lose fat</button><button aria-pressed="' + (F.goal === 'both') + '" data-act="bodyGoal" data-k="both">Both</button><button aria-pressed="' + (F.goal === 'build') + '" data-act="bodyGoal" data-k="build">Build muscle</button></div></div>' +
@@ -160,7 +190,81 @@ function viewBody() {
 }
 function photosSheet() {
   var photos = photosLoad();
-  openSheet('Your photos', '<div class="pgrid">' + photos.map(function (p, i) { return '<figure><img src="' + p.d + '" alt="Photo from ' + fmtDate(p.t) + '"><figcaption>' + fmtDate(p.t) + ' <button class="linkbtn" data-act="bodyDelPhoto" data-i="' + i + '">Delete</button></figcaption></figure>'; }).join('') + '</div><div class="note">Up to 8 photos are kept. The oldest is removed when you add a ninth.</div>');
+  openSheet('Your photos', '<div class="pgrid">' + photos.map(function (p, i) { return '<figure><img src="' + p.d + '" alt="Photo from ' + fmtDate(p.t) + '"><figcaption>' + fmtDate(p.t) + '<span><button class="linkbtn" data-act="bodySavePhoto" data-i="' + i + '">Save</button> · <button class="linkbtn" data-act="bodyDelPhoto" data-i="' + i + '">Delete</button></span></figcaption></figure>'; }).reverse().join('') + '</div>' +
+    '<div class="note">Up to ' + PHOTO_MAX + ' photos are kept in the app. Tap Save to keep a copy in your Photos or Files too' + (PHOTO_IDB ? '' : ' (this browser only allows a few, so save them)') + '.</div>');
+}
+
+/* ----- timeline video ----- */
+var TL = { raf: 0, rec: null };
+function tlFrames() { var ph = photosLoad(); if (ph.length <= 12) return ph; var out = [], n = 12; for (var i = 0; i < n; i++) out.push(ph[Math.round(i * (ph.length - 1) / (n - 1))]); return out; }
+function tlLoadImgs(list) { return Promise.all(list.map(function (p) { return new Promise(function (ok) { var im = new Image(); im.onload = function () { ok(im); }; im.onerror = function () { ok(null); }; im.src = p.d; }); })); }
+function tlDraw(x, W, H, imgs, list, t) {
+  // t in seconds. each photo: 1.3s hold + 0.7s crossfade; then a 2.8s before/after card
+  var per = 2, n = imgs.length, tot = n * per, B = profB(), u = uLabel();
+  function cover(im, a) { if (!im) return; var s = Math.max(W / im.width, (H - 120) / im.height), w = im.width * s, h = im.height * s; x.globalAlpha = a; x.drawImage(im, (W - w) / 2, 70 + (H - 120 - h) / 2, w, h); x.globalAlpha = 1; }
+  x.fillStyle = '#0f1113'; x.fillRect(0, 0, W, H);
+  var fd = '"Barlow Condensed", "Arial Narrow", sans-serif', fb = 'Barlow, Helvetica, Arial, sans-serif';
+  if (t < tot) {
+    var i = Math.min(n - 1, Math.floor(t / per)), k = t - i * per, fade = k > 1.3 && i < n - 1 ? (k - 1.3) / 0.7 : 0;
+    cover(imgs[i], 1); if (fade > 0) cover(imgs[i + 1], fade);
+    var cur = fade > 0.5 ? i + 1 : i, p = list[cur], wk = Math.round((p.t - list[0].t) / (7 * DAY));
+    x.fillStyle = 'rgba(15,17,19,.82)'; x.fillRect(0, H - 50, W, 50); x.fillRect(0, 0, W, 70);
+    x.fillStyle = '#f2c230'; x.font = '700 30px ' + fd; x.fillText('IRON LEDGER', 22, 45);
+    x.fillStyle = '#eceae4'; x.font = '700 34px ' + fd; x.textAlign = 'right'; x.fillText(wk ? 'Week ' + wk : 'Start', W - 22, 46); x.textAlign = 'left';
+    x.fillStyle = '#eceae4'; x.font = '600 22px ' + fb; x.fillText(fmtDateLong(p.t), 22, H - 18);
+    if (B) { var w = bwAt(B, p.t); if (w) { x.textAlign = 'right'; x.fillText(toDisp(w, unit()) + ' ' + u, W - 22, H - 18); x.textAlign = 'left'; } }
+    // progress bar
+    x.fillStyle = '#2a2f36'; x.fillRect(0, H - 52, W, 3); x.fillStyle = '#f2c230'; x.fillRect(0, H - 52, W * Math.min(1, t / tot), 3);
+    return false;
+  }
+  // before / after
+  var a = Math.min(1, (t - tot) / 0.5), half = W / 2 - 6;
+  x.globalAlpha = a;
+  [0, n - 1].forEach(function (idx, j) { var im = imgs[idx]; if (!im) return; var s = Math.max(half / im.width, (H - 170) / im.height), w = im.width * s, h = im.height * s; x.save(); x.beginPath(); x.rect(j * (half + 12), 80, half, H - 170); x.clip(); x.drawImage(im, j * (half + 12) + (half - w) / 2, 80 + (H - 170 - h) / 2, w, h); x.restore(); });
+  x.fillStyle = '#0f1113'; x.fillRect(0, 0, W, 80); x.fillRect(0, H - 90, W, 90);
+  x.fillStyle = '#f2c230'; x.font = '700 30px ' + fd; x.fillText('IRON LEDGER', 22, 48);
+  var weeks = Math.max(1, Math.round((list[n - 1].t - list[0].t) / (7 * DAY)));
+  x.fillStyle = '#eceae4'; x.font = '700 40px ' + fd; x.textAlign = 'right'; x.fillText(weeks + (weeks === 1 ? ' week' : ' weeks'), W - 22, 52); x.textAlign = 'left';
+  x.font = '600 22px ' + fb; x.fillStyle = '#99a0a9';
+  x.fillText(fmtDate(list[0].t), 22, H - 52); x.textAlign = 'right'; x.fillText(fmtDate(list[n - 1].t), W - 22, H - 52); x.textAlign = 'left';
+  if (B) { var w0 = bwAt(B, list[0].t), w1 = bwAt(B, list[n - 1].t); if (w0 && w1 && Math.abs(w1 - w0) >= 0.5) { var dlt = w1 - w0; x.fillStyle = '#eceae4'; x.font = '700 26px ' + fb; x.textAlign = 'center'; x.fillText((dlt > 0 ? '+' : '−') + toDisp(Math.abs(dlt), unit()) + ' ' + u, W / 2, H - 22); x.textAlign = 'left'; } }
+  x.globalAlpha = 1;
+  return t > tot + 2.8;
+}
+function tlStop() { cancelAnimationFrame(TL.raf); TL.raf = 0; }
+function timelineSheet() {
+  var list = tlFrames(); if (list.length < 2) { toast('Add at least two photos first.'); return; }
+  var canRec = !!(window.MediaRecorder && HTMLCanvasElement.prototype.captureStream);
+  openSheet('Your timeline', '<canvas id="tlc" width="540" height="760" style="width:100%;border-radius:16px;background:#0f1113"></canvas>' +
+    '<div class="row" style="gap:8px"><button class="btn grow" data-act="bodyTlPlay">↻ Replay</button>' + (canRec ? '<button class="btn primary grow" data-act="bodyTlSave" id="tlsave">Save video</button>' : '') + '</div>' +
+    '<div class="note">' + list.length + ' photos from ' + fmtDate(list[0].t) + ' to ' + fmtDate(list[list.length - 1].t) + (photosLoad().length > list.length ? ' (spread evenly across all ' + photosLoad().length + ')' : '') + '. Same pose, light and spot each time makes it look best.</div>');
+  tlPlay();
+}
+function tlPlay() {
+  tlStop(); var c = $('#tlc'); if (!c) return; var x = c.getContext('2d'), list = tlFrames();
+  tlLoadImgs(list).then(function (imgs) {
+    var t0 = performance.now();
+    (function step(now) { var c2 = $('#tlc'); if (!c2) { tlStop(); return; } var done = tlDraw(x, c.width, c.height, imgs, list, (now - t0) / 1000); if (!done) TL.raf = requestAnimationFrame(step); })(t0);
+  });
+}
+function tlRecord() {
+  var list = tlFrames(), btn = $('#tlsave'); if (TL.rec) return;
+  var c = document.createElement('canvas'); c.width = 540; c.height = 760; var x = c.getContext('2d');
+  var types = ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm'], type = types.filter(function (t) { return MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t); })[0] || '';
+  tlLoadImgs(list).then(function (imgs) {
+    var stream = c.captureStream(30), rec, chunks = [];
+    try { rec = type ? new MediaRecorder(stream, { mimeType: type, videoBitsPerSecond: 2500000 }) : new MediaRecorder(stream); } catch (e) { toast('This browser cannot make videos.'); return; }
+    TL.rec = rec; if (btn) { btn.disabled = true; btn.textContent = 'Making video…'; }
+    rec.ondataavailable = function (e) { if (e.data && e.data.size) chunks.push(e.data); };
+    rec.onstop = function () {
+      TL.rec = null; var mt = rec.mimeType || type || 'video/webm', ext = /mp4/.test(mt) ? 'mp4' : 'webm', blob = new Blob(chunks, { type: mt.split(';')[0] });
+      var b2 = $('#tlsave'); if (b2) { b2.disabled = false; b2.textContent = 'Save video'; }
+      saveBlob(blob, 'iron-ledger-timeline.' + ext, mt.split(';')[0], 'Video saved');
+    };
+    rec.start(250);
+    var t0 = performance.now();
+    (function step() { var done = tlDraw(x, c.width, c.height, imgs, list, (performance.now() - t0) / 1000); if (done) { setTimeout(function () { rec.stop(); }, 150); } else setTimeout(step, 1000 / 30); })();
+  });
 }
 
 /* ----- events ----- */
@@ -182,6 +286,10 @@ function bodyClick(a, d) {
     }
     case 'bodyStop': if (AI.ctl) AI.ctl.abort(); return true;
     case 'bodyPhotos': photosSheet(); return true;
+    case 'bodySavePhoto': { var sp = photosLoad()[+d.i]; if (sp) savePhotoFile(sp); return true; }
+    case 'bodyTimeline': timelineSheet(); return true;
+    case 'bodyTlPlay': tlPlay(); return true;
+    case 'bodyTlSave': tlRecord(); return true;
     case 'bodyDelPhoto': { var p = photosLoad(); p.splice(+d.i, 1); photosSave(p); photosSheet(); render(); return true; }
     case 'bodyTrain': { var gs = d.g.split(',').filter(function (g) { return GROUPS.indexOf(g) >= 0; }); if (gs.length) S.settings.groups = gs; persist({ settings: true }); U.tab = 'train'; U.plan = null; render(); window.scrollTo(0, 0); toast('Focus muscles selected. Tap Build my workout.'); return true; }
     case 'bodyEat': { var FF = FS(); FF.goal = d.k; FF.days = {}; persist({ settings: true }); toast('Eat goal set to ' + FGOALS[d.k].n); render(); return true; }
@@ -192,7 +300,7 @@ var BODY_FULL = null;   // sharper copy of the newest photo, kept in memory only
 function bodyChange(t) {
   if (t.id !== 'bodyfile' || !t.files || !t.files[0]) return false;
   var file = t.files[0]; t.value = '';
-  Promise.all([shrinkImage(file, 520, 0.72), shrinkImage(file, 1024, 0.82)]).then(function (r) {
+  Promise.all([shrinkImage(file, 720, 0.8), shrinkImage(file, 1024, 0.82)]).then(function (r) {
     var p = photosLoad(); p.push({ t: Date.now(), d: r[0] });
     if (photosSave(p)) { BODY_FULL = r[1]; AI.err = ''; render(); toast('Photo saved on this phone'); }
   }, function (e) { toast(e.message); });
