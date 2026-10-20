@@ -1,5 +1,5 @@
 // Iron Ledger offline cache: app shell network-first, pictures cached as they are used.
-const V = 'il-1792413879';
+const V = 'il-1792462560';
 self.addEventListener('install', e => { self.skipWaiting(); e.waitUntil(caches.open(V).then(c => c.addAll(['./', 'index.html', 'manifest.webmanifest', 'icon-192.png']))); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== V).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', e => {

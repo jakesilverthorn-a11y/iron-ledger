@@ -81,7 +81,43 @@ async function aiDetect() {
   if (window.claude && window.claude.use) {
     try { var sm = await window.claude.use('sample'); if (sm) { var lim = await sm.limits().catch(function () { return null; }); if (lim && lim.images) { AI.kind = 'claude'; AI.sample = sm; return; } } } catch (e) { }
   }
-  AI.kind = srvOn() ? 'server' : null;
+  AI.kind = aiKey() ? 'key' : srvOn() ? 'server' : null;
+}
+/* your own Anthropic API key: stored only on this phone, sent only to api.anthropic.com */
+var AK_KEY = 'ironledger.ak';
+function aiKey() { try { return localStorage.getItem(AK_KEY) || ''; } catch (e) { return ''; } }
+function aiKeySet(k) { try { if (k) localStorage.setItem(AK_KEY, k); else localStorage.removeItem(AK_KEY); } catch (e) { } }
+var AI_MODEL = 'claude-sonnet-5-5';
+async function aiAnthropic(du, prompt, key) {
+  var ctl = new AbortController(), to = setTimeout(function () { ctl.abort(); }, 90000); AI.ctl = ctl;
+  var r, j = null;
+  try {
+    r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', signal: ctl.signal, headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({ model: AI_MODEL, max_tokens: 900, messages: [{ role: 'user', content: [{ type: 'image', source: { type: 'base64', media_type: (du.match(/^data:([^;]+)/) || [])[1] || 'image/jpeg', data: du.split(',')[1] } }, { type: 'text', text: prompt }] }] }) });
+  } catch (e) { clearTimeout(to); var ne = new Error(e && e.name === 'AbortError' ? 'Stopped.' : 'Could not reach Claude. Check your connection.'); ne.code = e && e.name === 'AbortError' ? 'cancelled' : 'network'; throw ne; }
+  clearTimeout(to);
+  try { j = await r.json(); } catch (e) { }
+  if (!r.ok) {
+    var msg = (j && j.error && j.error.message) || '', er = new Error(msg || 'Claude returned an error (' + r.status + ').'); er.code = 'k' + r.status;
+    if (r.status === 401 || r.status === 403) er.message = 'That API key was not accepted. Check it under "Photo analysis" below.';
+    else if (r.status === 429 || r.status === 529) er.message = 'Claude is busy right now. Try again in a minute.';
+    else if (/credit|balance|billing/i.test(msg)) er.message = 'Your Anthropic account is out of credit. Add some at console.anthropic.com (Billing).';
+    else if (r.status === 404 && /model/i.test(msg)) er.message = 'That model is not available on your account: ' + msg;
+    throw er;
+  }
+  var txt = ((j && j.content) || []).filter(function (c) { return c.type === 'text'; }).map(function (c) { return c.text; }).join('');
+  var m = txt.match(/\{[\s\S]*\}/); if (!m) throw new Error('The answer did not come back in the expected form. Try again.');
+  return JSON.parse(m[0]);
+}
+function keySheet() {
+  var k = aiKey();
+  openSheet('Photo analysis', '<div class="note">To analyze photos in this app (including from your Home Screen), connect your own Claude API key. It is stored only on this phone and is sent only to Anthropic when you tap Analyze. Each analysis costs about 1–2 cents from your API credit.</div>' +
+    '<ol class="steps"><li>Go to <b>console.anthropic.com</b> and sign in (or make an account).</li><li>Open <b>Billing</b> and add a little credit, for example $5. Setting a monthly spend limit is a good idea.</li><li>Open <b>API keys</b>, tap <b>Create key</b>, name it "Iron Ledger", and copy it. It starts with <b>sk-ant-</b>.</li><li>Paste it below and tap Save.</li></ol>' +
+    '<input class="input" id="akin" type="password" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="sk-ant-…" value="' + esc(k) + '" aria-label="Claude API key">' +
+    '<div class="note" id="ak-err" style="color:var(--down);min-height:0"></div>' +
+    '<button class="btn primary block" data-act="bodyKeySave">Save key</button>' +
+    (k ? '<button class="btn block ghost danger" data-act="bodyKeyDel">Remove key from this phone</button>' : '') +
+    '<div class="note">Keep the key private: anyone who has it can spend your API credit. Friends using your app link need their own key (or your friends server).</div>');
 }
 function aiPrompt() {
   var B = profB(), wk = weakGroups(), F = BS();
@@ -109,6 +145,7 @@ async function aiAnalyze(du) {
     var j = await AI.sample.json(prompt, { images: [dataURLBlob(du)], signal: AI.ctl.signal, cache: false });
     return cleanAI(j);
   }
+  if (AI.kind === 'key') return cleanAI(await aiAnthropic(du, prompt, aiKey()));
   if (AI.kind === 'server') {
     var r = await srvRaw('POST', '/analyze', { image: du, prompt: prompt });
     return cleanAI(r.data);
@@ -175,11 +212,12 @@ function viewBody() {
   var photoCard = '<div class="card section" style="gap:12px"><h2>Progress photo</h2>' +
     (last ? '<div class="pcmp">' + (photos.length > 1 ? '<figure><img src="' + first.d + '" alt="First photo"><figcaption>' + fmtDate(first.t) + '</figcaption></figure>' : '') + '<figure><img src="' + last.d + '" alt="Latest photo"><figcaption>' + (photos.length > 1 ? 'Latest · ' : '') + fmtDate(last.t) + '</figcaption></figure></div>' : '<div class="note">Take a front photo in good light, standing relaxed, in shorts or fitted clothes. Same spot and time of day each time makes progress easy to see.</div>') +
     '<label class="btn ' + (last ? '' : 'primary ') + 'block filebtn">' + (last ? 'Add a new photo' : 'Take or choose a photo') + '<input type="file" id="bodyfile" accept="image/*" capture="user" hidden></label>' +
-    (last ? (AI.kind ? '<button class="btn primary block" data-act="bodyAnalyze"' + (AI.busy ? ' disabled' : '') + '>' + (AI.busy ? 'Looking at your photo…' : 'Analyze my latest photo') + '</button>' : '<div class="note">Photo analysis works in the Claude-hosted version, or when you are signed in to a friends server with AI turned on. Use the self-check below meanwhile.</div>') : '') +
-    (AI.busy && AI.kind === 'claude' ? '<button class="btn small ghost" data-act="bodyStop">Stop</button>' : '') +
+    (last ? (AI.kind ? '<button class="btn primary block" data-act="bodyAnalyze"' + (AI.busy ? ' disabled' : '') + '>' + (AI.busy ? 'Looking at your photo…' : 'Analyze my latest photo') + '</button>' : '<button class="btn primary block" data-act="bodyKey">Turn on photo analysis</button><div class="note">One-time setup with your own Claude API key (about 1–2 cents per photo). Or use the self-check below.</div>') : '') +
+    (AI.kind === 'key' ? '<button class="linkbtn" style="font-size:13px;color:var(--muted)" data-act="bodyKey">Photo analysis settings</button>' : '') +
+    (AI.busy && (AI.kind === 'claude' || AI.kind === 'key') ? '<button class="btn small ghost" data-act="bodyStop">Stop</button>' : '') +
     (AI.err ? '<div class="banner"><span>' + esc(AI.err) + '</span></div>' : '') +
     (photos.length ? '<div class="row" style="gap:8px">' + (photos.length > 1 ? '<button class="btn grow" data-act="bodyTimeline">▶ Timeline</button>' : '') + '<button class="btn grow" data-act="bodyPhotos">All photos (' + photos.length + ')</button></div>' : '') +
-    '<div class="note">Photos stay on this phone. When you tap Analyze, the photo is sent once to ' + (AI.kind === 'server' ? 'your friends server\'s AI' : 'Claude') + ' to read it, and the app does not keep it anywhere else.</div></div>';
+    '<div class="note">Photos stay on this phone. When you tap Analyze, the photo is sent once to ' + (AI.kind === 'server' ? 'your friends server\'s AI' : AI.kind === 'key' ? 'Claude (Anthropic) using your key' : 'Claude') + ' to read it, and the app does not keep it anywhere else.</div></div>';
   var self = '<div class="card section" style="gap:12px"><h2>Self-check</h2><div class="note">No photo needed. Tap what you want to improve. Your strength numbers fill in the rest.</div>' +
     '<div><span class="field-label">Main goal</span><div class="seg" role="group"><button aria-pressed="' + (F.goal === 'lose') + '" data-act="bodyGoal" data-k="lose">Lose fat</button><button aria-pressed="' + (F.goal === 'both') + '" data-act="bodyGoal" data-k="both">Both</button><button aria-pressed="' + (F.goal === 'build') + '" data-act="bodyGoal" data-k="build">Build muscle</button></div></div>' +
     '<div><span class="field-label">I want to improve</span><div class="chips">' + FOCUS_IDS.map(function (a) { return '<button class="chip" aria-pressed="' + (F.pick.indexOf(a) >= 0) + '" data-act="bodyPick" data-k="' + a + '">' + FOCUS[a].e + ' ' + (a === 'belly' ? 'Lose the gut' : FOCUS[a].n) + '</button>'; }).join('') + '</div></div>' +
@@ -286,6 +324,11 @@ function bodyClick(a, d) {
     }
     case 'bodyStop': if (AI.ctl) AI.ctl.abort(); return true;
     case 'bodyPhotos': photosSheet(); return true;
+    case 'bodyKey': keySheet(); return true;
+    case 'bodyKeySave': { var kv = (($('#akin') || {}).value || '').trim(), ke = $('#ak-err');
+      if (!/^sk-ant-[A-Za-z0-9_\-]{20,}$/.test(kv)) { if (ke) ke.textContent = 'That does not look like a Claude API key. It should start with sk-ant-.'; return true; }
+      aiKeySet(kv); if (!window.claude) AI.kind = 'key'; AI.err = ''; closeSheet(); render(); toast('Photo analysis is on'); return true; }
+    case 'bodyKeyDel': aiKeySet(''); AI.kind = srvOn() ? 'server' : (window.claude ? AI.kind : null); closeSheet(); render(); toast('Key removed'); return true;
     case 'bodySavePhoto': { var sp = photosLoad()[+d.i]; if (sp) savePhotoFile(sp); return true; }
     case 'bodyTimeline': timelineSheet(); return true;
     case 'bodyTlPlay': tlPlay(); return true;
