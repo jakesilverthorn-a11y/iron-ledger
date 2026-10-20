@@ -340,3 +340,13 @@ details.card summary { list-style: none; } details.card summary::-webkit-details
 .sets .hd{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 [hidden]{display:none !important}
+
+.injw{font-size:12.5px;margin-top:3px;color:#c98a12;font-weight:600}
+.injw.bad{color:var(--down)}
+.banner.bad{border-color:color-mix(in srgb,var(--down) 55%,transparent)}
+.chip.inj.careful{border-color:#d9a21b}
+.chip.inj.avoid{border-color:var(--down);background:color-mix(in srgb,var(--down) 18%,transparent);color:var(--fg)}
+.savedw summary{cursor:pointer;list-style:none}
+.savedw summary::-webkit-details-marker{display:none}
+.savedw summary::after{content:' ▾';color:var(--muted)}
+.lrow.sv{gap:8px;align-items:center}

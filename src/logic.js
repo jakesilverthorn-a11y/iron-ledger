@@ -166,7 +166,7 @@ var CLASSIC = /\b(bench press|incline dumbbell press|barbell squat|goblet squat|
 function famKey(n) {
   n = n.toLowerCase();
   if (/pull-?ups?|chin-?ups?|pullups|chinups/.test(n)) return 'pullup';
-  if (/push-?ups?|pushups/.test(n)) return 'pushup';
+  if (/push[- ]?ups?|pushups/.test(n)) return 'pushup';
   if (/crunch|sit-?up|v-up/.test(n)) return 'crunch';
   if (/wrist/.test(n)) return 'wrist';
   if (/leg curl|hamstring curl/.test(n)) return 'legcurl';
@@ -187,6 +187,25 @@ function famKey(n) {
   return null;
 }
 var STAPLE = /bench press|shoulder press|overhead press|military press|incline (dumbbell )?press|row|squat|lunge|deadlift|romanian|curl|lateral raise|front raise|rear delt|flye|fly\b|extension|kickback|push.?up|pushup|pull.?up|pullup|chin.?up|dip|shrug|crunch|plank|hip thrust|glute bridge|calf raise|pulldown|step.?up|good morning|skull|press$/i;
+/* ---------- injuries: which exercises load which joint ----------
+   hi = puts a lot of load or awkward range on the area, md = some load. "careful" skips hi, "avoid" skips hi and md. */
+var INJ_AREAS = [['shoulder', 'Shoulder'], ['elbow', 'Elbow'], ['wrist', 'Wrist'], ['back', 'Lower back'], ['neck', 'Neck'], ['hip', 'Hip'], ['knee', 'Knee'], ['ankle', 'Ankle / foot']];
+var INJ_RULES = {
+  shoulder: { hi: { test: function (n) { return /overhead|military|shoulder press|push press|arnold|behind the neck|upright|row to neck|high pull|around the world|\bdips?\b|handstand|snatch|jerk|pull-?over|kipping|muscle.?up|bradford|cuban|seesaw|see-saw|landmine press|z press|neck press/i.test(n) || (/press/i.test(n) && !/leg|calf|bench|chest|floor|board|pin|close|incline|decline|tricep|jm |tate|hip|crunch|sit-?up|pallof|pec|machine fly/i.test(n)); } }, md: /bench press|board press|pin press|incline|decline|\bfly|flye|cross ?over|wipers|triceps? extension|tricep extension|triceps press|deltoid raise|side lateral|pec deck|butterfly|lateral raise|front raise|push[- ]?ups?|pushups|pull[- ]?ups?|pullups|chin|pulldown|skull|french press|lying triceps|floor press|chest press|face pull/i },
+  elbow: { hi: /skull|french press|lying triceps|close-grip bench|\bdips?\b|preacher|triceps? extension|tricep.*extension|overhead triceps|jm press|tate press|spider curl/i, md: /curl|pushdown|press-?down|kickback|push[- ]?ups?|pushups|chin|pull[- ]?ups?|pullups|bench press|pulldown/i },
+  wrist: { hi: /front squat|clean|push[- ]?ups?|pushups|handstand|wrist|reverse curl|snatch|plank|\bdips?\b|zottman|reverse grip/i, md: /bench press|curl|press|row|deadlift|farmer/i },
+  back: { hi: /deadlift|good morning|bent over (barbell |two-dumbbell )?row|barbell row|pendlay|romanian|stiff|hyperext|back extension|barbell squat|back squat|front squat|\bclean|snatch|t-bar|jefferson|zercher|swing|sit-?up|v-up|superman|reverse hyper|rack pull|jackknife/i, md: /squat|lunge|\brow\b|leg press|standing.*press|military|push press|overhead press|crunch|leg raise|hip thrust|glute bridge|shrug|step.?up|kettlebell/i },
+  neck: { hi: /\bneck\b|shrug|upright row|behind the neck|headstand/i, md: /crunch|sit-?up|deadlift|overhead|military|bridge|farmer/i },
+  hip: { hi: /squat|lunge|deadlift|good morning|split|pistol|abduct|adduct|step.?up|sumo|hanging leg raise|leg raise/i, md: /leg press|hip thrust|glute bridge|swing|hyperext|kickback|leg curl|crunch/i },
+  knee: { hi: /squat|lunge|leg extension|jump|box|step.?up|pistol|sissy|hack|split|leg press|thruster/i, md: /deadlift|leg curl|swing|wall sit|calf.*leg press|good morning|hip thrust/i },
+  ankle: { hi: /jump|lunge|calf raise|calf press|step.?up|box|run|sprint|skip|pistol|hop|split squat/i, md: /squat|deadlift|thruster|swing|farmer/i }
+};
+var injuryList = function () { return []; };   // the UI points this at Settings → Injuries: [{a: area, s: 'careful'|'avoid'}]
+function injuryHits(e) {
+  var out = []; injuryList().forEach(function (inj) { var R = INJ_RULES[inj.a]; if (!R || !e) return; var lv = R.hi.test(e.n) ? 'hi' : R.md.test(e.n) ? 'md' : null; if (lv) out.push({ a: inj.a, s: inj.s, lv: lv, block: lv === 'hi' || inj.s === 'avoid' }); });
+  return out;
+}
+function injuryBlocked(e) { return injuryHits(e).some(function (h) { return h.block; }); }
 function candidatePool(opts) {
   var gm = gearMap(opts.gear);
   var maxL = LEVEL_RANK[opts.level] || 2;
@@ -196,6 +215,7 @@ function candidatePool(opts) {
     if (e.gear.indexOf('other_gear') >= 0 || e.gear.indexOf('cardio') >= 0) return false;
     if ((LEVEL_RANK[e.l] || 2) > maxL) return false;
     if (WEIRD.test(e.n)) return false;
+    if (injuryBlocked(e)) return false;
     if (e.gear.length === 1 && e.gear[0] === 'bodyweight') { var txt = e.i.join(' ').toLowerCase(); if (!gm.smith && /smith machine/.test(txt)) return false; if (!gm.cable && /pulley|cable/.test(txt)) return false; if (!gm.barbell && /barbell|power rack|squat rack/.test(txt)) return false; }
     return e.p.some(function (g) { return opts.groups.indexOf(g) >= 0; });
   });

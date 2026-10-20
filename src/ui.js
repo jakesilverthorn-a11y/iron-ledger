@@ -1,7 +1,8 @@
 /* ===== App state & persistence ===== */
 var LS_KEY = 'ironledger.v1';
-function defaults() { return { unit: 'lb', profile: 'gym', gear: { gym: GYM_GEAR.slice(), home: HOME_GEAR.slice() }, body: { sex: null, h: null, w: null, log: [] }, level: 'intermediate', goal: 'strength', minutes: 45, groups: ['Chest', 'Shoulders', 'Triceps'], deleted: [], friends: [], cfriends: [], handle: '', notes: {}, weekGoal: 3, bar: null, lift: !!window.claude, lastBackup: 0 }; }
+function defaults() { return { unit: 'lb', profile: 'gym', gear: { gym: GYM_GEAR.slice(), home: HOME_GEAR.slice() }, body: { sex: null, h: null, w: null, log: [] }, level: 'intermediate', goal: 'strength', minutes: 45, groups: ['Chest', 'Shoulders', 'Triceps'], deleted: [], friends: [], cfriends: [], handle: '', injuries: [], saved: [], notes: {}, weekGoal: 3, bar: null, lift: !!window.claude, lastBackup: 0 }; }
 var S = { settings: defaults(), workouts: [], draft: null, at: { settings: 0, draft: 0 } };
+injuryList = function () { return (S.settings && S.settings.injuries) || []; };
 metricBW = function () { var B = S.settings && profB(); return B ? curWeightLb(B) : 0; };
 var U = { tab: 'train', seg: 'muscles', libQ: '', libGroups: [], libGear: 'all', libCat: 'all', libItem: 'all', bsex: null, libShown: 40, plan: null, seed: 1, hist: null, pickQ: '', pickGroups: [], pickMode: null, rest: null, openHist: null, confirm: null };
 var dbCol = null, dbState = 'pending', dirtySettings = false, dirtyDraft = false, dirtyMonths = {}, pushing = false, again = false, syncTimer = null;
@@ -15,6 +16,8 @@ function normSettings(st) {
   if (!Array.isArray(st.cfriends)) st.cfriends = [];
   if (typeof st.handle !== 'string') st.handle = '';
   if (!st.notes || typeof st.notes !== 'object') st.notes = {};
+  if (!Array.isArray(st.injuries)) st.injuries = [];
+  if (!Array.isArray(st.saved)) st.saved = [];
   if (!(st.weekGoal >= 1 && st.weekGoal <= 7)) st.weekGoal = 3;
   if (typeof st.lift !== 'boolean') st.lift = !!window.claude;
   delete st.equip;
@@ -233,7 +236,7 @@ function exerciseSheet(name, ctx) {
   if (S.draft) add = S.draft.ex.some(function (x) { return x.n === name; }) ? '' : '<button class="btn primary block" data-act="addToDraft" data-n="' + esc(name) + '">Add to workout</button>';
   else if (U.plan) add = '<button class="btn primary block" data-act="addToPlan" data-n="' + esc(name) + '">Add to today\'s plan</button>';
   var lv = loadInfo(ex), logBox = lv.l ? '<div class="card section loadbox"><div class="xname">⚖️ How to log the weight' + (lv.s ? ': ' + esc(lv.s.toLowerCase()) : '') + '</div><div class="note" style="font-size:14.5px">' + esc(lv.l) + '</div></div>' : '';
-  var body = '<div class="demo-wrap" id="demowrap">' + demoInner(ex) + '</div>' + (S.draft ? logBox : '') +
+  var body = injSheetNote(ex) + '<div class="demo-wrap" id="demowrap">' + demoInner(ex) + '</div>' + (S.draft ? logBox : '') +
     '<div>' + tagsHTML(ex) + '<span class="tag">' + esc(titleCase(ex.l)) + '</span>' + (ex.m ? '<span class="tag">' + esc(titleCase(ex.m)) + '</span>' : '') + '</div>' + add +
     liftRankCard(name, allHistories(realWorkouts())[name]) + '<div class="section"><h3 style="font-size:20px">Equipment</h3><div class="gear-grid">' + ex.gear.map(function (g) { return ITEM_BY[g] ? gearTile(ITEM_BY[g], true, true) : ''; }).join('') + '</div></div>' +
     '<div class="section"><h3 style="font-size:20px">Your notes</h3><textarea class="input" id="exnote" data-n="' + esc(name) + '" rows="2" maxlength="200" style="padding:10px 14px;min-height:64px" placeholder="Seat height, grip, cues… shows up during workouts">' + esc(S.settings.notes[name] || '') + '</textarea></div>' + '<div class="section"><h3 style="font-size:20px">How to do it</h3><ol class="steps">' + ex.i.map(function (s) { return '<li>' + esc(s) + '</li>'; }).join('') + '</ol></div>' + (S.draft ? '' : logBox) + extra;
@@ -256,7 +259,7 @@ function groupChips(sel, act) {
   return '<div class="chips">' + GROUPS.map(function (g) { return '<button class="chip" aria-pressed="' + (sel.indexOf(g) >= 0) + '" data-act="' + act + '" data-g="' + g + '">' + g + '</button>'; }).join('') + '</div>';
 }
 function xrow(e, act) {
-  return '<button class="xrow" data-act="' + act + '" data-n="' + esc(e.n) + '"><div class="thumb">' + demoHTML(e, false) + '</div><div class="grow"><div class="xname">' + esc(e.n) + '</div><div class="xmeta">' + esc(exMeta(e)) + '</div></div></button>';
+  return '<button class="xrow" data-act="' + act + '" data-n="' + esc(e.n) + '"><div class="thumb">' + demoHTML(e, false) + '</div><div class="grow"><div class="xname">' + esc(e.n) + '</div><div class="xmeta">' + esc(exMeta(e)) + '</div>' + injBadge(e) + '</div></button>';
 }
 function libList(list, shown, act) {
   if (!list.length) return '<div class="empty"><h3>No matches</h3>Try fewer filters, or switch gear to All.</div>';
@@ -335,6 +338,7 @@ function viewTrain() {
     '<div><span class="field-label">Muscle groups</span>' + groupChips(sel, 'toggleGroup') + '</div>' +
     '<div><span class="field-label">Goal</span><div class="seg" role="group" aria-label="Goal">' + Object.keys(GOALS).map(function (k) { return '<button aria-pressed="' + (st.goal === k) + '" data-act="goal" data-k="' + k + '">' + GOALS[k].n + '</button>'; }).join('') + '</div></div>' +
     '<div><span class="field-label">Where are you training?</span><div class="seg" role="group" aria-label="Where you train"><button aria-pressed="' + (st.profile === 'gym') + '" data-act="profile" data-k="gym">Gym</button><button aria-pressed="' + (st.profile === 'home') + '" data-act="profile" data-k="home">Home</button></div><div class="note" style="margin-top:8px">' + gl.length + ' of ' + ITEMS.length + ' equipment types ticked · <button style="color:var(--accent-ink);font-weight:600" data-act="tab" data-t="settings">Edit gear</button></div></div>' +
+    (st.injuries.length ? '<div class="note">🩹 Working around: ' + st.injuries.map(function (j) { return injName(j.a).toLowerCase() + (j.s === 'avoid' ? ' (avoid)' : ' (careful)'); }).join(', ') + '. <button class="linkbtn accent" data-act="tab" data-t="settings">Edit</button></div>' : '') +
     '<button class="btn primary block" data-act="generate"' + (sel.length ? '' : ' disabled') + '>' + (U.plan ? 'Rebuild workout' : 'Build my workout') + '</button></div>';
   var recCard = '<div class="card section" style="gap:12px"><div class="row"><h2 class="grow" style="font-size:24px">Recovery</h2>' + (realWorkouts().length ? '<button class="btn small" data-act="trainFresh">Train fresh muscles</button>' : '') + '</div>' + recoveryHTML(false) + '</div>';
   var plan = U.plan ? planHTML() : '';
@@ -342,7 +346,7 @@ function viewTrain() {
   var rw = realWorkouts().slice(-3).reverse();
   if (rw.length) recent = '<div class="section"><h2>Recent</h2><div class="card" style="padding:0 14px">' + rw.map(histRow).join('') + '</div></div>';
   var nudge = (dbState === 'local' && realWorkouts().length >= 3 && Date.now() - (st.lastBackup || 0) > 14 * DAY) ? '<button class="banner" style="width:100%;text-align:left" data-act="tab" data-t="settings"><span><b>Back up your workouts</b> · they live only on this phone. Tap to save a backup file.</span></button>' : '';
-  return '<div class="screen">' + head + nudge + weekCard() + recCard + builder + plan + '<button class="btn block" data-act="startEmpty">Start an empty workout</button>' + recent + '</div>';
+  return '<div class="screen">' + head + nudge + weekCard() + savedWorkoutsHTML() + recCard + builder + plan + '<button class="btn block" data-act="startEmpty">Start an empty workout</button>' + recent + '</div>';
 }
 function planHTML() {
   var p = U.plan, items = p.items;
@@ -355,7 +359,7 @@ function planHTML() {
   return '<div class="section"><div class="row"><h2 class="grow">Today\'s workout</h2><span class="num" style="font-size:22px">~' + p.estMin + ' min</span></div>' + short +
     '<div class="card" style="padding:0 14px">' + (rows || '<div class="empty">Nothing left in the plan.</div>') + '</div>' +
     '<div class="row"><button class="btn grow" data-act="pickPlan">' + ico('plus').replace('<svg', '<svg width="18" height="18"') + ' Add exercise</button><button class="btn grow" data-act="generate">Shuffle</button></div>' +
-    '<button class="btn primary block" data-act="startPlan"' + (items.length ? '' : ' disabled') + '>Start workout</button></div>';
+    '<button class="btn primary block" data-act="startPlan"' + (items.length ? '' : ' disabled') + '>Start workout</button>' + (items.length ? '<div class="row" style="gap:8px"><button class="btn grow" data-act="wkSendPlan">👥 Send to a friend</button><button class="btn grow" data-act="wkSavePlan">☆ Save</button></div>' : '') + '</div>';
 }
 
 /* --- active workout --- */
@@ -374,11 +378,12 @@ function viewWorkout() {
         '<div class="' + (s.done ? 'done' : '') + '"><input inputmode="numeric" data-k="r" data-x="' + xi + '" data-s="' + si + '" class="' + (s.sug && !s.done ? 'sug' : '') + '" value="' + (s.r == null ? '' : s.r) + '" placeholder="0" aria-label="Set ' + (si + 1) + ' reps"></div>' +
         '<button class="ck' + (s.done ? ' on' : '') + '" data-act="toggleSet" data-x="' + xi + '" data-s="' + si + '" aria-pressed="' + !!s.done + '" aria-label="Mark set ' + (si + 1) + ' done">' + ico('check') + '</button>';
     });
-    return '<div class="xcard"><div class="xcard-head"><button class="thumb" data-act="openEx" data-n="' + esc(e.n) + '" aria-label="View ' + esc(e.n) + '">' + demoHTML(ex, false) + '</button><div class="grow"><button class="xname xlink" data-act="openEx" data-n="' + esc(e.n) + '">' + esc(e.n) + ' <span class="info-i" aria-hidden="true">i</span></button><div class="target">Target ' + e.sets.filter(function (q) { return !q.wu; }).length + ' × ' + e.lo + '–' + e.hi + ' · <button class="linkbtn" data-act="restCycle" data-x="' + xi + '" aria-label="Change rest time">rest ' + fmtDur(e.rest) + '</button>' + (isBarbell(ex) ? ' · <button class="linkbtn accent" data-act="plates" data-x="' + xi + '">Plates</button>' : '') + '</div>' + (li.s ? '<button class="loadhint" data-act="loadInfo" data-n="' + esc(e.n) + '">⚖️ ' + esc(li.s) + '</button>' : '') + (S.settings.notes[e.n] ? '<div class="xnote">' + esc(S.settings.notes[e.n]) + '</div>' : '') + '</div><button class="icon-btn" data-act="swapEx" data-x="' + xi + '" aria-label="Swap ' + esc(e.n) + ' for a similar exercise">' + ico('shuffle') + '</button><button class="icon-btn" data-act="rmEx" data-x="' + xi + '" aria-label="Remove ' + esc(e.n) + '">' + ico('x') + '</button></div>' +
+    return '<div class="xcard"><div class="xcard-head"><button class="thumb" data-act="openEx" data-n="' + esc(e.n) + '" aria-label="View ' + esc(e.n) + '">' + demoHTML(ex, false) + '</button><div class="grow"><button class="xname xlink" data-act="openEx" data-n="' + esc(e.n) + '">' + esc(e.n) + ' <span class="info-i" aria-hidden="true">i</span></button><div class="target">Target ' + e.sets.filter(function (q) { return !q.wu; }).length + ' × ' + e.lo + '–' + e.hi + ' · <button class="linkbtn" data-act="restCycle" data-x="' + xi + '" aria-label="Change rest time">rest ' + fmtDur(e.rest) + '</button>' + (isBarbell(ex) ? ' · <button class="linkbtn accent" data-act="plates" data-x="' + xi + '">Plates</button>' : '') + '</div>' + injBadge(ex) + (li.s ? '<button class="loadhint" data-act="loadInfo" data-n="' + esc(e.n) + '">⚖️ ' + esc(li.s) + '</button>' : '') + (S.settings.notes[e.n] ? '<div class="xnote">' + esc(S.settings.notes[e.n]) + '</div>' : '') + '</div><button class="icon-btn" data-act="swapEx" data-x="' + xi + '" aria-label="Swap ' + esc(e.n) + ' for a similar exercise">' + ico('shuffle') + '</button><button class="icon-btn" data-act="rmEx" data-x="' + xi + '" aria-label="Remove ' + esc(e.n) + '">' + ico('x') + '</button></div>' +
       '<div class="sets">' + rows + '</div><div class="row"><button class="btn small ghost grow" data-act="addSet" data-x="' + xi + '" aria-label="Add a set">+ Set</button>' + (!bw && !e.sets.some(function (q) { return q.wu; }) && !e.sets.some(function (q) { return q.done; }) ? '<button class="btn small ghost grow" data-act="warmup" data-x="' + xi + '">+ Warm-up</button>' : '') + (e.sets.length > 1 ? '<button class="btn small ghost grow" data-act="rmSet" data-x="' + xi + '" aria-label="Remove a set">– Set</button>' : '') + '</div></div>';
   }).join('');
   return '<div class="screen" style="gap:14px;padding-top:0"><div class="wk-top"><div><div class="clock" id="clock">0:00</div></div><div class="grow note" id="wk-stats">' + totalDone + (totalDone === 1 ? ' set' : ' sets') + ' · ' + volDisp(vol) + ' ' + unitL + '</div><button class="btn primary small" data-act="finish">Finish</button></div>' +
     (cards || '<div class="empty"><h3>Empty workout</h3>Add your first exercise.</div>') +
+    (d.ex.length ? '<button class="btn block ghost" data-act="wkSendDraft">👥 Invite a friend to this workout</button>' : '') +
     '<button class="btn block" data-act="pickDraft">' + ico('plus').replace('<svg', '<svg width="18" height="18"') + ' Add exercise</button>' +
     (U.confirm === 'discard' ? '<div class="banner"><span>Discard this workout? Nothing will be saved.</span><span class="row"><button class="btn small danger" data-act="discard2">Discard</button><button class="btn small" data-act="noconfirm">Keep</button></span></div>' : '<button class="btn block ghost danger" data-act="discard">Discard workout</button>') + '</div>';
 }
@@ -550,6 +555,7 @@ function histSheet(id) {
     w.ex.map(function (e) { var ex = BYNAME[e.n]; return '<div class="section"><div class="row"><div class="thumb" style="width:64px">' + demoHTML(ex, false) + '</div><div class="xname grow">' + esc(e.n) + (prs.indexOf(e.n) >= 0 ? '<span class="pr">PR</span>' : '') + '</div></div><div>' + e.sets.map(function (s, i) { return '<div class="lrow"><span class="muted">Set ' + (i + 1) + '</span><span class="num" style="font-size:18px">' + (isBW(ex) && !s.w ? s.r + ' reps' : toDisp(s.w, unit()) + ' ' + uLabel() + loadSuffix(ex) + ' × ' + s.r) + '</span></div>'; }).join('') + '</div></div>'; }).join('') +
     (w.sample ? '' : (U.confirm === 'delhist' ? '<div class="banner"><span>Delete this workout?</span><span class="row"><button class="btn small danger" data-act="delhist2" data-id="' + esc(w.id) + '">Delete</button><button class="btn small" data-act="histCancel" data-id="' + esc(w.id) + '">Keep</button></span></div>' : '<button class="btn block ghost danger" data-act="delhist" data-id="' + esc(w.id) + '">Delete workout</button>'));
   if (!S.draft) body = '<button class="btn primary block" data-act="repeatW" data-id="' + esc(w.id) + '">Do this workout again</button>' + body;
+  if (!w.sample) body = body + '<div class="row" style="gap:8px"><button class="btn grow" data-act="wkSendHist" data-id="' + esc(w.id) + '">👥 Send</button><button class="btn grow" data-act="wkSaveHist" data-id="' + esc(w.id) + '">☆ Save</button></div>';
   if (!w.sample) body = body + '<div class="row"><button class="btn grow" data-act="editW" data-id="' + esc(w.id) + '">Edit</button><button class="btn grow" data-act="shareW" data-id="' + esc(w.id) + '">Share</button></div>';
   openSheet(fmtDateLong(w.t), body);
 }
@@ -593,6 +599,7 @@ function viewSettings() {
   var status = dbState === 'synced' ? 'Saved to your Claude account and this device.' : dbState === 'error' ? 'Could not reach your account just now. Saved on this device and retrying.' : dbState === 'pending' ? 'Connecting…' : 'Saved on this device only. Back up regularly.';
   return '<div class="screen"><div class="screen-head"><h1>Settings</h1></div>' +
     '<div class="section"><span class="field-label">Weight units</span><div class="seg" role="group"><button aria-pressed="' + (st.unit === 'lb') + '" data-act="unit" data-k="lb">Pounds</button><button aria-pressed="' + (st.unit === 'kg') + '" data-act="unit" data-k="kg">Kilograms</button></div></div>' +
+    injurySettingsHTML() +
     '<div class="section"><span class="field-label">Rest timer chime</span><div class="seg" role="group" aria-label="Rest timer chime"><button aria-pressed="' + (st.chime !== false) + '" data-act="chimeOpt" data-k="on">On</button><button aria-pressed="' + (st.chime === false) + '" data-act="chimeOpt" data-k="off">Off</button></div><div class="note">A short chime when rest is over, through your headphones or speaker. Keep the app open on screen (it stays awake during workouts); iPhones pause web apps that are in the background.</div></div>' +
     '<div class="section"><span class="field-label">Bottom corner</span><div class="seg" role="group" aria-label="Bottom corner space"><button aria-pressed="' + (st.lift !== false) + '" data-act="liftOpt" data-k="on">Keep clear</button><button aria-pressed="' + (st.lift === false) + '" data-act="liftOpt" data-k="off">Off</button></div><div class="note">Leaves room under the tab bar so a hosting badge (like "Powered by Netlify") cannot cover buttons.</div></div>' +
     '<div class="section"><h2>Your body</h2>' + bodyCard() + '</div>' +
@@ -830,6 +837,16 @@ document.addEventListener('click', function (ev) {
   if (a === 'calDay') { histSheet(d.id); return; }
   if (a === 'shareW') { shareWorkout(d.id); return; }
   if (a === 'loadInfo') { var lx = BYNAME[d.n], lv = loadInfo(lx); openSheet('How to log ' + d.n, '<div class="card section loadbox"><div class="xname">⚖️ ' + esc(lv.s || 'Weight') + '</div><div class="note" style="font-size:15px">' + esc(lv.l) + '</div></div><button class="btn block" data-act="openEx" data-n="' + esc(d.n) + '">See how to do the exercise</button><button class="btn primary block" data-act="close">Got it</button>'); return; }
+  if (a === 'injTap') { var ix = st.injuries.filter(function (j) { return j.a === d.k; })[0]; if (!ix) st.injuries.push({ a: d.k, s: 'careful' }); else if (ix.s === 'careful') ix.s = 'avoid'; else st.injuries = st.injuries.filter(function (j) { return j.a !== d.k; }); persist({ settings: true }); U.plan = null; render(); return; }
+  if (a === 'wkSendDraft') { shareWorkoutLink(S.draft.ex.map(function (e) { return [e.n, e.sets.filter(function (q) { return !q.wu; }).length, e.lo, e.hi, e.rest]; }), 'Workout together'); return; }
+  if (a === 'wkSendPlan') { shareWorkoutLink(U.plan.items.map(function (it) { return [it.n, it.sets, it.lo, it.hi, it.rest]; }), planTitle(U.plan.items.map(function (it) { return it.n; }))); return; }
+  if (a === 'wkSavePlan') { saveTemplate(U.plan.items.map(function (it) { return [it.n, it.sets, it.lo, it.hi, it.rest]; }), planTitle(U.plan.items.map(function (it) { return it.n; })), ''); return; }
+  if (a === 'wkSendHist' || a === 'wkSaveHist') { var hw = statWorkouts().filter(function (x) { return x.id === d.id; })[0]; if (!hw) return; var hx = hw.ex.filter(function (e) { return BYNAME[e.n]; }).map(function (e) { var it = defaultItem(e.n, st.goal); return [e.n, e.sets.length, it.lo, it.hi, it.rest]; }), ht = planTitle(hw.ex.map(function (e) { return e.n; })); if (a === 'wkSendHist') shareWorkoutLink(hx, ht); else saveTemplate(hx, ht, ''); return; }
+  if (a === 'wkStart') { var tw = d.id ? st.saved.filter(function (x) { return x.id === d.id; })[0] : U.inWk; if (!tw) return; if (S.draft) { toast('Finish or discard your current workout first.'); return; } newDraft(tw.x.filter(function (r) { return BYNAME[r[0]]; }).map(function (r) { return { n: r[0], sets: r[1], lo: r[2], hi: r[3], rest: r[4] }; })); U.inWk = null; closeSheet(); U.tab = 'train'; render(); window.scrollTo(0, 0); toast('Started. Weights are suggested from your own history.'); return; }
+  if (a === 'wkKeep') { if (U.inWk) saveTemplate(U.inWk.x, U.inWk.t, U.inWk.f); U.inWk = null; closeSheet(); render(); return; }
+  if (a === 'wkDel') { st.saved = st.saved.filter(function (x) { return x.id !== d.id; }); persist({ settings: true }); render(); return; }
+  if (a === 'wkSendSaved') { var sv = st.saved.filter(function (x) { return x.id === d.id; })[0]; if (sv) shareWorkoutLink(sv.x, sv.t); return; }
+  if (a === 'wkPaste') { var pv = ($('#wkcode') || {}).value || '', ob = wkDecode(pv); if (!ob) { toast('That is not a workout link or code.'); return; } U.inWk = ob; incomingSheet(); return; }
   if (a === 'socCat') { SOC.cat = d.g; render(); return; }
   if (a === 'socChTab') { SOC.chTab = d.k; render(); return; }
   if (a === 'socCreate') {
@@ -1173,3 +1190,72 @@ function loadInfo(ex) {
   return { h: U2, s: '', l: 'Enter the weight you lift. Count it the same way every time so progress is accurate.' };
 }
 function loadSuffix(ex) { var i = loadInfo(ex); return /EACH/.test(i.h) ? ' each' : ''; }
+
+/* ===== injuries ===== */
+function injName(a) { var r = INJ_AREAS.filter(function (x) { return x[0] === a; })[0]; return r ? r[1] : a; }
+function injurySettingsHTML() {
+  var st = S.settings;
+  return '<div class="section"><span class="field-label">Injuries</span><div class="chips">' + INJ_AREAS.map(function (r) {
+    var j = st.injuries.filter(function (x) { return x.a === r[0]; })[0], lv = j ? j.s : '';
+    return '<button class="chip inj ' + lv + '" aria-pressed="' + !!j + '" data-act="injTap" data-k="' + r[0] + '">' + (lv === 'avoid' ? '⛔ ' : lv === 'careful' ? '⚠️ ' : '') + r[1] + (lv ? ' · ' + lv : '') + '</button>';
+  }).join('') + '</div><div class="note">Tap once for <b>careful</b> (skips the riskiest exercises for that area), twice for <b>avoid</b> (skips anything that loads it), three times to clear. Workouts, swaps and focus plans follow this. It is a guide, not medical advice: if something hurts, stop and get it checked.</div></div>';
+}
+function injBadge(e) {
+  var h = injuryHits(e); if (!h.length) return '';
+  var block = h.some(function (x) { return x.block; });
+  return '<div class="injw' + (block ? ' bad' : '') + '">' + (block ? '⛔ Not recommended for your ' : '⚠️ Go easy: may load your ') + h.map(function (x) { return injName(x.a).toLowerCase(); }).join(' and ') + '</div>';
+}
+function injSheetNote(e) {
+  var h = injuryHits(e); if (!h.length) return '';
+  var block = h.some(function (x) { return x.block; });
+  return '<div class="banner' + (block ? ' bad' : '') + '"><span>' + (block ? '⛔ Because of your ' : '⚠️ With your ') + h.map(function (x) { return injName(x.a).toLowerCase(); }).join(' and ') + ' injury, ' + (block ? 'the app leaves this out of your workouts. Pick a pain-free alternative or use the shuffle button.' : 'use a lighter weight and a pain-free range of motion. Stop if it hurts.') + '</span></div>';
+}
+
+/* ===== share / save workouts ===== */
+function planTitle(names) { var gs = {}; names.forEach(function (n) { var e = BYNAME[n]; if (e) gs[e.p[0]] = 1; }); var g = GROUPS.filter(function (x) { return gs[x]; }).slice(0, 3); return g.length ? g.join(' · ') : 'Workout'; }
+function wkEncode(o) { return 'IW1-' + btoa(unescape(encodeURIComponent(JSON.stringify(o)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+function wkDecode(txt) {
+  var m = String(txt || '').match(/IW1-[A-Za-z0-9_-]+/); if (!m) return null;
+  try {
+    var b = m[0].slice(4).replace(/-/g, '+').replace(/_/g, '/'); while (b.length % 4) b += '=';
+    var o = JSON.parse(decodeURIComponent(escape(atob(b))));
+    if (!o || !Array.isArray(o.x)) return null;
+    var x = o.x.filter(function (r) { return Array.isArray(r) && typeof r[0] === 'string' && BYNAME[r[0]]; }).slice(0, 15).map(function (r) {
+      return [r[0], Math.max(1, Math.min(8, +r[1] || 3)), Math.max(1, Math.min(50, +r[2] || 8)), Math.max(1, Math.min(60, +r[3] || 12)), Math.max(15, Math.min(600, +r[4] || 90))];
+    });
+    if (!x.length) return null;
+    return { f: String(o.f || '').slice(0, 24), t: String(o.t || 'Workout').slice(0, 40), x: x };
+  } catch (e) { return null; }
+}
+function shareBase() { return (!window.claude && /^https?:$/.test(location.protocol) && !/localhost|127\.0\.0\.1/.test(location.hostname)) ? location.origin + location.pathname : 'https://jakesilverthorn-a11y.github.io/iron-ledger/'; }
+function shareWorkoutLink(x, title) {
+  var from = S.settings.handle || (typeof SRV !== 'undefined' && SRV.name) || '';
+  var url = shareBase() + '#wk=' + wkEncode({ f: from, t: title, x: x });
+  var text = (from ? from + ' sent you' : 'Here\'s') + ' a workout: ' + title + ' (' + x.length + ' exercises). Open it in Iron Ledger:';
+  U.lastShare = url;
+  if (navigator.share) navigator.share({ title: 'Iron Ledger workout', text: text, url: url }).catch(function () { });
+  else copyText(text + ' ' + url);
+}
+function saveTemplate(x, title, from) {
+  var st = S.settings; st.saved = (st.saved || []).filter(function (w) { return JSON.stringify(w.x) !== JSON.stringify(x); });
+  st.saved.unshift({ id: 'sv' + Date.now().toString(36), t: title, f: from || '', x: x, at: Date.now() }); st.saved = st.saved.slice(0, 20);
+  persist({ settings: true }); toast('Saved to your workouts on the Train tab'); render();
+}
+function savedWorkoutsHTML() {
+  var sv = S.settings.saved || [];
+  var rows = sv.map(function (w) { return '<div class="lrow sv"><div class="grow"><div class="xname">' + esc(w.t) + '</div><div class="xmeta">' + w.x.length + ' exercises' + (w.f ? ' · from ' + esc(w.f) : '') + '</div></div><button class="btn small primary" data-act="wkStart" data-id="' + w.id + '">Start</button><button class="icon-btn" data-act="wkSendSaved" data-id="' + w.id + '" aria-label="Send to a friend">👥</button><button class="icon-btn" data-act="wkDel" data-id="' + w.id + '" aria-label="Delete">' + ico('x') + '</button></div>'; }).join('');
+  return '<details class="card section savedw"' + (sv.length ? ' open' : '') + '><summary class="xname">Saved &amp; shared workouts' + (sv.length ? ' (' + sv.length + ')' : '') + '</summary>' + (rows || '<div class="note">Save a workout from a plan or your history, or open a link a friend sent you.</div>') +
+    '<div class="row" style="gap:8px;margin-top:6px"><input class="input grow" id="wkcode" placeholder="Paste a workout link or code" autocapitalize="none" autocomplete="off"><button class="btn small" data-act="wkPaste">Open</button></div></details>';
+}
+function incomingSheet() {
+  var w = U.inWk; if (!w) return;
+  openSheet((w.f ? w.f + ' sent you a workout' : 'Shared workout'), '<div class="xname" style="font-size:19px">' + esc(w.t) + '</div>' +
+    '<div class="card" style="padding:0 14px">' + w.x.map(function (r) { var e = BYNAME[r[0]]; return '<div class="lrow"><span class="grow" style="display:flex;gap:10px;align-items:center"><span class="thumb" style="width:52px">' + demoHTML(e, false) + '</span>' + esc(r[0]) + '</span><span class="faint">' + r[1] + ' × ' + r[2] + '–' + r[3] + '</span></div>' + injBadge(e); }).join('') + '</div>' +
+    '<div class="note">Same exercises and sets as your friend. The weights are suggested from your own history, so you each lift what is right for you.</div>' +
+    '<button class="btn primary block" data-act="wkStart">Start this workout now</button><button class="btn block" data-act="wkKeep">Save for later</button>');
+}
+(function () {
+  var m = (location.hash || '').match(/[#&]wk=([^&]+)/); if (!m) return;
+  var o = wkDecode(decodeURIComponent(m[1])); try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { }
+  if (o) { U.inWk = o; setTimeout(incomingSheet, 400); }
+})();

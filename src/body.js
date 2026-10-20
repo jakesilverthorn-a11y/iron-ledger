@@ -172,8 +172,8 @@ function focusFromSelf() {
 }
 function focusExercises(area, n) {
   var mg = gearMap(gearList()), out = [];
-  FOCUS[area].ex.forEach(function (nm) { var e = BYNAME[nm]; if (e && available(e, mg) && out.length < n) out.push(e); });
-  if (out.length < n) filterEx('', FOCUS[area].g, 'mine', 'strength', 'all').forEach(function (e) { if (out.length < n && out.indexOf(e) < 0) out.push(e); });
+  FOCUS[area].ex.forEach(function (nm) { var e = BYNAME[nm]; if (e && available(e, mg) && !injuryBlocked(e) && out.length < n) out.push(e); });
+  if (out.length < n) filterEx('', FOCUS[area].g, 'mine', 'strength', 'all').forEach(function (e) { if (out.length < n && out.indexOf(e) < 0 && !injuryBlocked(e)) out.push(e); });
   return out;
 }
 function weekSetsFor(groups) {
@@ -213,6 +213,7 @@ function viewBody() {
     (last ? '<div class="pcmp">' + (photos.length > 1 ? '<figure><img src="' + first.d + '" alt="First photo"><figcaption>' + fmtDate(first.t) + '</figcaption></figure>' : '') + '<figure><img src="' + last.d + '" alt="Latest photo"><figcaption>' + (photos.length > 1 ? 'Latest · ' : '') + fmtDate(last.t) + '</figcaption></figure></div>' : '<div class="note">Take a front photo in good light, standing relaxed, in shorts or fitted clothes. Same spot and time of day each time makes progress easy to see.</div>') +
     '<label class="btn ' + (last ? '' : 'primary ') + 'block filebtn">' + (last ? 'Add a new photo' : 'Take or choose a photo') + '<input type="file" id="bodyfile" accept="image/*" capture="user" hidden></label>' +
     (last ? (AI.kind ? '<button class="btn primary block" data-act="bodyAnalyze"' + (AI.busy ? ' disabled' : '') + '>' + (AI.busy ? 'Looking at your photo…' : 'Analyze my latest photo') + '</button>' : '<button class="btn primary block" data-act="bodyKey">Turn on photo analysis</button><div class="note">One-time setup with your own Claude API key (about 1–2 cents per photo). Or use the self-check below.</div>') : '') +
+    (last && AI.kind !== 'claude' ? '<button class="btn block" data-act="bodyChat">💬 Analyze in my Claude app</button>' : '') +
     (AI.kind === 'key' ? '<button class="linkbtn" style="font-size:13px;color:var(--muted)" data-act="bodyKey">Photo analysis settings</button>' : '') +
     (AI.busy && (AI.kind === 'claude' || AI.kind === 'key') ? '<button class="btn small ghost" data-act="bodyStop">Stop</button>' : '') +
     (AI.err ? '<div class="banner"><span>' + esc(AI.err) + '</span></div>' : '') +
@@ -325,6 +326,14 @@ function bodyClick(a, d) {
     case 'bodyStop': if (AI.ctl) AI.ctl.abort(); return true;
     case 'bodyPhotos': photosSheet(); return true;
     case 'bodyKey': keySheet(); return true;
+    case 'bodyChat': chatSheet(); return true;
+    case 'bodyChatSend': chatSend(); return true;
+    case 'bodyChatCopy': copyText(chatPrompt()); return true;
+    case 'bodyChatUse': {
+      var tx = ($('#chatans') || {}).value || '', er = $('#chat-err'), m = tx.match(/\{[\s\S]*\}/);
+      try { if (!m) throw new Error('Paste Claude\'s whole reply (it should contain a block that starts with { and ends with }).'); var res = cleanAI(JSON.parse(m[0])); if (res.ok) { res.src = 'chat'; res.at = Date.now(); } F.res = res; persist({ settings: true }); closeSheet(); render(); window.scrollTo(0, 0); toast(res.ok ? 'Focus plan added' : 'Claude could not use that photo'); }
+      catch (e) { if (er) er.textContent = (e instanceof SyntaxError) ? 'That reply could not be read. Ask Claude to "reply with only the JSON" and paste again.' : e.message; }
+      return true; }
     case 'bodyKeySave': { var kv = (($('#akin') || {}).value || '').trim(), ke = $('#ak-err');
       if (!/^sk-ant-[A-Za-z0-9_\-]{20,}$/.test(kv)) { if (ke) ke.textContent = 'That does not look like a Claude API key. It should start with sk-ant-.'; return true; }
       aiKeySet(kv); if (!window.claude) AI.kind = 'key'; AI.err = ''; closeSheet(); render(); toast('Photo analysis is on'); return true; }
@@ -348,4 +357,24 @@ function bodyChange(t) {
     if (photosSave(p)) { BODY_FULL = r[1]; AI.err = ''; render(); toast('Photo saved on this phone'); }
   }, function (e) { toast(e.message); });
   return true;
+}
+
+/* ----- analyze through the Claude app (uses your Claude subscription; no key) ----- */
+function chatPrompt() { return 'Iron Ledger photo check. ' + aiPrompt() + '\n\nReply with only the JSON so I can paste it back into the app.'; }
+async function chatSend() {
+  var ph = photosLoad(), last = ph[ph.length - 1]; if (!last) return;
+  var prompt = chatPrompt();
+  try { if (navigator.clipboard) await navigator.clipboard.writeText(prompt); } catch (e) { }
+  var blob = dataURLBlob(BODY_FULL || last.d), file = new File([blob], 'progress-photo.jpg', { type: 'image/jpeg' });
+  try {
+    if (navigator.canShare && navigator.canShare({ files: [file], text: prompt })) { await navigator.share({ files: [file], text: prompt }); U.chatSent = true; chatSheet(); return; }
+    if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file] }); U.chatSent = true; chatSheet(); toast('The instructions are copied. Paste them into the chat with the photo.'); return; }
+  } catch (e) { if (e && e.name === 'AbortError') return; }
+  await saveBlob(blob, 'progress-photo.jpg', 'image/jpeg', 'Photo saved'); U.chatSent = true; chatSheet();
+  toast('Photo saved and instructions copied. Attach the photo in a Claude chat and paste.');
+}
+function chatSheet() {
+  openSheet('Analyze in Claude', '<div class="note">Uses your Claude account (no API key). It takes two steps because the Claude app cannot write into this app directly.</div>' +
+    '<div class="card section" style="gap:8px"><div class="xname">1 · Send the photo to Claude</div><div class="note">Tap below and pick <b>Claude</b> in the share sheet. The photo and the instructions go into a new chat (the instructions are also copied, in case you need to paste them).</div><button class="btn primary block" data-act="bodyChatSend">' + (U.chatSent ? 'Send again' : 'Send photo to Claude') + '</button><button class="linkbtn" style="font-size:13px" data-act="bodyChatCopy">Copy the instructions only</button></div>' +
+    '<div class="card section" style="gap:8px"><div class="xname">2 · Paste Claude\'s reply here</div><div class="note">When Claude answers, press and hold its reply, tap <b>Copy</b>, come back and paste it below.</div><textarea class="input" id="chatans" rows="5" style="padding:10px 14px;min-height:120px;font-size:13px" placeholder="Paste Claude\'s reply"></textarea><div class="note" id="chat-err" style="color:var(--down);min-height:0"></div><button class="btn primary block" data-act="bodyChatUse">Use this analysis</button></div>');
 }
