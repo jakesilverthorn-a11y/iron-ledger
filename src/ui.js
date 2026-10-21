@@ -37,6 +37,7 @@ function persist(o) {
   if (o.month != null) dirtyMonths[monthKey(o.month)] = 1;
   saveLocal(); clearTimeout(syncTimer); syncTimer = setTimeout(pushDb, 900);
   if (typeof socPublishSoon === 'function' && SOC.db) { socPublishSoon(); socProgressSoon(); }
+  if (o.draft && typeof tgSoon === 'function') tgSoon();
 }
 async function pushDb() {
   if (!dbCol) return;
@@ -214,13 +215,13 @@ function deltaHTML(d, suffix) {
 
 /* ===== sheets ===== */
 function openSheet(title, body, opts) {
-  opts = opts || {};
+  opts = opts || {}; U.tgSheet = false; U.tgSheetOpen = false;
   var root = $('#sheet-root');
   root.innerHTML = '<div class="scrim" data-act="close"></div><div class="sheet" role="dialog" aria-modal="true" aria-label="' + esc(title) + '"><div class="panel"><div class="grab"></div><div class="head"><h2>' + esc(title) + '</h2><button class="icon-btn" data-act="close" aria-label="Close">' + ico('x') + '</button></div><div class="body" id="sheet-body">' + body + '</div></div></div>';
   document.body.style.overflow = 'hidden';
   var b = $('#sheet-body'); if (opts.focus) { var f = $(opts.focus, b); if (f) f.focus(); }
 }
-function closeSheet() { $('#sheet-root').innerHTML = ''; document.body.style.overflow = ''; U.pickMode = null; U.socSheet = null; U.eatSheet = null; }
+function closeSheet() { $('#sheet-root').innerHTML = ''; document.body.style.overflow = ''; U.pickMode = null; U.socSheet = null; U.eatSheet = null; U.tgSheet = false; U.tgSheetOpen = false; }
 function sheetOpen() { return !!$('#sheet-root').firstChild; }
 
 /* ===== exercise detail ===== */
@@ -346,7 +347,7 @@ function viewTrain() {
   var rw = realWorkouts().slice(-3).reverse();
   if (rw.length) recent = '<div class="section"><h2>Recent</h2><div class="card" style="padding:0 14px">' + rw.map(histRow).join('') + '</div></div>';
   var nudge = (dbState === 'local' && realWorkouts().length >= 3 && Date.now() - (st.lastBackup || 0) > 14 * DAY) ? '<button class="banner" style="width:100%;text-align:left" data-act="tab" data-t="settings"><span><b>Back up your workouts</b> · they live only on this phone. Tap to save a backup file.</span></button>' : '';
-  return '<div class="screen">' + head + nudge + weekCard() + savedWorkoutsHTML() + recCard + builder + plan + '<button class="btn block" data-act="startEmpty">Start an empty workout</button>' + recent + '</div>';
+  return '<div class="screen">' + head + nudge + weekCard() + tgJoinCard() + savedWorkoutsHTML() + recCard + builder + plan + '<button class="btn block" data-act="startEmpty">Start an empty workout</button>' + recent + '</div>';
 }
 function planHTML() {
   var p = U.plan, items = p.items;
@@ -381,9 +382,9 @@ function viewWorkout() {
     return '<div class="xcard"><div class="xcard-head"><button class="thumb" data-act="openEx" data-n="' + esc(e.n) + '" aria-label="View ' + esc(e.n) + '">' + demoHTML(ex, false) + '</button><div class="grow"><button class="xname xlink" data-act="openEx" data-n="' + esc(e.n) + '">' + esc(e.n) + ' <span class="info-i" aria-hidden="true">i</span></button><div class="target">Target ' + e.sets.filter(function (q) { return !q.wu; }).length + ' × ' + e.lo + '–' + e.hi + ' · <button class="linkbtn" data-act="restCycle" data-x="' + xi + '" aria-label="Change rest time">rest ' + fmtDur(e.rest) + '</button>' + (isBarbell(ex) ? ' · <button class="linkbtn accent" data-act="plates" data-x="' + xi + '">Plates</button>' : '') + '</div>' + injBadge(ex) + (li.s ? '<button class="loadhint" data-act="loadInfo" data-n="' + esc(e.n) + '">⚖️ ' + esc(li.s) + '</button>' : '') + (S.settings.notes[e.n] ? '<div class="xnote">' + esc(S.settings.notes[e.n]) + '</div>' : '') + '</div><button class="icon-btn" data-act="swapEx" data-x="' + xi + '" aria-label="Swap ' + esc(e.n) + ' for a similar exercise">' + ico('shuffle') + '</button><button class="icon-btn" data-act="rmEx" data-x="' + xi + '" aria-label="Remove ' + esc(e.n) + '">' + ico('x') + '</button></div>' +
       '<div class="sets">' + rows + '</div><div class="row"><button class="btn small ghost grow" data-act="addSet" data-x="' + xi + '" aria-label="Add a set">+ Set</button>' + (!bw && !e.sets.some(function (q) { return q.wu; }) && !e.sets.some(function (q) { return q.done; }) ? '<button class="btn small ghost grow" data-act="warmup" data-x="' + xi + '">+ Warm-up</button>' : '') + (e.sets.length > 1 ? '<button class="btn small ghost grow" data-act="rmSet" data-x="' + xi + '" aria-label="Remove a set">– Set</button>' : '') + '</div></div>';
   }).join('');
-  return '<div class="screen" style="gap:14px;padding-top:0"><div class="wk-top"><div><div class="clock" id="clock">0:00</div></div><div class="grow note" id="wk-stats">' + totalDone + (totalDone === 1 ? ' set' : ' sets') + ' · ' + volDisp(vol) + ' ' + unitL + '</div><button class="btn primary small" data-act="finish">Finish</button></div>' +
+  return '<div class="screen" style="gap:14px;padding-top:0"><div class="wk-top"><div><div class="clock" id="clock">0:00</div></div><div class="grow note" id="wk-stats">' + totalDone + (totalDone === 1 ? ' set' : ' sets') + ' · ' + volDisp(vol) + ' ' + unitL + '</div><button class="btn primary small" data-act="finish">Finish</button></div>' + tgBox() +
     (cards || '<div class="empty"><h3>Empty workout</h3>Add your first exercise.</div>') +
-    (d.ex.length ? '<button class="btn block ghost" data-act="wkSendDraft">👥 Invite a friend to this workout</button>' : '') +
+    tgWorkoutButtons() +
     '<button class="btn block" data-act="pickDraft">' + ico('plus').replace('<svg', '<svg width="18" height="18"') + ' Add exercise</button>' +
     (U.confirm === 'discard' ? '<div class="banner"><span>Discard this workout? Nothing will be saved.</span><span class="row"><button class="btn small danger" data-act="discard2">Discard</button><button class="btn small" data-act="noconfirm">Keep</button></span></div>' : '<button class="btn block ghost danger" data-act="discard">Discard workout</button>') + '</div>';
 }
@@ -687,6 +688,7 @@ function newDraft(items) {
 function finishWorkout() {
   var w = finishDraft(S.draft, Date.now());
   if (!w.ex.length) { toast('Check off at least one set first.'); return; }
+  tgEnd();
   var prs = findPRs(realWorkouts(), w);
   S.workouts.push(w); S.workouts.sort(function (a, b) { return a.t - b.t; });
   S.draft = null; U.rest = null; U.plan = null; U.confirm = null; tick();
@@ -703,6 +705,7 @@ document.addEventListener('click', function (ev) {
   var el = ev.target.closest('[data-act]'); if (!el) return;
   var a = el.dataset.act, d = el.dataset, st = S.settings;
   if (a.indexOf('eat') === 0 && eatClick(a, d, el)) return;
+  if ((a.indexOf('tg') === 0 || a.indexOf('safari') === 0) && tgClick(a, d)) return;
   if (a.indexOf('body') === 0 && a !== 'bodyEdit' && a !== 'bodySave' && a !== 'bodySex' && bodyClick(a, d)) return;
   if (a === 'close') { closeSheet(); U.confirm = null; return; }
   if (a === 'doneSummary') { closeSheet(); U.tab = 'prog'; U.seg = 'muscles'; render(); window.scrollTo(0, 0); return; }
@@ -753,7 +756,7 @@ document.addEventListener('click', function (ev) {
   if (a === 'finish') { finishWorkout(); return; }
   if (a === 'discard') { U.confirm = 'discard'; render(); return; }
   if (a === 'noconfirm') { U.confirm = null; render(); return; }
-  if (a === 'discard2') { S.draft = null; U.rest = null; U.confirm = null; persist({ draft: true }); render(); tick(); return; }
+  if (a === 'discard2') { tgEnd(); S.draft = null; U.rest = null; U.confirm = null; persist({ draft: true }); render(); tick(); return; }
   if (a === 'restAdd') { if (U.rest) { U.rest.end += +d.v * 1000; U.rest.total = Math.max(15, U.rest.total + +d.v); tick(); } return; }
   if (a === 'restSkip') { U.rest = null; tick(); return; }
   if (a === 'chimeOpt') { st.chime = d.k === 'on'; persist({ settings: true }); render(); if (st.chime) { unlockAudio(); setTimeout(beep, 120); } return; }
@@ -846,7 +849,7 @@ document.addEventListener('click', function (ev) {
   if (a === 'wkKeep') { if (U.inWk) saveTemplate(U.inWk.x, U.inWk.t, U.inWk.f); U.inWk = null; closeSheet(); render(); return; }
   if (a === 'wkDel') { st.saved = st.saved.filter(function (x) { return x.id !== d.id; }); persist({ settings: true }); render(); return; }
   if (a === 'wkSendSaved') { var sv = st.saved.filter(function (x) { return x.id === d.id; })[0]; if (sv) shareWorkoutLink(sv.x, sv.t); return; }
-  if (a === 'wkPaste') { var pv = ($('#wkcode') || {}).value || '', ob = wkDecode(pv); if (!ob) { toast('That is not a workout link or code.'); return; } U.inWk = ob; incomingSheet(); return; }
+  if (a === 'wkPaste') { var pv = ($('#wkcode') || {}).value || ''; if (!openPasted(pv)) toast('That is not a workout link or code.'); return; }
   if (a === 'boardMode') { st.boardMode = d.k === 'nightly' ? 'nightly' : 'live'; persist({ settings: true }); render(); return; }
   if (a === 'socCat') { SOC.cat = d.g; render(); return; }
   if (a === 'socChTab') { SOC.chTab = d.k; render(); return; }
@@ -938,8 +941,8 @@ function addExerciseTo(name) {
 
 /* ===== backup ===== */
 function backupText() { return JSON.stringify({ app: 'iron-ledger', v: 1, exported: new Date().toISOString(), settings: S.settings, workouts: S.workouts }, null, 1); }
-function copyText(txt) {
-  var done = function () { toast('Backup copied. Paste it somewhere safe.'); };
+function copyText(txt, msg) {
+  var done = function () { toast(msg || 'Backup copied. Paste it somewhere safe.'); };
   var fallback = function () { var ta = document.createElement('textarea'); ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); done(); } catch (e) { toast('Copy failed. Use Save backup file.'); } ta.remove(); };
   try { navigator.clipboard.writeText(txt).then(done, fallback); } catch (e) { fallback(); }
 }
@@ -1246,7 +1249,7 @@ function savedWorkoutsHTML() {
   var sv = S.settings.saved || [];
   var rows = sv.map(function (w) { return '<div class="lrow sv"><div class="grow"><div class="xname">' + esc(w.t) + '</div><div class="xmeta">' + w.x.length + ' exercises' + (w.f ? ' · from ' + esc(w.f) : '') + '</div></div><button class="btn small primary" data-act="wkStart" data-id="' + w.id + '">Start</button><button class="icon-btn" data-act="wkSendSaved" data-id="' + w.id + '" aria-label="Send to a friend">👥</button><button class="icon-btn" data-act="wkDel" data-id="' + w.id + '" aria-label="Delete">' + ico('x') + '</button></div>'; }).join('');
   return '<details class="card section savedw"' + (sv.length ? ' open' : '') + '><summary class="xname">Saved &amp; shared workouts' + (sv.length ? ' (' + sv.length + ')' : '') + '</summary>' + (rows || '<div class="note">Save a workout from a plan or your history, or open a link a friend sent you.</div>') +
-    '<div class="row" style="gap:8px;margin-top:6px"><input class="input grow" id="wkcode" placeholder="Paste a workout link or code" autocapitalize="none" autocomplete="off"><button class="btn small" data-act="wkPaste">Open</button></div></details>';
+    '<div class="row" style="gap:8px;margin-top:6px"><input class="input grow" id="wkcode" placeholder="Workout link or code" autocapitalize="none" autocomplete="off"><button class="btn small" data-act="tgPasteWk">Paste</button><button class="btn small" data-act="wkPaste">Open</button></div></details>';
 }
 function incomingSheet() {
   var w = U.inWk; if (!w) return;
@@ -1258,5 +1261,5 @@ function incomingSheet() {
 (function () {
   var m = (location.hash || '').match(/[#&]wk=([^&]+)/); if (!m) return;
   var o = wkDecode(decodeURIComponent(m[1])); try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { }
-  if (o) { U.inWk = o; setTimeout(incomingSheet, 400); }
+  if (o) { U.inWk = o; setTimeout(function () { if (tgIsSafariTab() && !tgHasHistory()) safariSheet('wk', m[1], incomingSheet); else incomingSheet(); }, 400); }
 })();

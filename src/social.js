@@ -4,7 +4,7 @@
    ch/<id>      challenges that person started
    cp/<id>      that person's progress in challenges they joined
    Friends are a private list kept in your own settings. */
-var SOC = { db: null, uid: null, canWrite: null, state: 'pending', people: {}, ch: {}, cp: {}, cat: 'Overall', q: '', lastPub: '', lastProg: '', pubT: null, progT: null, renderT: null, err: null, chTab: 'active', busy: false };
+var SOC = { db: null, uid: null, canWrite: null, state: 'pending', people: {}, ch: {}, cp: {}, tg: {}, cat: 'Overall', q: '', lastPub: '', lastProg: '', pubT: null, progT: null, renderT: null, err: null, chTab: 'active', busy: false };
 var CHAL = {
   workouts: { n: 'Most workouts', d: 'Whoever trains the most days wins.', u: 'workouts' },
   sets: { n: 'Most sets', d: 'Total sets logged. Pick a muscle or count everything.', u: 'sets' },
@@ -39,11 +39,12 @@ async function socInit(db, user, id) {
     try {
       db.collection(col).onSnapshot(function (snap) {
         var m = {}; snap.docs.forEach(function (d) { var x = d.data(); if (x) m[d.id] = x; });
-        SOC[key] = m; SOC.state = 'ready'; SOC.err = null; socChanged();
+        SOC[key] = m; SOC.state = 'ready'; SOC.err = null;
+        if (key === 'tg') { if (typeof tgChanged === 'function') tgChanged(); } else socChanged();
       }, function (e) { SOC.err = e && e.code; if (SOC.state !== 'ready') SOC.state = 'error'; socChanged(); });
     } catch (e) { SOC.state = 'error'; }
   }
-  sub('people', 'people'); sub('ch', 'ch'); sub('cp', 'cp');
+  sub('people', 'people'); sub('ch', 'ch'); sub('cp', 'cp'); sub('tg', 'tg');
 }
 
 /* what other people may see about you */

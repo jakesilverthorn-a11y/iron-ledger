@@ -5,7 +5,7 @@ R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 src = lambda f: open(os.path.join(R, 'src', f)).read()
 data = src('data.json').replace('</', '<\\/')
 logic = src('logic.js').replace('__DATA__', data)
-js = '\n'.join([src('figure.js'), src('social.js'), src('server.js'), src('food.js'), src('body.js'), src('ui.js')])
+js = '\n'.join([src('figure.js'), src('social.js'), src('server.js'), src('food.js'), src('body.js'), src('together.js'), src('ui.js')])
 css = src('style.css') + '\n' + src('figure.css')
 head = src('shell_head.html').replace('<meta name="claude:viewport-fit-sides" content="cover">', '''<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0f1113">

@@ -1,10 +1,10 @@
 /* Iron Ledger friends server: a tiny Cloudflare Worker.
    Gives friends usernames + passwords, a shared leaderboard and live challenges.
-   Stores only public scores and challenge progress. Workouts, height and weight never leave the phone.
+   Stores only public scores, challenge progress and the sets of live workouts you share. Workouts, height and weight never leave the phone.
    Needs ONE KV namespace bound to this Worker with the variable name  DB  (see SERVER-SETUP.txt). */
 const ITER = 30000;               // password stretching; kept modest so it fits the free plan's CPU limit
 const MAX_USERS = 300, MAX_DOC = 16000, DAYS = 86400;
-const COLS = ['people', 'ch', 'cp'];
+const COLS = ['people', 'ch', 'cp', 'tg'];   // tg = live 'train together' sessions
 const VISION = '@cf/meta/llama-3.2-11b-vision-instruct';
 const enc = new TextEncoder();
 let SECRET = null;                // signing key, created once and kept in KV
@@ -42,7 +42,7 @@ async function readIdx(env) { return JSON.parse((await env.DB.get('idx')) || '[]
 async function addIdx(env, uid) { const i = await readIdx(env); if (i.indexOf(uid) < 0) { i.push(uid); await env.DB.put('idx', JSON.stringify(i)); } return i; }
 
 async function everyone(env) {
-  const idx = await readIdx(env), res = { people: {}, ch: {}, cp: {} };
+  const idx = await readIdx(env), res = { people: {}, ch: {}, cp: {}, tg: {} };
   const docs = await Promise.all(idx.map(u => env.DB.get('d:' + u, 'json')));
   idx.forEach((u, i) => { const d = docs[i]; if (d) COLS.forEach(c => { if (d[c]) res[c][u] = d[c]; }); });
   return res;
@@ -82,7 +82,7 @@ export default {
         ctx.waitUntil(cache.put(ck, new Response(body, { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=8' } })));
         return new Response(body, { status: 200, headers: Object.assign({ 'Content-Type': 'application/json' }, CORS) });
       }
-      const m = path.match(/^\/c\/(people|ch|cp)\/([a-z0-9_]{3,16})$/);
+      const m = path.match(/^\/c\/(people|ch|cp|tg)\/([a-z0-9_]{3,16})$/);
       if (m && (req.method === 'PUT' || req.method === 'DELETE')) {
         if (m[2] !== uid) return bad('You can only change your own data.', 403);
         if (!(await env.DB.get('u:' + uid))) return bad('Account no longer exists.', 401);

@@ -1,6 +1,6 @@
 /* ===== friends server (optional): real usernames + passwords, live leaderboard and challenges, no Claude needed =====
    Talks to the tiny Cloudflare Worker in SERVER-SETUP.txt. Only public scores and challenge progress go there. */
-var SRV = { url: '', token: '', uid: '', name: '', subs: { people: [], ch: [], cp: [] }, timer: null, busy: false, last: null };
+var SRV = { url: '', token: '', uid: '', name: '', subs: { people: [], ch: [], cp: [], tg: [] }, timer: null, busy: false, last: null };
 function srvOn() { return !!(SRV.url && SRV.token && SRV.uid); }
 function srvNorm(u) { u = String(u || '').trim(); if (!u) return ''; if (!/^https?:\/\//i.test(u)) u = 'https://' + u; return u.replace(/\/+$/, ''); }
 function srvLoad() {
@@ -49,17 +49,17 @@ function srvDb() {
 }
 function srvDocs(map) { return Object.keys(map || {}).map(function (id) { return { id: id, data: function () { return map[id]; } }; }); }
 function srvDeliver() {
-  ['people', 'ch', 'cp'].forEach(function (c) { var docs = srvDocs(SRV.last && SRV.last[c]); SRV.subs[c].slice().forEach(function (s) { try { s.ok({ docs: docs }); } catch (e) { } }); });
+  ['people', 'ch', 'cp', 'tg'].forEach(function (c) { var docs = srvDocs(SRV.last && SRV.last[c]); SRV.subs[c].slice().forEach(function (s) { try { s.ok({ docs: docs }); } catch (e) { } }); });
 }
 async function srvPoll() {
   if (!srvOn() || SRV.busy) return; SRV.busy = true;
   try { SRV.last = await srvRaw('GET', '/all'); srvDeliver(); }
-  catch (e) { if (e.code === 'network') ['people', 'ch', 'cp'].forEach(function (c) { SRV.subs[c].forEach(function (s) { if (s.bad) s.bad({ code: 'network' }); }); }); }
+  catch (e) { if (e.code === 'network') ['people', 'ch', 'cp', 'tg'].forEach(function (c) { SRV.subs[c].forEach(function (s) { if (s.bad) s.bad({ code: 'network' }); }); }); }
   SRV.busy = false;
 }
 function srvStart() {
   if (!srvOn() || SOC.db) return;
-  SRV.last = null; SRV.subs = { people: [], ch: [], cp: [] };
+  SRV.last = null; SRV.subs = { people: [], ch: [], cp: [], tg: [] };
   socInit(srvDb(), { can: async function () { return true; } }, SRV.uid);
   clearInterval(SRV.timer); SRV.timer = setInterval(function () { if (!document.hidden) srvPoll(); }, 20000);
   srvPoll();
@@ -67,8 +67,8 @@ function srvStart() {
   if (typeof aiDetect === 'function') aiDetect();
 }
 function srvStop() {
-  clearInterval(SRV.timer); SRV.timer = null; SRV.last = null; SRV.subs = { people: [], ch: [], cp: [] };
-  SOC.db = null; SOC.uid = null; SOC.people = {}; SOC.ch = {}; SOC.cp = {}; SOC.state = 'pending'; SOC.lastPub = ''; SOC.lastProg = '';
+  clearInterval(SRV.timer); SRV.timer = null; SRV.last = null; SRV.subs = { people: [], ch: [], cp: [], tg: [] };
+  SOC.db = null; SOC.uid = null; SOC.people = {}; SOC.ch = {}; SOC.cp = {}; SOC.tg = {}; SOC.tgLoaded = false; SOC.state = 'pending'; SOC.lastPub = ''; SOC.lastProg = '';
 }
 async function srvAuth(kind, u, p) {
   try {
