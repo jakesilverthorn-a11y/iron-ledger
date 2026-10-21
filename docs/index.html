@@ -383,6 +383,10 @@ details.card summary { list-style: none; } details.card summary::-webkit-details
 .xcard-head .icon-btn{width:34px;height:40px;flex:none}
 .xcard-head .icon-btn svg{width:19px;height:19px}
 
+/* chart time window */
+.rangeseg{margin-top:4px}
+.rangeseg button{min-height:32px;font-size:13px}
+
 /* cartoon figures */
 .fig { display: block; width: 100%; height: 100%; }
 .demo.cg { background: linear-gradient(180deg, var(--surface2), var(--surface2)); }
@@ -3631,7 +3635,8 @@ function lineChart(pts, o) {
   o = o || {};
   var W = 360, H = o.h || 170, pl = 40, pr = 14, pt = 12, pb = 24, fmt = o.fmt || function (v) { return Math.round(v); };
   if (!pts.length) return '';
-  var t0 = pts[0].t, t1 = pts[pts.length - 1].t, lo = Infinity, hi = -Infinity;
+  var t0 = o.t0 != null ? Math.min(o.t0, pts[0].t) : pts[0].t, t1 = o.t1 != null ? Math.max(o.t1, pts[pts.length - 1].t) : pts[pts.length - 1].t, lo = Infinity, hi = -Infinity;
+  var dl = (t1 - t0) > 300 * DAY ? function (t) { var d = new Date(t); return MON[d.getMonth()] + ' ' + d.getFullYear(); } : fmtDate;
   pts.forEach(function (p) { lo = Math.min(lo, p.v); hi = Math.max(hi, p.v); });
   if (o.base != null) { lo = Math.min(lo, o.base); hi = Math.max(hi, o.base); }
   var padv = (hi - lo) * 0.12 || Math.max(1, hi * 0.05); lo -= padv; hi += padv;
@@ -3643,15 +3648,45 @@ function lineChart(pts, o) {
   if (o.base != null) { var yb = Y(o.base); g += '<line x1="' + pl + '" x2="' + (W - pr) + '" y1="' + yb + '" y2="' + yb + '" style="stroke:var(--faint)" stroke-width="1" stroke-dasharray="4 4"/>'; }
   var d = pts.map(function (p, k) { return (k ? 'L' : 'M') + X(p.t).toFixed(1) + ' ' + Y(p.v).toFixed(1); }).join(' ');
   if (pts.length > 1) {
-    g += '<path d="' + d + ' L' + X(t1).toFixed(1) + ' ' + (H - pb) + ' L' + X(t0).toFixed(1) + ' ' + (H - pb) + ' Z" style="fill:var(--accent)" fill-opacity=".13"/>';
+    g += '<path d="' + d + ' L' + X(pts[pts.length - 1].t).toFixed(1) + ' ' + (H - pb) + ' L' + X(pts[0].t).toFixed(1) + ' ' + (H - pb) + ' Z" style="fill:var(--accent)" fill-opacity=".13"/>';
     g += '<path d="' + d + '" fill="none" style="stroke:var(--accent-ink)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>';
   }
   if (pts.length <= 14) pts.forEach(function (p) { g += '<circle cx="' + X(p.t).toFixed(1) + '" cy="' + Y(p.v).toFixed(1) + '" r="3" style="fill:var(--bg);stroke:var(--accent-ink)" stroke-width="2"/>'; });
   var last = pts[pts.length - 1];
   g += '<circle cx="' + X(last.t).toFixed(1) + '" cy="' + Y(last.v).toFixed(1) + '" r="5" style="fill:var(--accent-ink);stroke:var(--bg)" stroke-width="2"/>';
-  g += '<text x="' + pl + '" y="' + (H - 6) + '" text-anchor="start">' + esc(fmtDate(t0)) + '</text>';
-  if (t1 !== t0) g += '<text x="' + (W - pr) + '" y="' + (H - 6) + '" text-anchor="end">' + esc(fmtDate(t1)) + '</text>';
+  g += '<text x="' + pl + '" y="' + (H - 6) + '" text-anchor="start">' + esc(dl(t0)) + '</text>';
+  if (t1 !== t0) { g += '<text x="' + (W - pr) + '" y="' + (H - 6) + '" text-anchor="end">' + esc(o.t1 != null && Date.now() - t1 < DAY ? 'Today' : dl(t1)) + '</text>'; if (o.t0 != null) g += '<text x="' + ((pl + W - pr) / 2) + '" y="' + (H - 6) + '" text-anchor="middle">' + esc(dl((t0 + t1) / 2)) + '</text>'; }
   return '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(o.label || 'Trend chart') + '">' + g + '</svg>';
+}
+/* ===== chart time windows ===== */
+var RANGES = [['1M', 30], ['3M', 91], ['6M', 182], ['1Y', 365], ['All', 0]];
+function curRange() {
+  var k = S.settings.chartRange; if (RANGES.some(function (r) { return r[0] === k; })) return k;
+  var W = realWorkouts(); return W.length && Date.now() - W[0].t > 35 * DAY ? '3M' : '1M';   // new users start on the month view
+}
+function rangeBounds(firstT) {
+  var k = curRange(), now = Date.now(), days = RANGES.filter(function (r) { return r[0] === k; })[0][1];
+  var t0 = days ? now - days * DAY : Math.min(firstT || now, now - 14 * DAY);
+  return { t0: t0, t1: now, k: k };
+}
+/* sample fn(t) across the window: daily for a month, up to ~60 points for longer windows */
+function seriesOver(fn, b) {
+  var span = b.t1 - b.t0, step = Math.max(DAY, Math.ceil(span / 60 / DAY) * DAY), out = [];
+  for (var t = b.t0; t < b.t1 - step / 2; t += step) { var v = fn(t); if (v != null) out.push({ t: t, v: v }); }
+  var vl = fn(b.t1); if (vl != null) out.push({ t: b.t1, v: vl });
+  return out;
+}
+function rangeSeg() {
+  var k = curRange();
+  return '<div class="seg rangeseg" role="group" aria-label="Time window">' + RANGES.map(function (r) { return '<button aria-pressed="' + (r[0] === k) + '" data-act="chartRange" data-k="' + r[0] + '">' + r[0] + '</button>'; }).join('') + '</div>';
+}
+function firstWorkoutT(W) { return W.length ? W[0].t : Date.now(); }
+/* change of a series over the window, as a small line under the chart */
+function rangeNote(pts, unitTxt) {
+  if (!pts.length) return '<div class="note">No data in this window yet.</div>';
+  if (pts.length === 1) return '<div class="note">Only one data point so far. The line fills in as you keep logging.</div>';
+  var a = pts[0], z = pts[pts.length - 1], d = z.v - a.v, lo = Math.min.apply(null, pts.map(function (p) { return p.v; })), hi = Math.max.apply(null, pts.map(function (p) { return p.v; }));
+  return '<div class="note">' + (Math.abs(d) < 0.5 ? 'No change' : (d > 0 ? '▲ +' : '▼ ') + Math.round(d) + (unitTxt || '')) + ' since ' + esc(fmtDate(a.t)) + ' · low ' + Math.round(lo) + ', high ' + Math.round(hi) + '</div>';
 }
 function spark(pts, base) {
   if (pts.length < 2) return '<svg class="spark" viewBox="0 0 300 34" aria-hidden="true"></svg>';
@@ -3679,7 +3714,7 @@ function openSheet(title, body, opts) {
   document.body.style.overflow = 'hidden';
   var b = $('#sheet-body'); if (opts.focus) { var f = $(opts.focus, b); if (f) f.focus(); }
 }
-function closeSheet() { $('#sheet-root').innerHTML = ''; document.body.style.overflow = ''; U.pickMode = null; U.socSheet = null; U.eatSheet = null; U.tgSheet = false; U.tgSheetOpen = false; }
+function closeSheet() { $('#sheet-root').innerHTML = ''; document.body.style.overflow = ''; U.pickMode = null; U.socSheet = null; U.eatSheet = null; U.tgSheet = false; U.tgSheetOpen = false; U.chartRedraw = null; }
 function sheetOpen() { return !!$('#sheet-root').firstChild; }
 
 /* ===== exercise detail ===== */
@@ -3893,10 +3928,10 @@ function progMuscles(W) {
   var H = allHistories(W), now = Date.now(), ov = overallRankAt(H, B, now), ov30 = overallRankAt(H, B, now - 30 * DAY);
   var chip = '<button class="chip" style="min-height:32px;font-size:13px" data-act="bodyEdit">' + esc(bodyText(B)) + ' · edit</button>';
   if (!ov) return '<div class="empty"><h3>No rank yet</h3>Log sets with weight and reps. Each lift is compared with people who are ' + esc(bodyText(B)) + '.</div>' + chip;
-  var series = []; for (var k = 12; k >= 0; k--) { var t = now - k * 7 * DAY, o = overallRankAt(H, B, t); if (o) series.push({ t: t, v: o.pct }); }
+  var rb = rangeBounds(firstWorkoutT(W)), series = seriesOver(function (t) { var o = overallRankAt(H, B, t); return o ? o.pct : null; }, rb);
   var idx = overallScore(H, now), idx30 = overallScore(H, now - 30 * DAY);
   var hero = '<div class="card section"><div class="field-label" style="margin:0">Overall strength rank</div><div class="score-hero"><div class="big">' + ov.score + '</div><div style="padding-bottom:4px"><div class="tier">' + tierOf(ov.score) + '</div><div>' + deltaHTML(ov30 ? ov.score - ov30.score : null, ' pts') + '</div></div></div>' +
-    '<div class="note">Stronger than about ' + Math.round(ov.pct) + '% of lifters your size. 100 is the strongest of people with your height, weight and sex. Based on ' + ov.groups + ' of ' + GROUPS.length + ' muscle groups.</div>' + lineChart(series, { base: 50, label: 'Overall rank over time', fmt: function (v) { return Math.round(v); } }) + '<div>' + chip + '</div></div>';
+    '<div class="note">Stronger than about ' + Math.round(ov.pct) + '% of lifters your size. 100 is the strongest of people with your height, weight and sex. Based on ' + ov.groups + ' of ' + GROUPS.length + ' muscle groups.</div>' + rangeSeg() + lineChart(series, { base: 50, t0: rb.t0, t1: rb.t1, label: 'Overall rank over time', fmt: function (v) { return Math.round(v); } }) + rangeNote(series, ' pts') + '<div>' + chip + '</div></div>';
   var rows = GROUPS.map(function (g) {
     var cur = groupRankAt(H, g, B, now), old = groupRankAt(H, g, B, now - 30 * DAY);
     return { g: g, cur: cur, d: cur && old ? cur.score - old.score : null, ser: groupRankSeries(H, g, B, now, 12) };
@@ -3942,12 +3977,14 @@ function liftSheet(name, metric) {
   metric = metric || 'e1rm';
   var ex = BYNAME[name], H = allHistories(statWorkouts())[name]; if (!H) return;
   var bw = isBW(ex), u = unit(), conv = function (lb) { return u === 'kg' ? lb / LB : lb; };
-  var pts = H.map(function (x) { return { t: x.t, v: metric === 'vol' ? conv(x.vol) : metric === 'top' ? (bw ? x.topR : conv(x.topW)) : (bw ? x.best : conv(x.best)) }; });
+  var allPts = H.map(function (x) { return { t: x.t, v: metric === 'vol' ? conv(x.vol) : metric === 'top' ? (bw ? x.topR : conv(x.topW)) : (bw ? x.best : conv(x.best)) }; });
+  var rb = rangeBounds(H[0].t), pts = allPts.filter(function (p) { return p.t >= rb.t0; });
+  U.chartRedraw = function () { liftSheet(name, metric); };
   var first = H[0].best, cur = H[H.length - 1].best, best = Math.max.apply(null, H.map(function (x) { return x.best; }));
   var wtd = bw && H.some(function (x) { return x.topW > 0; });
   var fmtv = function (lb) { return bw ? (wtd ? '≈' : '') + Math.round(lb) + ' reps' : toDisp(lb, u) + ' ' + uLabel(); };
   var segs = bw ? '' : '<div class="seg" role="group"><button aria-pressed="' + (metric === 'e1rm') + '" data-act="liftMetric" data-n="' + esc(name) + '" data-k="e1rm">Est. 1RM</button><button aria-pressed="' + (metric === 'top') + '" data-act="liftMetric" data-n="' + esc(name) + '" data-k="top">Top weight</button><button aria-pressed="' + (metric === 'vol') + '" data-act="liftMetric" data-n="' + esc(name) + '" data-k="vol">Volume</button></div>';
-  var body = segs + lineChart(pts, { label: name + ' trend', fmt: function (v) { return metric === 'vol' ? (v >= 1000 ? Math.round(v / 100) / 10 + 'k' : Math.round(v)) : Math.round(v * 10) / 10; } }) +
+  var body = segs + rangeSeg() + (pts.length ? '' : '<div class="note">No sessions in this window. Your last one was ' + esc(fmtDate(H[H.length - 1].t)) + '.</div>') + lineChart(pts, { t0: rb.t0, t1: rb.t1, label: name + ' trend', fmt: function (v) { return metric === 'vol' ? (v >= 1000 ? Math.round(v / 100) / 10 + 'k' : Math.round(v)) : Math.round(v * 10) / 10; } }) +
     '<div class="grid2"><div class="stat"><div class="v">' + fmtv(best) + '</div><div class="k">Best' + (bw ? '' : ' (est. 1RM)') + '</div></div><div class="stat"><div class="v">' + (H.length > 1 ? (cur >= first ? '+' : '') + Math.round((cur / first - 1) * 100) + '%' : '–') + '</div><div class="k">Since first session</div></div><div class="stat"><div class="v">' + fmtv(first) + '</div><div class="k">First session</div></div><div class="stat"><div class="v">' + H.length + '</div><div class="k">Sessions</div></div></div>' +
     '<div class="section"><h3 style="font-size:20px">Recent sessions</h3><div>' + H.slice(-6).reverse().map(function (x) { return '<div class="lrow"><span>' + fmtDateLong(x.t) + '</span><span class="num" style="font-size:18px">' + (bw && !x.topW ? x.topR + ' reps' : toDisp(x.topW, u) + ' ' + uLabel() + loadSuffix(ex) + ' × ' + x.topR) + (x.best >= best - 1e-6 && H.length > 1 ? '<span class="pr">BEST</span>' : '') + '</span></div>'; }).join('') + '</div></div>' +
     (bw ? '' : pctTable(cur)) + liftRankCard(name, H) +
@@ -3986,27 +4023,29 @@ function groupSheet(g) {
   var B = profB();
   if (B) return groupRankSheet(g, B);
   var W = statWorkouts(), H = allHistories(W), now = Date.now(), cur = groupScoreAt(H, g, now);
-  var ser = groupSeries(H, g, now, 24), rows = [];
+  var rb = rangeBounds(firstWorkoutT(W)), ser = seriesOver(function (t) { var r = groupScoreAt(H, g, t); return r ? r.score : null; }, rb), rows = [];
+  U.chartRedraw = function () { groupSheet(g); };
   Object.keys(H).forEach(function (n) {
     var ex = BYNAME[n], w = ex.p.indexOf(g) >= 0 ? 'Primary' : (ex.s.indexOf(g) >= 0 ? 'Secondary' : null); if (!w) return;
     var r = exIndexAt(H[n], now); if (r) rows.push({ n: n, idx: r.idx, role: w });
   });
   rows.sort(function (a, b) { return (a.role === 'Primary' ? 0 : 1) - (b.role === 'Primary' ? 0 : 1) || b.idx - a.idx; });
-  var body = '<div class="score-hero"><div class="big">' + Math.round(cur.score) + '</div><div class="note" style="padding-bottom:6px">strength index</div></div>' + lineChart(ser, { base: 100, label: g + ' strength index' }) +
+  var body = '<div class="score-hero"><div class="big">' + Math.round(cur.score) + '</div><div class="note" style="padding-bottom:6px">strength index</div></div>' + rangeSeg() + lineChart(ser, { base: 100, t0: rb.t0, t1: rb.t1, label: g + ' strength index' }) + rangeNote(ser, '') +
     '<div class="section"><h3 style="font-size:20px">What counts toward it</h3><div>' + rows.map(function (r) { return '<button class="lrow" style="width:100%;text-align:left" data-act="openLift" data-n="' + esc(r.n) + '"><span>' + esc(r.n) + ' <span class="faint">· ' + r.role + '</span></span><span class="num" style="font-size:18px">' + Math.round(r.idx) + '</span></button>'; }).join('') + '</div></div><div class="note">Each lift is compared with your first session on it, using estimated 1-rep max (reps for bodyweight moves). Secondary muscles count for less.</div>';
   openSheet(g, body);
 }
 function groupRankSheet(g, B) {
   var W = statWorkouts(), H = allHistories(W), now = Date.now(), cur = groupRankAt(H, g, B, now); if (!cur) return;
-  var old = groupRankAt(H, g, B, now - 30 * DAY), ser = groupRankSeries(H, g, B, now, 24), idx = groupScoreAt(H, g, now), rows = [];
+  var old = groupRankAt(H, g, B, now - 30 * DAY), rb = rangeBounds(firstWorkoutT(W)), ser = seriesOver(function (t) { var r = groupRankAt(H, g, B, t); return r ? r.pct : null; }, rb), idx = groupScoreAt(H, g, now), rows = [];
+  U.chartRedraw = function () { groupRankSheet(g, B); };
   Object.keys(H).forEach(function (n) {
     var ex = BYNAME[n], role = ex.p.indexOf(g) >= 0 ? 'Primary' : (ex.s.indexOf(g) >= 0 ? 'Secondary' : null); if (!role) return;
     var r = exerciseRank(n, H[n], B, now), ix = exIndexAt(H[n], now); rows.push({ n: n, role: role, r: r, idx: ix ? ix.idx : null });
   });
   rows.sort(function (a, b) { return (a.role === 'Primary' ? 0 : 1) - (b.role === 'Primary' ? 0 : 1) || (b.r ? b.r.score : -1) - (a.r ? a.r.score : -1); });
   var body = '<div class="score-hero"><div class="big">' + cur.score + '</div><div style="padding-bottom:4px"><div class="tier">' + tierOf(cur.score) + '</div>' + deltaHTML(old ? cur.score - old.score : null, ' pts') + '</div></div>' +
-    '<div class="note">Stronger than about ' + Math.round(cur.pct) + '% of lifters who are ' + esc(bodyText(B)) + '.</div>' + lineChart(ser, { base: 50, label: g + ' rank over time', fmt: function (v) { return Math.round(v); } }) +
-    (idx ? '<div class="grid2"><div class="stat"><div class="v">' + Math.round(idx.score) + '</div><div class="k">Progress vs. your start</div></div><div class="stat"><div class="v">' + cur.n + '</div><div class="k">Ranked lifts</div></div></div>' : '') +
+    '<div class="note">Stronger than about ' + Math.round(cur.pct) + '% of lifters who are ' + esc(bodyText(B)) + '.</div>' + rangeSeg() + lineChart(ser, { base: 50, t0: rb.t0, t1: rb.t1, label: g + ' rank over time', fmt: function (v) { return Math.round(v); } }) + rangeNote(ser, ' pts') +
+    (idx ? '<div class="grid2"><div class="stat"><div class="v">' + (idx.score >= 100 ? '+' : '') + Math.round(idx.score - 100) + '%</div><div class="k">Stronger than your first sessions</div></div><div class="stat"><div class="v">' + cur.n + '</div><div class="k">Ranked lifts</div></div></div>' : '') +
     '<div class="section"><h3 style="font-size:20px">What counts toward it</h3><div>' + rows.map(function (r) { return '<button class="lrow" style="width:100%;text-align:left" data-act="openLift" data-n="' + esc(r.n) + '"><span>' + esc(r.n) + ' <span class="faint">· ' + r.role + '</span></span><span class="num" style="font-size:18px">' + (r.r ? (r.r.est ? '≈' : '') + r.r.score : '<span class="faint">no rank</span>') + '</span></button>'; }).join('') + '</div></div>' +
     '<div class="note">Each lift is ranked against standards for your sex and body size. A lift marked ≈ has no exact standard, so it is estimated from a similar lift and counts for less. Secondary muscles count for less too.</div>';
   openSheet(g, body);
@@ -4231,6 +4270,11 @@ document.addEventListener('click', function (ev) {
   if (a === 'libGear') { U.libGear = d.k; U.libShown = 40; render(); return; }
   if (a === 'libMore') { U.libShown += 60; refreshLibList(); return; }
   if (a === 'pickGroup') { var k = U.pickGroups.indexOf(d.g); if (k >= 0) U.pickGroups.splice(k, 1); else U.pickGroups.push(d.g); openPicker(U.pickMode, true); return; }
+  if (a === 'chartRange') {
+    st.chartRange = d.k; persist({ settings: true });
+    if (sheetOpen() && U.chartRedraw) { var sb = $('#sheet-body'), sy = sb ? sb.scrollTop : 0, f = U.chartRedraw; f(); sb = $('#sheet-body'); if (sb) sb.scrollTop = sy; } else render();
+    return;
+  }
   if (a === 'openGroup') { groupSheet(d.g); return; }
   if (a === 'openLift') { liftSheet(d.n); return; }
   if (a === 'liftMetric') { liftSheet(d.n, d.k); return; }

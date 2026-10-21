@@ -368,3 +368,7 @@ details.card summary { list-style: none; } details.card summary::-webkit-details
 .xcard-head .thumb{width:70px}
 .xcard-head .icon-btn{width:34px;height:40px;flex:none}
 .xcard-head .icon-btn svg{width:19px;height:19px}
+
+/* chart time window */
+.rangeseg{margin-top:4px}
+.rangeseg button{min-height:32px;font-size:13px}
