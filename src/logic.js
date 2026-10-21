@@ -43,7 +43,8 @@ function fromDisp(txt, unit) { var v = parseFloat(String(txt).replace(',', '.'))
 function fmtW(lb, unit) { if (!lb) return '0'; return toDisp(lb, unit); }
 
 /* ---------- strength metric ---------- */
-function isBW(ex) { return ex && ex.eq === 'Bodyweight'; }
+/* bodyweight = tracked in reps: no-equipment moves, plus anything rated against a reps standard (ring dips, weighted pull-ups, ab wheel) */
+function isBW(ex) { return !!ex && (ex.eq === 'Bodyweight' || ex.bwk === 1); }
 /* weighted bodyweight work: added weight is turned into "bodyweight-equivalent reps" so a vest, belt or plate counts.
    BW_FRAC is roughly how much of your bodyweight each movement moves. */
 var BW_FRAC = { pullup: 1, dip: 0.95, pushup: 0.65, situp: 0.35, calfbw: 1, hangleg: 0.35 };

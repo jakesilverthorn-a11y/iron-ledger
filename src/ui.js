@@ -499,7 +499,7 @@ function liftRankCard(name, H) {
   var now = Date.now(), r = H && H.length ? exerciseRank(name, H, B, now) : null;
   var a = r ? r.anchors : stdAt(k.cls, B.sex, effBW(B.sex, B.h, curWeightLb(B))); if (!a) return '';
   var rep = DATA.std[k.cls].u === 'reps', lbls = ['Novice', 'Intermediate', 'Advanced', 'Elite'], pd = DATA.std[k.cls].pd;
-  var each = pd && ex.eq !== 'barbell' ? ' each' : '', u = uLabel();
+  var each = loadSuffix(ex), u = uLabel();
   // weight used last time, for "reps at your weight" on weighted bodyweight moves
   var lastW = 0; if (rep && H && H.length) lastW = H[H.length - 1].topW || 0;
   var tbl = lbls.map(function (l, i) {
@@ -1177,13 +1177,13 @@ function loadInfo(ex) {
     return { h: '+' + U2, s: 'Added weight only', l: 'Leave it at 0 for plain bodyweight. Only enter extra weight you add, like a vest, belt or dumbbell. Your reps are what get tracked.' };
   }
   if (q === 'dumbbell' || (has('dumbbell') && !has('barbell') && !has('ezbar'))) {
-    var single = /one[- ]arm|single|goblet|pullover|one dumbbell|^dumbbell (?:raise|side bend)$|two-arm.*one dumbbell/.test(n) || /tricep.*extension/.test(n) && !/lying/.test(n);
+    var single = /one[- ]arm|single|goblet|plie|pullover|one dumbbell|^dumbbell (?:raise|side bend)$|two-arm.*one dumbbell|^seated triceps press$/.test(n) || /tricep.*extension/.test(n) && !/lying|two-arm|pronated grip|decline/.test(n);
     return single
       ? { h: U2 + ' (1 DB)', s: 'Weight of the dumbbell', l: 'You use one dumbbell here. Enter its weight, e.g. 40.' }
       : { h: U2 + ' EACH', s: 'Per dumbbell', l: 'Enter the weight of ONE dumbbell. Holding two 50s? Enter 50, not 100. Strength ranks are set up this way too.' };
   }
   if (q === 'kettlebells' || has('kettlebell') && !has('barbell')) {
-    return /double|two-arm kettlebell|kettlebell.*s\b.*double/.test(n) ? { h: U2 + ' EACH', s: 'Per kettlebell', l: 'Enter the weight of ONE kettlebell, even when you hold two.' } : { h: U2, s: 'Weight of the bell', l: 'Enter the weight of the kettlebell or dumbbell you hold.' };
+    return /double|two-arm kettlebell|two kettlebells|kettlebell.*s\b.*double/.test(n) ? { h: U2 + ' EACH', s: 'Per kettlebell', l: 'Enter the weight of ONE kettlebell, even when you hold two.' } : { h: U2, s: 'Weight of the bell', l: 'Enter the weight of the kettlebell or dumbbell you hold.' };
   }
   if (has('smith')) return { h: U2 + ' TOTAL', s: 'Plates + bar', l: 'Enter all the plates plus the Smith bar. Smith bars often weigh 15–25 ' + u + ' (check the label). Count it the same way every time.' };
   if (q === 'barbell' || q === 'e-z curl bar' || has('barbell') || has('ezbar') || has('trapbar')) return { h: U2 + ' TOTAL', s: 'Total on the bar', l: 'Enter the total weight, including the bar itself: an Olympic bar is ' + bar + ', an EZ bar is about ' + (u === 'kg' ? '10 kg' : '25 lb') + '. Use Plates to see what to load.' };
