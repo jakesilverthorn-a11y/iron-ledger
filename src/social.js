@@ -54,6 +54,9 @@ function socDoc() {
   W.forEach(function (w) { if (w.t >= now - 30 * DAY) { doc.w30++; w.ex.forEach(function (e) { doc.s30 += e.sets.filter(function (s) { return (+s.r || 0) > 0; }).length; }); } });
   if (B) {
     var ov = overallRankAt(H, B, now); doc.ov = ov ? ov.score : null;
+    // nightly leaderboard: the same scores as of the last 10 pm cut-off
+    var C = boardCutoff(now), ovc = overallRankAt(H, B, C); doc.b = { c: C, ov: ovc ? ovc.score : null, g: {} };
+    GROUPS.forEach(function (g) { var rc = groupRankAt(H, g, B, C); if (rc) doc.b.g[g] = rc.score; });
     GROUPS.forEach(function (g) { var r = groupRankAt(H, g, B, now); if (r) doc.g[g] = r.score; });
     var arr = []; Object.keys(H).forEach(function (n) { var r = exerciseRank(n, H[n], B, now); if (r) arr.push([n, r.score]); });
     arr.sort(function (a, b) { return b[1] - a[1]; }).slice(0, 10).forEach(function (a) { doc.ex[a[0]] = a[1]; });
@@ -193,7 +196,7 @@ function lbRows(cat) {
   var ids = [SOC.uid].concat(socFriends()), rows = [];
   ids.forEach(function (id) {
     var p = SOC.people[id]; if (!p) { if (id !== SOC.uid) rows.push({ id: id, gone: true, s: null }); return; }
-    var s = cat === 'Overall' ? p.ov : (p.g || {})[cat];
+    var s = boardVal(p, cat);
     rows.push({ id: id, p: p, s: s == null ? null : s, me: id === SOC.uid });
   });
   rows.sort(function (a, b) { return (b.s == null ? -1 : b.s) - (a.s == null ? -1 : a.s); });
@@ -227,7 +230,7 @@ function viewFriends() {
     var inner = '<span class="lbr">' + (r.s != null ? rk : '–') + '</span><div class="grow"><div class="xname">' + esc(r.p.u) + (r.me ? ' <span class="tag p">You</span>' : '') + '</div><div class="xmeta">' + (r.s != null ? tierOf(r.s) + ' · ' : '') + socAgo(r.p.last) + '</div></div>' + scoreChip(r.s);
     return r.me ? '<div class="lb me">' + inner + '</div>' : '<button class="lb" data-act="socCompare" data-id="' + esc(r.id) + '">' + inner + '</button>';
   }).join('');
-  var lb = '<div class="section"><h2>Leaderboard</h2>' + chips + '<div class="card" style="padding:4px 14px">' + board + '</div>' +
+  var lb = '<div class="section"><h2>Leaderboard</h2>' + chips + '<div class="seg" role="group" aria-label="Leaderboard updates" style="margin-bottom:6px"><button aria-pressed="' + (S.settings.boardMode !== 'nightly') + '" data-act="boardMode" data-k="live">Live</button><button aria-pressed="' + (S.settings.boardMode === 'nightly') + '" data-act="boardMode" data-k="nightly">Nightly at 10 pm</button></div><div class="note">' + (S.settings.boardMode === 'nightly' ? '🕙 Scores lock in every night at 10 pm (Eastern). Last update ' + boardWhen(boardCutoff(Date.now())) + ', next ' + boardWhen(boardCutoff(Date.now()) + DAY, 1) + '.' : '🟢 Live: scores update within seconds of anyone finishing a workout.') + '</div><div class="card" style="padding:4px 14px">' + board + '</div>' +
     (fr.length ? '' : '<div class="note">Add a friend below to see how you stack up. Scores compare people of similar size, so it is a fair race.</div>') + '</div>';
   var all = peopleAll();
   var add = '<div class="section"><h2>Add friends</h2><input class="input" id="fq" type="search" autocapitalize="none" autocomplete="off" placeholder="Search username" aria-label="Search username" value="' + esc(SOC.q) + '">' +
@@ -375,4 +378,35 @@ function viewFriendsCode() {
   var add = '<div class="card section"><h2>Add a friend</h2><textarea class="input" id="codein" rows="2" style="padding:10px 14px;min-height:64px;font-size:13px" placeholder="Paste a friend\'s code or their whole message"></textarea><button class="btn block" data-act="codeAdd">Add friend</button><div class="note">Pasting a newer code from the same friend updates their scores.</div></div>';
   var lb = d ? '<div class="section"><h2>Leaderboard</h2>' + chips + '<div class="card" style="padding:4px 14px">' + board + '</div>' + (codeFriends().length ? '' : '<div class="note">Add a friend to see how you stack up. Scores compare people of similar height, weight and sex, so it is a fair race.</div>') + '</div>' : '';
   return '<div class="screen">' + head + mine + lb + add + (SRV.url ? '<button class="btn block ghost" data-act="srvBack">Back to sign in</button>' : srvConnectCard() + '<div class="note">Friend codes work anywhere with no server. Live challenges need a friends server.</div>') + '</div>';
+}
+
+/* ===== nightly leaderboard cut-off: 10 pm in Toronto (handles daylight saving) ===== */
+var BOARD_TZ = 'America/Toronto', BOARD_HOUR = 22;
+function tzOffsetMin(t) {
+  try {
+    var f = new Intl.DateTimeFormat('en-US', { timeZone: BOARD_TZ, hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric' }), o = {};
+    f.formatToParts(new Date(t)).forEach(function (x) { o[x.type] = +x.value; });
+    return (Date.UTC(o.year, o.month - 1, o.day, o.hour % 24, o.minute, o.second) - Math.floor(t / 1000) * 1000) / 60000;
+  } catch (e) { return -new Date(t).getTimezoneOffset(); }
+}
+function boardCutoff(t) {
+  var off = tzOffsetMin(t), loc = new Date(t + off * 60000);             // wall-clock time in Toronto, read with UTC getters
+  var c = Date.UTC(loc.getUTCFullYear(), loc.getUTCMonth(), loc.getUTCDate(), BOARD_HOUR, 0, 0) - off * 60000;
+  if (c > t) c -= DAY;
+  return c - (tzOffsetMin(c) - off) * 60000;                              // correct if DST changed in between
+}
+function boardWhen(c, future) {
+  var d = new Date(c), now = new Date(), same = d.toDateString() === now.toDateString(), y = new Date(Date.now() - DAY).toDateString() === d.toDateString(), tm = d.getHours() + ':' + ('0' + d.getMinutes()).slice(-2);
+  var hh = d.getHours() % 12 || 12, ap = d.getHours() < 12 ? 'am' : 'pm', t2 = hh + (d.getMinutes() ? ':' + ('0' + d.getMinutes()).slice(-2) : '') + ' ' + ap;
+  if (future) return (same ? 'tonight' : 'tomorrow') + ' at ' + t2;
+  return (same ? 'today' : y ? 'yesterday' : DOW[d.getDay()]) + ' at ' + t2;
+}
+/* a friend's score on the nightly board: their live score is right if they last published before the cut-off,
+   otherwise use the score they computed for that same cut-off */
+function boardVal(p, cat) {
+  var C = boardCutoff(Date.now()), pick = function (o) { return o ? (cat === 'Overall' ? o.ov : (o.g || {})[cat]) : null; };
+  if (S.settings.boardMode !== 'nightly') return pick(p);
+  if (!p.at || p.at <= C) return pick(p);
+  if (p.b && p.b.c >= C) return pick(p.b);
+  return pick(p);
 }

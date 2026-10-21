@@ -847,6 +847,7 @@ document.addEventListener('click', function (ev) {
   if (a === 'wkDel') { st.saved = st.saved.filter(function (x) { return x.id !== d.id; }); persist({ settings: true }); render(); return; }
   if (a === 'wkSendSaved') { var sv = st.saved.filter(function (x) { return x.id === d.id; })[0]; if (sv) shareWorkoutLink(sv.x, sv.t); return; }
   if (a === 'wkPaste') { var pv = ($('#wkcode') || {}).value || '', ob = wkDecode(pv); if (!ob) { toast('That is not a workout link or code.'); return; } U.inWk = ob; incomingSheet(); return; }
+  if (a === 'boardMode') { st.boardMode = d.k === 'nightly' ? 'nightly' : 'live'; persist({ settings: true }); render(); return; }
   if (a === 'socCat') { SOC.cat = d.g; render(); return; }
   if (a === 'socChTab') { SOC.chTab = d.k; render(); return; }
   if (a === 'socCreate') {
