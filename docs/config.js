@@ -1,2 +1,2 @@
-// Optional: paste your friends server address between the quotes, then commit.
-window.IL_SERVER = "";
+// Friends server for leaderboards, challenges and AI photo analysis.
+window.IL_SERVER = "https://ironledger.jakesilverthorn.workers.dev";
