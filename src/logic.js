@@ -207,6 +207,57 @@ function injuryHits(e) {
   return out;
 }
 function injuryBlocked(e) { return injuryHits(e).some(function (h) { return h.block; }); }
+/* how recently and how often each exercise was done: { name: { d: days since last time, n: times in the last 14 days } } */
+function recency(workouts, now) {
+  var out = {}; now = now || Date.now();
+  workouts.forEach(function (w) {
+    var d = (now - w.t) / DAY;
+    w.ex.forEach(function (x) {
+      var r = out[x.n] || (out[x.n] = { d: 999, n: 0 }); if (d < r.d) r.d = d; if (d <= 14) r.n++;
+      var f = famKey(x.n); if (f) { var k = 'fam:' + f; if (!(out[k] < d)) out[k] = d; }
+    });
+  });
+  return out;
+}
+/* variety: a big push away from what you did in the last few days, a small one for anything frequent */
+function recencyPenalty(r) {
+  if (!r) return 0;
+  var p = r.d < 2.5 ? 3.2 : r.d < 4.5 ? 2.2 : r.d < 7.5 ? 1.1 : 0;
+  return p + Math.max(0, r.n - 1) * 0.6;
+}
+/* pick from the strongest few, weighted toward the top, so the same favourite does not win every time */
+function softPick(list, score, R, top) {
+  if (!list.length) return null;
+  var sc = list.map(function (e) { return { e: e, s: score(e) }; }).sort(function (a, b) { return b.s - a.s; }).slice(0, top || 5);
+  var best = sc[0].s, ws = sc.map(function (x) { return Math.exp((x.s - best) * 1.1); }), tot = ws.reduce(function (a, b) { return a + b; }, 0), r = R() * tot;
+  for (var i = 0; i < sc.length; i++) { r -= ws[i]; if (r <= 0) return sc[i].e; }
+  return sc[0].e;
+}
+/* how alike two exercises are: same muscles first, then the same kind of lift, equipment and movement */
+function exSimilarity(a, b) {
+  var s = 0;
+  if (a.p[0] === b.p[0]) s += 5; else if (a.p.some(function (g) { return b.p.indexOf(g) >= 0; })) s += 2.5;
+  if (a.pm && b.pm && a.pm[0] && a.pm[0] === b.pm[0]) s += 2;
+  var ka = parseK(a.k), kb = parseK(b.k); if (ka && kb && ka.cls === kb.cls) s += 3;
+  var fa = famKey(a.n); if (fa && fa === famKey(b.n)) s += 2;
+  if (a.m && a.m === b.m) s += 1;
+  if (a.q === b.q) s += 1.5;
+  var sa = a.s || [], sb = b.s || []; sa.forEach(function (g) { s += sb.indexOf(g) >= 0 ? 0.5 : -0.25; }); sb.forEach(function (g) { if (sa.indexOf(g) < 0) s -= 0.25; });
+  var na = nameKey(a.n), nb = nameKey(b.n);
+  if (na.length && nb.length) s += 3 * na.filter(function (x) { return nb.indexOf(x) >= 0; }).length / Math.max(na.length, nb.length);
+  return s;
+}
+/* alternatives to one exercise, most similar first. opts: { gear, exclude: [names] } */
+function similarExercises(name, opts) {
+  var a = BYNAME[name]; if (!a) return [];
+  var gm = gearMap(opts.gear), ex = opts.exclude || [];
+  return EX.filter(function (e) {
+    if (e.n === name || ex.indexOf(e.n) >= 0) return false;
+    if (e.c !== 'strength' && e.c !== 'powerlifting' && e.c !== a.c) return false;
+    if (!available(e, gm) || WEIRD.test(e.n) || injuryBlocked(e)) return false;
+    return e.p.some(function (g) { return a.p.indexOf(g) >= 0 || a.s.indexOf(g) >= 0; });
+  }).map(function (e) { return { e: e, s: exSimilarity(a, e) }; }).sort(function (x, y) { return y.s - x.s; });
+}
 function candidatePool(opts) {
   var gm = gearMap(opts.gear);
   var maxL = LEVEL_RANK[opts.level] || 2;
@@ -225,13 +276,17 @@ function generateWorkout(opts, workouts, seed) {
   var G = GOALS[opts.goal] || GOALS.strength, R = rng(seed || 1);
   var groups = GROUP_ORDER.filter(function (g) { return opts.groups.indexOf(g) >= 0; });
   var pool = candidatePool(opts);
-  var hist = allHistories(workouts);
+  var hist = allHistories(workouts), rec = recency(workouts, opts.now);
   var budget = opts.minutes * 60 - (opts.minutes >= 30 ? 240 : 120);
   var chosen = [], counts = {}, used = 0;
   groups.forEach(function (g) { counts[g] = 0; });
   function weightOf(e, g, wantCompound) {
-    var s = R() * 2.2;
-    if (hist[e.n]) s += 0.9;
+    var s = R() * 2.2, r = rec[e.n];
+    if (hist[e.n] && (!r || r.d >= 7.5)) s += 0.9;   // familiar, but not done this week
+    s -= recencyPenalty(r);
+    var fk0 = famKey(e.n), fd = fk0 ? rec['fam:' + fk0] : null;
+    if (fd != null && fd < 3.5) s -= 1.2;            // same kind of move (e.g. any crunch) in the last few days
+    if (e.k) s += 0.6;                              // counts toward your strength rank
     if (wantCompound) s += isComp(e) ? 2.5 : 0; else s += !isComp(e) ? 1 : 0;
     if (e.p[0] === g) s += 1.2;
     if (STAPLE.test(e.n)) s += 2.2;
@@ -252,12 +307,11 @@ function generateWorkout(opts, workouts, seed) {
     var cands = pool.filter(function (e) {
       if (e.p.indexOf(g) < 0) return false;
       if (chosen.some(function (c) { return c.n === e.n || similar(c.n, e.n); })) return false;
-      var fk = famKey(e.n); if (fk && chosen.filter(function (c) { return famKey(c.n) === fk; }).length >= (fk === 'shrug' ? 1 : 2)) return false;
+      var fk = famKey(e.n); if (fk && chosen.filter(function (c) { return famKey(c.n) === fk; }).length >= (fk === 'shrug' || fk === 'crunch' ? 1 : 2)) return false;
       return true;
     });
     if (!cands.length) { counts[g] += 99; if (groups.every(function (x) { return counts[x] >= 99; })) break; continue; }
-    cands.sort(function (a, b) { return weightOf(b, g, wantCompound) - weightOf(a, g, wantCompound); });
-    var e = cands[0], p = plan(e, wantCompound); p.g = g;
+    var e = softPick(cands, function (x) { return weightOf(x, g, wantCompound); }, R, 5), p = plan(e, wantCompound); p.g = g;
     var t = exTimeSec(p.sets, p.rest, 40);
     if (used + t > budget) {
       // try a smaller version, otherwise stop
@@ -295,9 +349,9 @@ function swapExercise(opts, current, item, workouts, seed) {
   });
   if (!cands.length) return null;
   var hasHist = {}; workouts.forEach(function (w) { w.ex.forEach(function (x) { hasHist[x.n] = 1; }); });
-  var best = null, bs = -1;
+  var rec = recency(workouts), best = null, bs = -1e9;
   cands.forEach(function (e) {
-    var s = R() * 2 + (item.comp ? (isComp(e) ? 1.5 : 0) : (!isComp(e) ? 1 : 0)) + (hasHist[e.n] ? 0.5 : 0);
+    var s = R() * 2 + (item.comp ? (isComp(e) ? 1.5 : 0) : (!isComp(e) ? 1 : 0)) + (hasHist[e.n] ? 0.5 : 0) - recencyPenalty(rec[e.n]) * 0.5;
     if (s > bs) { bs = s; best = e; }
   });
   return { n: best.n, sets: item.sets, lo: item.lo, hi: item.hi, rest: item.rest, comp: item.comp && best.m === 'compound', g: g };

@@ -112,6 +112,7 @@ function ico(name) {
     check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
     plus: '<path d="M12 5v14M5 12h14"/>',
     up: '<path d="M12 5l-6 7h12z"/>',
+    pick: '<path d="M4 6.5h9M4 12h7M4 17.5h5"/><circle cx="17" cy="14" r="3.2"/><path d="M19.4 16.4L21.5 18.5"/>',
     shuffle: '<path d="M3.5 7H7c3 0 4.5 2 5.5 5s2.5 5 5.5 5H20M3.5 17H7c1.6 0 2.8-.7 3.7-1.8M13.3 8.8C14.2 7.7 15.4 7 17 7h3"/><path d="M17.5 4.5L20 7l-2.5 2.5M17.5 14.5L20 17l-2.5 2.5"/>',
     body: '<circle cx="12" cy="4.8" r="2.3"/><path d="M6 8.5h12M12 8.5v6.5M12 15l-3 5.5M12 15l3 5.5"/>',
     eat: '<path d="M7 3v7.5M4.5 3v5a2.5 2.5 0 005 0V3M7 10.5V21"/><path d="M17 21V3c-2.2 1.2-3.5 3.6-3.5 7 0 2 1 3.2 3.5 3.5"/>',
@@ -234,7 +235,11 @@ function exerciseSheet(name, ctx) {
       '<div class="note">' + (bw ? 'Best set: ' + Math.round(best) + ' reps' : 'Best estimated 1-rep max: ' + toDisp(best, unit()) + ' ' + uLabel()) + ' · ' + h.length + ' session' + (h.length > 1 ? 's' : '') + '</div></div>';
   }
   var add = '';
-  if (S.draft) add = S.draft.ex.some(function (x) { return x.n === name; }) ? '' : '<button class="btn primary block" data-act="addToDraft" data-n="' + esc(name) + '">Add to workout</button>';
+  if (S.draft) {
+    var dxi = -1; S.draft.ex.forEach(function (x, j) { if (dxi < 0 && x.n === name) dxi = j; });
+    add = dxi < 0 ? '<button class="btn primary block" data-act="addToDraft" data-n="' + esc(name) + '">Add to workout</button>'
+      : (S.draft.ex[dxi].sets.some(function (q) { return q.done; }) ? '' : '<div class="row" style="gap:8px"><button class="btn grow" data-act="altEx" data-x="' + dxi + '">' + ico('pick') + ' Choose a different one</button><button class="btn grow" data-act="swapEx" data-x="' + dxi + '">' + ico('shuffle') + ' Random swap</button></div>');
+  }
   else if (U.plan) add = '<button class="btn primary block" data-act="addToPlan" data-n="' + esc(name) + '">Add to today\'s plan</button>';
   var lv = loadInfo(ex), logBox = lv.l ? '<div class="card section loadbox"><div class="xname">⚖️ How to log the weight' + (lv.s ? ': ' + esc(lv.s.toLowerCase()) : '') + '</div><div class="note" style="font-size:14.5px">' + esc(lv.l) + '</div></div>' : '';
   var body = injSheetNote(ex) + '<div class="demo-wrap" id="demowrap">' + demoInner(ex) + '</div>' + (S.draft ? logBox : '') +
@@ -354,7 +359,7 @@ function planHTML() {
   var rows = items.map(function (it, i) {
     var ex = BYNAME[it.n], ls = lastSession(realWorkouts(), it.n), last = '';
     if (ls) { var top = ls.e.sets.slice().sort(function (a, b) { return (b.w - a.w) || (b.r - a.r); })[0]; last = ' · last ' + (isBW(ex) && !top.w ? top.r + ' reps' : fmtW(top.w, unit()) + '×' + top.r); }
-    return '<div class="plan-item"><button class="thumb" data-act="openEx" data-n="' + esc(it.n) + '" aria-label="View ' + esc(it.n) + '">' + demoHTML(ex, false) + '</button><div class="grow"><div class="xname">' + esc(it.n) + '</div><div class="xmeta">' + it.sets + ' × ' + it.lo + '–' + it.hi + ' · rest ' + fmtDur(it.rest) + last + '</div></div><div class="plan-actions"><button class="icon-btn" data-act="swap" data-i="' + i + '" aria-label="Swap exercise">' + ico('swap') + '</button><button class="icon-btn" data-act="rmPlan" data-i="' + i + '" aria-label="Remove exercise">' + ico('x') + '</button></div></div>';
+    return '<div class="plan-item"><button class="thumb" data-act="openEx" data-n="' + esc(it.n) + '" aria-label="View ' + esc(it.n) + '">' + demoHTML(ex, false) + '</button><div class="grow"><div class="xname">' + esc(it.n) + '</div><div class="xmeta">' + it.sets + ' × ' + it.lo + '–' + it.hi + ' · rest ' + fmtDur(it.rest) + last + '</div></div><div class="plan-actions"><button class="icon-btn" data-act="swap" data-i="' + i + '" aria-label="Swap for a random exercise">' + ico('shuffle') + '</button><button class="icon-btn" data-act="altPlan" data-i="' + i + '" aria-label="Choose a different exercise">' + ico('pick') + '</button><button class="icon-btn" data-act="rmPlan" data-i="' + i + '" aria-label="Remove exercise">' + ico('x') + '</button></div></div>';
   }).join('');
   var short = p.short ? '<div class="banner"><span>Not enough matching exercises to fill ' + S.settings.minutes + ' min with your gear. Add equipment in Settings for more.</span></div>' : '';
   return '<div class="section"><div class="row"><h2 class="grow">Today\'s workout</h2><span class="num" style="font-size:22px">~' + p.estMin + ' min</span></div>' + short +
@@ -379,7 +384,7 @@ function viewWorkout() {
         '<div class="' + (s.done ? 'done' : '') + '"><input inputmode="numeric" data-k="r" data-x="' + xi + '" data-s="' + si + '" class="' + (s.sug && !s.done ? 'sug' : '') + '" value="' + (s.r == null ? '' : s.r) + '" placeholder="0" aria-label="Set ' + (si + 1) + ' reps"></div>' +
         '<button class="ck' + (s.done ? ' on' : '') + '" data-act="toggleSet" data-x="' + xi + '" data-s="' + si + '" aria-pressed="' + !!s.done + '" aria-label="Mark set ' + (si + 1) + ' done">' + ico('check') + '</button>';
     });
-    return '<div class="xcard"><div class="xcard-head"><button class="thumb" data-act="openEx" data-n="' + esc(e.n) + '" aria-label="View ' + esc(e.n) + '">' + demoHTML(ex, false) + '</button><div class="grow"><button class="xname xlink" data-act="openEx" data-n="' + esc(e.n) + '">' + esc(e.n) + ' <span class="info-i" aria-hidden="true">i</span></button><div class="target">Target ' + e.sets.filter(function (q) { return !q.wu; }).length + ' × ' + e.lo + '–' + e.hi + ' · <button class="linkbtn" data-act="restCycle" data-x="' + xi + '" aria-label="Change rest time">rest ' + fmtDur(e.rest) + '</button>' + (isBarbell(ex) ? ' · <button class="linkbtn accent" data-act="plates" data-x="' + xi + '">Plates</button>' : '') + '</div>' + injBadge(ex) + (li.s ? '<button class="loadhint" data-act="loadInfo" data-n="' + esc(e.n) + '">⚖️ ' + esc(li.s) + '</button>' : '') + (S.settings.notes[e.n] ? '<div class="xnote">' + esc(S.settings.notes[e.n]) + '</div>' : '') + '</div><button class="icon-btn" data-act="swapEx" data-x="' + xi + '" aria-label="Swap ' + esc(e.n) + ' for a similar exercise">' + ico('shuffle') + '</button><button class="icon-btn" data-act="rmEx" data-x="' + xi + '" aria-label="Remove ' + esc(e.n) + '">' + ico('x') + '</button></div>' +
+    return '<div class="xcard"><div class="xcard-head"><button class="thumb" data-act="openEx" data-n="' + esc(e.n) + '" aria-label="View ' + esc(e.n) + '">' + demoHTML(ex, false) + '</button><div class="grow"><button class="xname xlink" data-act="openEx" data-n="' + esc(e.n) + '">' + esc(e.n) + ' <span class="info-i" aria-hidden="true">i</span></button><div class="target">Target ' + e.sets.filter(function (q) { return !q.wu; }).length + ' × ' + e.lo + '–' + e.hi + ' · <button class="linkbtn" data-act="restCycle" data-x="' + xi + '" aria-label="Change rest time">rest ' + fmtDur(e.rest) + '</button>' + (isBarbell(ex) ? ' · <button class="linkbtn accent" data-act="plates" data-x="' + xi + '">Plates</button>' : '') + '</div>' + injBadge(ex) + (li.s ? '<button class="loadhint" data-act="loadInfo" data-n="' + esc(e.n) + '">⚖️ ' + esc(li.s) + '</button>' : '') + (S.settings.notes[e.n] ? '<div class="xnote">' + esc(S.settings.notes[e.n]) + '</div>' : '') + '</div><button class="icon-btn" data-act="swapEx" data-x="' + xi + '" aria-label="Swap ' + esc(e.n) + ' for a random similar exercise">' + ico('shuffle') + '</button><button class="icon-btn" data-act="altEx" data-x="' + xi + '" aria-label="Choose a different exercise">' + ico('pick') + '</button><button class="icon-btn" data-act="rmEx" data-x="' + xi + '" aria-label="Remove ' + esc(e.n) + '">' + ico('x') + '</button></div>' +
       '<div class="sets">' + rows + '</div><div class="row"><button class="btn small ghost grow" data-act="addSet" data-x="' + xi + '" aria-label="Add a set">+ Set</button>' + (!bw && !e.sets.some(function (q) { return q.wu; }) && !e.sets.some(function (q) { return q.done; }) ? '<button class="btn small ghost grow" data-act="warmup" data-x="' + xi + '">+ Warm-up</button>' : '') + (e.sets.length > 1 ? '<button class="btn small ghost grow" data-act="rmSet" data-x="' + xi + '" aria-label="Remove a set">– Set</button>' : '') + '</div></div>';
   }).join('');
   return '<div class="screen" style="gap:14px;padding-top:0"><div class="wk-top"><div><div class="clock" id="clock">0:00</div></div><div class="grow note" id="wk-stats">' + totalDone + (totalDone === 1 ? ' set' : ' sets') + ' · ' + volDisp(vol) + ' ' + unitL + '</div><button class="btn primary small" data-act="finish">Finish</button></div>' + tgBox() +
@@ -727,8 +732,13 @@ document.addEventListener('click', function (ev) {
     var itm = { g: g0, comp: isComp(xx), sets: xe.sets.length, lo: xe.lo, hi: xe.hi, rest: xe.rest };
     var nw = swapExercise({ minutes: st.minutes, groups: [g0], gear: gearList(), level: st.level, goal: st.goal }, S.draft.ex.map(function (z) { return { n: z.n }; }), itm, realWorkouts(), (Date.now() % 99991) + 1);
     if (!nw) { toast('No other ' + g0.toLowerCase() + ' exercise fits your equipment.'); return; }
-    S.draft.ex[+d.x] = makeWorkoutEx(realWorkouts(), nw, unit()); persist({ draft: true }); render(); toast('Swapped to ' + nw.n); return;
+    S.draft.ex[+d.x] = makeWorkoutEx(realWorkouts(), nw, unit()); persist({ draft: true }); if (sheetOpen()) closeSheet(); render(); toast('Swapped to ' + nw.n); return;
   }
+  if (a === 'altEx') { altSheet('draft', +d.x); return; }
+  if (a === 'altPlan') { altSheet('plan', +d.i); return; }
+  if (a === 'altPick') { altPick(d.n); return; }
+  if (a === 'altMore') { U.alt.shown += 25; altRefresh(); return; }
+  if (a === 'altGear') { U.alt.all = d.k === 'all'; U.alt.shown = 25; altSheet(U.alt.mode, U.alt.i, true); return; }
   if (a === 'demoMode') { U.demoMode = d.m; var dw = $('#demowrap'), dx = BYNAME[d.n]; if (dw && dx) { dw.innerHTML = demoInner(dx); startDemo(dx); } return; }
   if (a === 'rmPlan') { U.plan.items.splice(+d.i, 1); render(); return; }
   if (a === 'startPlan') { newDraft(U.plan.items); U.plan = null; render(); window.scrollTo(0, 0); return; }
@@ -892,6 +902,7 @@ document.addEventListener('input', function (ev) {
   if (t.id === 'time') { S.settings.minutes = +t.value; var b = $('#timebig'); if (b) b.textContent = t.value; persist({ settings: true }); return; }
   if (t.id === 'libq') { U.libQ = t.value; U.libShown = 40; refreshLibList(); return; }
   if (t.id === 'pickq') { U.pickQ = t.value; refreshPick(); return; }
+  if (t.id === 'altq' && U.alt) { U.alt.q = t.value; U.alt.shown = 25; altRefresh(); return; }
   if (t.dataset && t.dataset.ek && U.edit) { var es = U.edit.ex[+t.dataset.x].sets[+t.dataset.s]; if (t.dataset.ek === 'w') es.w = fromDisp(t.value, unit()) || 0; else es.r = Math.max(0, parseInt(t.value, 10) || 0); return; }
   if (t.id === 'exnote') { var nn = t.dataset.n, nv = t.value.slice(0, 200).trim(); if (nv) S.settings.notes[nn] = nv; else delete S.settings.notes[nn]; persist({ settings: true }); return; }
   if (t.id === 'pcw') { U.pcw = t.value; var pb = $('#pcbody'); if (pb) pb.innerHTML = plateBody(); return; }
@@ -937,6 +948,49 @@ function addExerciseTo(name) {
   else { toast('Build a workout first.'); return; }
   closeSheet(); render(); toast('Added ' + name);
   if (mode === 'draft') { var cs = document.querySelectorAll('.xcard'); if (cs.length) cs[cs.length - 1].scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+}
+
+/* ===== choose a different exercise, most similar first ===== */
+function altCurrent() { var A = U.alt; if (!A) return null; return A.mode === 'draft' ? (S.draft && S.draft.ex[A.i]) : (U.plan && U.plan.items[A.i]); }
+function altSheet(mode, i, keep) {
+  var prevQ = keep && U.alt ? U.alt.q : '', prevAll = keep && U.alt ? U.alt.all : false;
+  U.alt = { mode: mode, i: i, q: prevQ, all: prevAll, shown: 25 };
+  var cur = altCurrent(); if (!cur) return;
+  if (mode === 'draft' && cur.sets.some(function (q) { return q.done; })) { toast('You already logged sets on this one. Remove it to swap.'); U.alt = null; return; }
+  var others = (mode === 'draft' ? S.draft.ex : U.plan.items).map(function (x) { return x.n; });
+  U.alt.list = similarExercises(cur.n, { gear: U.alt.all ? ITEMS.map(function (x) { return x.id; }) : gearList(), exclude: others });
+  openSheet('Swap ' + cur.n, '<div class="note">Most similar first: same muscles, same kind of lift and equipment at the top.</div>' +
+    '<input class="input" id="altq" type="search" placeholder="Search alternatives" value="' + esc(U.alt.q) + '" aria-label="Search alternatives" autocomplete="off">' +
+    '<div class="seg" role="group" aria-label="Gear"><button aria-pressed="' + !U.alt.all + '" data-act="altGear" data-k="mine">My ' + profName().toLowerCase() + ' gear</button><button aria-pressed="' + U.alt.all + '" data-act="altGear" data-k="all">All gear</button></div>' +
+    '<div id="altlist">' + altListHTML() + '</div>');
+}
+function altListHTML() {
+  var A = U.alt, toks = A.q.toLowerCase().split(/\s+/).filter(Boolean);
+  var list = A.list.filter(function (x) { if (!toks.length) return true; var e = x.e, hay = (e.n + ' ' + e.pm.join(' ') + ' ' + gearNames(e).join(' ')).toLowerCase(); return toks.every(function (t) { return hay.indexOf(t) >= 0; }); });
+  if (!list.length) return '<div class="empty"><h3>No matches</h3>' + (A.all ? 'Try a different search.' : 'Try All gear.') + '</div>';
+  var top = A.list.length ? A.list[0].s : 1;
+  var h = list.slice(0, A.shown).map(function (x) {
+    var e = x.e, f = x.s / Math.max(top, 1), tag = f >= 0.85 ? 'Closest match' : f >= 0.65 ? 'Very similar' : f >= 0.45 ? 'Similar' : 'Same muscles';
+    var last = lastSession(realWorkouts(), e.n);
+    return '<button class="xrow" data-act="altPick" data-n="' + esc(e.n) + '"><div class="thumb">' + demoHTML(e, false) + '</div><div class="grow"><div class="xname">' + esc(e.n) + '</div><div class="xmeta">' + esc(exMeta(e)) + '</div><div class="row" style="gap:6px;margin-top:4px;flex-wrap:wrap"><span class="tag' + (f >= 0.65 ? ' p' : '') + '">' + tag + '</span>' + (last ? '<span class="tag">Done ' + esc(fmtDate(last.w.t)) + '</span>' : '') + '</div>' + injBadge(e) + '</div></button>';
+  }).join('');
+  if (list.length > A.shown) h += '<button class="btn block" style="margin-top:12px" data-act="altMore">Show more (' + (list.length - A.shown) + ' left)</button>';
+  return h;
+}
+function altRefresh() { var l = $('#altlist'); if (l) l.innerHTML = altListHTML(); }
+function altPick(name) {
+  var A = U.alt, cur = altCurrent(); if (!A || !cur) return;
+  var nx = BYNAME[name], old = BYNAME[cur.n], it = defaultItem(name, S.settings.goal);
+  if (A.mode === 'draft') {
+    var n = cur.sets.filter(function (q) { return !q.wu; }).length || it.sets;
+    var keepRange = isBW(nx) === isBW(old);
+    S.draft.ex[A.i] = makeWorkoutEx(realWorkouts(), { n: name, sets: n, lo: keepRange ? cur.lo : it.lo, hi: keepRange ? cur.hi : it.hi, rest: cur.rest }, unit());
+    persist({ draft: true });
+  } else {
+    var p = U.plan.items[A.i];
+    U.plan.items[A.i] = { n: name, sets: p.sets, lo: isBW(nx) === isBW(old) ? p.lo : it.lo, hi: isBW(nx) === isBW(old) ? p.hi : it.hi, rest: p.rest, comp: p.comp && isComp(nx), g: p.g };
+  }
+  U.alt = null; closeSheet(); render(); toast('Swapped to ' + name);
 }
 
 /* ===== backup ===== */

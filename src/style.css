@@ -362,3 +362,9 @@ details.card summary { list-style: none; } details.card summary::-webkit-details
 .tgcode{font-family:var(--font-d);font-weight:700;font-size:56px;letter-spacing:.08em;line-height:1;color:var(--accent-ink);font-variant-numeric:tabular-nums}
 .tgin{text-transform:uppercase;letter-spacing:.12em;font-family:var(--font-d);font-weight:600;font-size:20px}
 .tgin::placeholder{text-transform:none;letter-spacing:0;font-family:var(--font-b);font-weight:400;font-size:16px}
+
+/* workout card header: room for shuffle + choose + remove */
+.xcard-head{gap:8px}
+.xcard-head .thumb{width:70px}
+.xcard-head .icon-btn{width:34px;height:40px;flex:none}
+.xcard-head .icon-btn svg{width:19px;height:19px}
