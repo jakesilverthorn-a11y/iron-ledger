@@ -624,7 +624,7 @@ var FIG = (function () {
   }
   var memo = {};
   function forEx(ex) {
-    if (!(ex.n in memo)) { var p = null; try { p = pick(ex); } catch (e) { p = null; } memo[ex.n] = p && B[p[0]] ? tpl(p) : null; }
+    if (!(ex.n in memo)) { var p = null; try { p = (ex.fx && pick({ n: ex.fx, c: ex.c })) || pick(ex); } catch (e) { p = null; } memo[ex.n] = p && B[p[0]] ? tpl(p) : null; }
     return memo[ex.n];
   }
   function svgDoc(T, k, cls) { return '<svg class="' + (cls || 'fig') + '" viewBox="0 0 300 200" role="img" aria-hidden="true">' + frame(T, k) + '</svg>'; }

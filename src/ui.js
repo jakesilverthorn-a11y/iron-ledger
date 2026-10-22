@@ -120,7 +120,9 @@ function ico(name) {
   };
   return '<svg viewBox="0 0 24 24" aria-hidden="true">' + (P[name] || '') + '</svg>';
 }
+function hasPhoto(ex) { return !!ex && ex.a != null && !!DATA.atlas[ex.a]; }
 function photoHTML(ex, anim, extra) {
+  if (!hasPhoto(ex)) { var T0 = FIG.forEx(ex); return '<div class="demo cg' + (extra ? ' ' + extra : '') + '" role="img" aria-label="' + esc(ex ? ex.n : '') + ' demonstration">' + (T0 ? FIG.thumb(T0) : '') + '</div>'; }
   var a = anim ? DATA.atlas2[ex.a2] : DATA.atlas[ex.a], r = anim ? ex.r2 : ex.r, rows = a[1], y = rows > 1 ? (r / (rows - 1) * 100) : 0;
   return '<div class="demo' + (anim ? ' anim' : '') + (extra ? ' ' + extra : '') + '" role="img" aria-label="' + esc(ex.n) + ' demonstration" style="background-image:url(' + a[0] + ');background-size:' + (anim ? 200 : 100) + '% ' + (rows * 100) + '%;background-position-x:0%;background-position-y:' + y + '%"></div>';
 }
@@ -131,8 +133,8 @@ function demoHTML(ex, anim, extra) {
   return photoHTML(ex, anim, extra);
 }
 function demoInner(ex) {
-  var T = FIG.forEx(ex), mode = T && U.demoMode !== 'photo' ? 'cartoon' : 'photo';
-  var tog = T ? '<div class="seg" role="group" aria-label="Demo style"><button aria-pressed="' + (mode === 'cartoon') + '" data-act="demoMode" data-m="cartoon" data-n="' + esc(ex.n) + '">Cartoon</button><button aria-pressed="' + (mode === 'photo') + '" data-act="demoMode" data-m="photo" data-n="' + esc(ex.n) + '">Photos</button></div>' : '';
+  var T = FIG.forEx(ex), mode = T && (U.demoMode !== 'photo' || !hasPhoto(ex)) ? 'cartoon' : 'photo';
+  var tog = T && hasPhoto(ex) ? '<div class="seg" role="group" aria-label="Demo style"><button aria-pressed="' + (mode === 'cartoon') + '" data-act="demoMode" data-m="cartoon" data-n="' + esc(ex.n) + '">Cartoon</button><button aria-pressed="' + (mode === 'photo') + '" data-act="demoMode" data-m="photo" data-n="' + esc(ex.n) + '">Photos</button></div>' : '';
   var pic = mode === 'cartoon' ? '<div class="demo cg big" role="img" aria-label="' + esc(ex.n) + ' animated demonstration"><svg class="fig" id="figlive" viewBox="0 0 300 200" aria-hidden="true"></svg></div><div class="note">Red marks the muscles doing the work.</div>' : photoHTML(ex, true, 'big') + '<div class="note">' + (T ? 'Photos flip between the start and end of the move.' : 'Photos flip between the start and end of the move. No cartoon for this one yet.') + '</div>';
   return pic + tog;
 }
@@ -274,7 +276,7 @@ function exerciseSheet(name, ctx) {
   else if (U.plan) add = '<button class="btn primary block" data-act="addToPlan" data-n="' + esc(name) + '">Add to today\'s plan</button>';
   var lv = loadInfo(ex), logBox = lv.l ? '<div class="card section loadbox"><div class="xname">⚖️ How to log the weight' + (lv.s ? ': ' + esc(lv.s.toLowerCase()) : '') + '</div><div class="note" style="font-size:14.5px">' + esc(lv.l) + '</div></div>' : '';
   var body = injSheetNote(ex) + '<div class="demo-wrap" id="demowrap">' + demoInner(ex) + '</div>' + (S.draft ? logBox : '') +
-    '<div>' + tagsHTML(ex) + '<span class="tag">' + esc(titleCase(ex.l)) + '</span>' + (ex.m ? '<span class="tag">' + esc(titleCase(ex.m)) + '</span>' : '') + '</div>' + add +
+    '<div>' + tagsHTML(ex) + '<span class="tag">' + esc(titleCase(ex.l)) + '</span>' + (ex.m ? '<span class="tag">' + esc(titleCase(ex.m)) + '</span>' : '') + '</div>' + (ex.al ? '<div class="note">Also called ' + esc(ex.al.join(', ')) + '</div>' : '') + add +
     liftRankCard(name, allHistories(realWorkouts())[name]) + '<div class="section"><h3 style="font-size:20px">Equipment</h3><div class="gear-grid">' + ex.gear.map(function (g) { return ITEM_BY[g] ? gearTile(ITEM_BY[g], true, true) : ''; }).join('') + '</div></div>' +
     '<div class="section"><h3 style="font-size:20px">Your notes</h3><textarea class="input" id="exnote" data-n="' + esc(name) + '" rows="2" maxlength="200" style="padding:10px 14px;min-height:64px" placeholder="Seat height, grip, cues… shows up during workouts">' + esc(S.settings.notes[name] || '') + '</textarea></div>' + '<div class="section"><h3 style="font-size:20px">How to do it</h3><ol class="steps">' + ex.i.map(function (s) { return '<li>' + esc(s) + '</li>'; }).join('') + '</ol></div>' + (S.draft ? '' : logBox) + extra;
   openSheet(ex.n, body); startDemo(ex);
@@ -282,13 +284,13 @@ function exerciseSheet(name, ctx) {
 
 /* ===== library list & filtering ===== */
 function filterEx(q, groups, gear, cat, item) {
-  var toks = q.toLowerCase().split(/\s+/).filter(Boolean), mg = gearMap(gearList());
+  var toks = q.toLowerCase().replace(/-/g, ' ').split(/\s+/).filter(Boolean), mg = gearMap(gearList());
   return EX.filter(function (e) {
     if (gear === 'mine' && !available(e, mg)) return false;
     if (item && item !== 'all' && e.gear.indexOf(item) < 0) return false;
     if (cat !== 'all' && e.c !== cat) return false;
     if (groups.length && !groups.some(function (g) { return e.p.indexOf(g) >= 0; })) return false;
-    if (toks.length) { var hay = (e.n + ' ' + e.pm.join(' ') + ' ' + gearNames(e).join(' ')).toLowerCase(); for (var i = 0; i < toks.length; i++) if (hay.indexOf(toks[i]) < 0) return false; }
+    if (toks.length) { var hay = (e.n + ' ' + (e.al || []).join(' ') + ' ' + e.pm.join(' ') + ' ' + gearNames(e).join(' ')).toLowerCase().replace(/-/g, ' '); for (var i = 0; i < toks.length; i++) if (hay.indexOf(toks[i]) < 0) return false; }
     return true;
   });
 }
@@ -1005,8 +1007,8 @@ function altSheet(mode, i, keep) {
     '<div id="altlist">' + altListHTML() + '</div>');
 }
 function altListHTML() {
-  var A = U.alt, toks = A.q.toLowerCase().split(/\s+/).filter(Boolean);
-  var list = A.list.filter(function (x) { if (!toks.length) return true; var e = x.e, hay = (e.n + ' ' + e.pm.join(' ') + ' ' + gearNames(e).join(' ')).toLowerCase(); return toks.every(function (t) { return hay.indexOf(t) >= 0; }); });
+  var A = U.alt, toks = A.q.toLowerCase().replace(/-/g, ' ').split(/\s+/).filter(Boolean);
+  var list = A.list.filter(function (x) { if (!toks.length) return true; var e = x.e, hay = (e.n + ' ' + (e.al || []).join(' ') + ' ' + e.pm.join(' ') + ' ' + gearNames(e).join(' ')).toLowerCase().replace(/-/g, ' '); return toks.every(function (t) { return hay.indexOf(t) >= 0; }); });
   if (!list.length) return '<div class="empty"><h3>No matches</h3>' + (A.all ? 'Try a different search.' : 'Try All gear.') + '</div>';
   var top = A.list.length ? A.list[0].s : 1;
   var h = list.slice(0, A.shown).map(function (x) {
