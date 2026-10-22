@@ -7,16 +7,17 @@ standard lift's units:  equivalent = logged / m. The standard lift's convention 
   machine classes (pulldown, cablerow, legpress, ...) = stack number / plates loaded
   bodyweight classes (pullup, pushup, dip, situp, hangleg, calfbw) = reps, with added weight converted to reps
 So an exercise logged per dumbbell must never use a barbell class with m = 1, and so on.
-Ratios come from comparing intermediate standards (e.g. dumbbell bench per hand is about 0.40 of a barbell bench).
+Ratios come from comparing intermediate standards (e.g. dumbbell bench per hand is about 0.40 of a barbell bench);
+where Strength Level publishes the dumbbell lift itself (DB RDL, DB deadlift, goblet, DB squat, Bulgarian, thruster, snatch) its numbers set the ratio.
 Run:  python3 tools/std_fixes.py   (edits src/data.json in place; safe to run again)"""
 import json, os
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FIX = {
   # --- logged per dumbbell / kettlebell, but rated against a barbell total ---
-  'Stiff-Legged Dumbbell Deadlift': 'rdl*0.42',
+  'Stiff-Legged Dumbbell Deadlift': 'rdl*0.34',
   'Dumbbell Clean': 'rdl*0.3',
-  'Dumbbell Squat': 'dblunge*1.2', 'Dumbbell Squat To A Bench': 'dblunge*1.2', 'Plie Dumbbell Squat': 'dblunge*1.2',
-  'Goblet Squat': 'dblunge*1.2',
+  'Dumbbell Squat': 'dblunge*1.05', 'Dumbbell Squat To A Bench': 'dblunge*1.05', 'Plie Dumbbell Squat': 'dblunge*1.3',
+  'Goblet Squat': 'dblunge*1.3',
   'Front Squats With Two Kettlebells': 'frontsquat*0.23',
   'Kettlebell One-Legged Deadlift': 'rdl*0.2',
   'Alternating Hang Clean': 'rdl*0.18', 'Kettlebell Dead Clean': 'rdl*0.18', 'Kettlebell Hang Clean': 'rdl*0.18',

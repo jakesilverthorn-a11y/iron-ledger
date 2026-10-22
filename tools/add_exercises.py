@@ -11,13 +11,13 @@ NEW = [
   # --- hinges ---
   X('Dumbbell Deadlift', 'dumbbell', 'beginner', 'compound', ['Hamstrings'], ['Back', 'Glutes', 'Quads', 'Forearms'], ['hamstrings'], ['dumbbell'],
     ['Stand with feet hip-width apart, a dumbbell in each hand at your sides or in front of your thighs.', 'Push your hips back and bend your knees to lower the dumbbells along your legs until they reach mid-shin, keeping your back flat and chest up.', 'Drive through your feet and squeeze your glutes to stand up tall.', 'Lower under control and repeat.'],
-    'Stiff-Legged Dumbbell Deadlift', True, 'deadlift*0.38'),
+    'Stiff-Legged Dumbbell Deadlift', True, 'deadlift*0.27'),
   X('Dumbbell Romanian Deadlift', 'dumbbell', 'beginner', 'compound', ['Hamstrings'], ['Back', 'Glutes', 'Forearms'], ['hamstrings'], ['dumbbell'],
     ['Stand tall holding a dumbbell in each hand in front of your thighs, knees slightly bent.', 'Keeping your back flat, push your hips back and slide the dumbbells down the front of your legs until you feel a strong stretch in your hamstrings (usually just below the knee).', 'Drive your hips forward to return to standing, squeezing your glutes at the top.', 'Keep the dumbbells close to your legs the whole time.'],
-    'Stiff-Legged Dumbbell Deadlift', True, 'rdl*0.42'),
+    'Stiff-Legged Dumbbell Deadlift', True, 'rdl*0.34'),
   X('Single-Leg Dumbbell Romanian Deadlift', 'dumbbell', 'intermediate', 'compound', ['Hamstrings'], ['Glutes', 'Back', 'Core'], ['hamstrings'], ['dumbbell'],
     ['Hold a dumbbell in one hand and stand on the opposite leg with a soft knee.', 'Hinge at the hip, reaching the dumbbell toward the floor while your free leg extends straight behind you.', 'Keep your hips square to the floor and your back flat; stop when your torso is about parallel to the floor or you feel a deep hamstring stretch.', 'Squeeze the glute of the standing leg to return upright. Finish all reps, then switch sides.'],
-    'Kettlebell One-Legged Deadlift', True, 'rdl*0.22'),
+    'Kettlebell One-Legged Deadlift', True, 'rdl*0.18'),
   X('Kettlebell Deadlift', 'kettlebells', 'beginner', 'compound', ['Hamstrings'], ['Glutes', 'Back', 'Quads', 'Forearms'], ['hamstrings'], ['kettlebell'],
     ['Stand with the kettlebell between your feet, feet a little wider than hip-width.', 'Push your hips back, bend your knees and grab the handle with both hands, back flat.', 'Stand up by driving through your feet and squeezing your glutes, keeping the bell close.', 'Hinge back down and touch the bell to the floor between reps.'],
     'Kettlebell Dead Clean', False, 'deadlift*0.3'),
@@ -33,7 +33,7 @@ NEW = [
   # --- squats and lunges ---
   X('Dumbbell Bulgarian Split Squat', 'dumbbell', 'intermediate', 'compound', ['Quads'], ['Glutes', 'Hamstrings'], ['quadriceps'], ['dumbbell', 'bench'],
     ['Stand about two feet in front of a bench holding a dumbbell in each hand. Reach one foot back and rest its top on the bench.', 'Lower straight down by bending your front knee until your back knee nearly touches the floor.', 'Keep your torso upright and your front knee tracking over your toes.', 'Drive through your front heel to stand back up. Finish all reps, then switch legs.'],
-    'Split Squat with Dumbbells', True, 'dblunge*0.9'),
+    'Split Squat with Dumbbells', True, 'dblunge*1.07'),
   X('Bulgarian Split Squat', 'body only', 'beginner', 'compound', ['Quads'], ['Glutes', 'Hamstrings'], ['quadriceps'], ['bodyweight', 'bench'],
     ['Stand about two feet in front of a bench and rest the top of one foot on it behind you.', 'Lower straight down by bending your front knee until your back knee nearly touches the floor.', 'Keep your chest up and your front knee in line with your toes.', 'Push through your front heel to stand back up. Finish all reps, then switch legs.'],
     'Split Squats', True),
@@ -42,10 +42,10 @@ NEW = [
     'Dumbbell Lunges', True, 'dblunge*1'),
   X('Dumbbell Goblet Squat', 'dumbbell', 'beginner', 'compound', ['Quads'], ['Glutes', 'Hamstrings', 'Core'], ['quadriceps'], ['dumbbell'],
     ['Hold one dumbbell vertically against your chest, cupping the top end with both hands.', 'Stand with feet slightly wider than shoulder-width, toes turned out a little.', 'Sit down between your heels, keeping your chest up and elbows inside your knees.', 'Drive through your feet to stand back up.'],
-    'Goblet Squat', True, 'dblunge*1.2'),
+    'Goblet Squat', True, 'dblunge*1.3'),
   X('Dumbbell Front Squat', 'dumbbell', 'intermediate', 'compound', ['Quads'], ['Glutes', 'Hamstrings', 'Core'], ['quadriceps'], ['dumbbell'],
     ['Hold a dumbbell in each hand and rest one end of each on the front of your shoulders, elbows pointing forward.', 'Stand with feet about shoulder-width apart.', 'Squat down until your thighs are at least parallel to the floor, keeping your chest tall.', 'Drive back up through your whole foot.'],
-    'Goblet Squat', False, 'dblunge*1.1'),
+    'Goblet Squat', False, 'dblunge*1'),
   X('Dumbbell Lateral Lunge', 'dumbbell', 'beginner', 'compound', ['Quads'], ['Glutes', 'Hamstrings'], ['adductors'], ['dumbbell'],
     ['Stand tall holding a dumbbell at your chest or one in each hand.', 'Take a big step out to the side and sit your hips back over that foot, keeping the other leg straight.', 'Keep your chest up and the bent knee over your toes.', 'Push off the outside foot to return to standing. Alternate sides or do all reps on one side first.'],
     'Barbell Side Split Squat', False, 'dblunge*0.8'),
@@ -133,10 +133,10 @@ NEW = [
   # --- full body ---
   X('Dumbbell Thruster', 'dumbbell', 'intermediate', 'compound', ['Quads'], ['Shoulders', 'Glutes', 'Triceps'], ['quadriceps'], ['dumbbell'],
     ['Hold a dumbbell in each hand at your shoulders.', 'Squat down until your thighs are about parallel to the floor.', 'Drive up hard and use that momentum to press the dumbbells overhead in one smooth motion.', 'Lower the dumbbells back to your shoulders as you go into the next squat.'],
-    'Kettlebell Thruster', False, 'dbpress*0.7'),
+    'Kettlebell Thruster', False, 'dbpress*0.75'),
   X('Dumbbell Snatch', 'dumbbell', 'intermediate', 'compound', ['Shoulders'], ['Hamstrings', 'Glutes', 'Back', 'Quads'], ['shoulders'], ['dumbbell'],
     ['Stand over a dumbbell, hinge and grab it with one hand.', 'Drive your hips forward explosively and pull the dumbbell up close to your body.', 'Punch it overhead in one motion, finishing with your arm straight.', 'Lower it back down under control. Alternate arms or finish one side first.'],
-    'Dumbbell Clean', False, 'dbpress*0.75'),
+    'Dumbbell Clean', False, 'dbpress*1'),
 ]
 
 ALIAS = {
@@ -160,7 +160,9 @@ def main():
     added = 0
     for x in NEW:
         assert x['fx'] in by, ('missing donor', x['fx'])
-        if x['n'] in by: continue
+        if x['n'] in by:   # already there: keep its standard in step with this file
+            if x['k']: by[x['n']]['k'] = x['k']
+            continue
         e = {k: x[k] for k in ('n', 'q', 'l', 'm', 'c', 'p', 's', 'pm', 'i', 'e')}
         e['fx'] = x['fx']
         if x['ph']:   # True = same photos as the cartoon donor; a name = photos from that exercise

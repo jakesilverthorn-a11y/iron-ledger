@@ -1273,7 +1273,7 @@ function loadInfo(ex) {
     return { h: '+' + U2, s: 'Added weight only', l: 'Leave it at 0 for plain bodyweight. Only enter extra weight you add, like a vest, belt or dumbbell. Your reps are what get tracked.' };
   }
   if (q === 'dumbbell' || (has('dumbbell') && !has('barbell') && !has('ezbar'))) {
-    var single = /one[- ]arm|single|goblet|plie|pullover|one dumbbell|^dumbbell (?:raise|side bend)$|two-arm.*one dumbbell|^seated triceps press$/.test(n) || /tricep.*extension/.test(n) && !/lying|two-arm|pronated grip|decline/.test(n);
+    var single = /one[- ]arm|single|goblet|plie|pullover|one dumbbell|^dumbbell (?:raise|side bend)$|two-arm.*one dumbbell|^seated triceps press$|^dumbbell snatch$/.test(n) || /tricep.*extension/.test(n) && !/lying|two-arm|pronated grip|decline/.test(n);
     return single
       ? { h: U2 + ' (1 DB)', s: 'Weight of the dumbbell', l: 'You use one dumbbell here. Enter its weight, e.g. 40.' }
       : { h: U2 + ' EACH', s: 'Per dumbbell', l: 'Enter the weight of ONE dumbbell. Holding two 50s? Enter 50, not 100. Strength ranks are set up this way too.' };
