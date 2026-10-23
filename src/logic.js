@@ -9,7 +9,7 @@ var ITEM_GROUPS = ['Bodyweight & bars', 'Free weights', 'Benches & racks', 'Cabl
 var GYM_GEAR = ITEMS.map(function (it) { return it.id; });
 var HOME_GEAR = ['bodyweight', 'pullup_bar', 'dumbbell', 'bench', 'bands', 'kettlebell', 'foam_roller', 'stability_ball'];
 function gearMap(list) { var m = {}; (list || []).forEach(function (g) { m[g] = 1; }); return m; }
-function available(e, gm) { for (var i = 0; i < e.gear.length; i++) if (!gm[e.gear[i]]) return false; return true; }
+function available(e, gm) { for (var i = 0; i < e.gear.length; i++) if (e.gear[i] !== 'bodyweight' && !gm[e.gear[i]]) return false; return true; }
 function gearNames(e) { return e.gear.map(function (g) { return ITEM_BY[g] ? ITEM_BY[g].n : g; }); }
 
 var GROUPS = ['Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Forearms', 'Core', 'Quads', 'Hamstrings', 'Glutes', 'Calves'];
@@ -48,46 +48,44 @@ function isBW(ex) { return !!ex && (ex.eq === 'Bodyweight' || ex.bwk === 1); }
 /* weighted bodyweight work: added weight is turned into "bodyweight-equivalent reps" so a vest, belt or plate counts.
    BW_FRAC is roughly how much of your bodyweight each movement moves. */
 var BW_FRAC = { pullup: 1, dip: 0.95, pushup: 0.65, situp: 0.35, calfbw: 1, hangleg: 0.35 };
-var metricBW = function () { return 0; };   // the UI points this at the current body weight (lb)
+var metricBW = function (t) { return 0; };   // the UI points this at your body weight (lb) at time t (now when t is missing)
 function bwFrac(ex) { var k = parseK(ex && ex.k); return (k && (BW_FRAC[k.cls] || (DATA.std[k.cls] && DATA.std[k.cls].bf))) || 0.6; }
-function bwEqReps(ex, w, r) { var B = metricBW(); if (!(w > 0) || !(B > 0)) return r; var base = bwFrac(ex) * B; return Math.min(300, 30 * w / base + r * (base + w) / base); }
-function repsAtLoad(ex, eqReps, w) { var B = metricBW(); if (!(w > 0) || !(B > 0)) return eqReps; var base = bwFrac(ex) * B; return (eqReps - 30 * w / base) * base / (base + w); }
-function setMetric(ex, s) {
+function bwEqReps(ex, w, r, t) { var B = metricBW(t); if (!(w > 0) || !(B > 0)) return r; var base = bwFrac(ex) * B; return Math.min(300, 30 * w / base + r * (base + w) / base); }
+function repsAtLoad(ex, eqReps, w, t) { var B = metricBW(t); if (!(w > 0) || !(B > 0)) return eqReps; var base = bwFrac(ex) * B; return (eqReps - 30 * w / base) * base / (base + w); }
+function setMetric(ex, s, t) {
   var r = +s.r || 0, w = +s.w || 0;
   if (r <= 0) return 0;
-  if (isBW(ex)) return w > 0 ? bwEqReps(ex, w, r) : r;   // bodyweight work is tracked in (equivalent) reps
+  if (isBW(ex)) return w > 0 ? bwEqReps(ex, w, r, t) : r;   // bodyweight work is tracked in (equivalent) reps
   if (w <= 0) return 0;
   return w * (1 + Math.min(r, 15) / 30);   // Epley estimated 1RM
 }
-function sessionBest(ex, sets) {
+function sessionBest(ex, sets, t) {
   var b = 0;
-  for (var i = 0; i < sets.length; i++) { var m = setMetric(ex, sets[i]); if (m > b) b = m; }
+  for (var i = 0; i < sets.length; i++) { var m = setMetric(ex, sets[i], t); if (m > b) b = m; }
   return b;
 }
 /* history: [{t, best, vol, topW, topR}] for an exercise, oldest first */
+function histEntry(ex, e, t) {
+  var best = sessionBest(ex, e.sets, t);
+  if (!best) return null;
+  var vol = 0, topW = 0, topR = 0;
+  e.sets.forEach(function (s) { vol += (+s.w || 0) * (+s.r || 0); if ((+s.w || 0) > topW || ((+s.w || 0) === topW && (+s.r || 0) > topR)) { topW = +s.w || 0; topR = +s.r || 0; } });
+  return { t: t, best: best, vol: vol, topW: topW, topR: topR };
+}
 function exHistory(workouts, name) {
   var ex = BYNAME[name], out = [];
-  workouts.forEach(function (w) {
-    w.ex.forEach(function (e) {
-      if (e.n !== name) return;
-      var best = sessionBest(ex, e.sets);
-      if (!best) return;
-      var vol = 0, topW = 0, topR = 0;
-      e.sets.forEach(function (s) { vol += (+s.w || 0) * (+s.r || 0); if ((+s.w || 0) > topW || ((+s.w || 0) === topW && (+s.r || 0) > topR)) { topW = +s.w || 0; topR = +s.r || 0; } });
-      out.push({ t: w.t, best: best, vol: vol, topW: topW, topR: topR });
-    });
-  });
+  workouts.forEach(function (w) { w.ex.forEach(function (e) { if (e.n === name) { var h = histEntry(ex, e, w.t); if (h) out.push(h); } }); });
   out.sort(function (a, b) { return a.t - b.t; });
   return out;
 }
 function allHistories(workouts) {
-  var names = {}, res = {};
-  workouts.forEach(function (w) { w.ex.forEach(function (e) { names[e.n] = 1; }); });
-  Object.keys(names).forEach(function (n) { if (BYNAME[n]) { var h = exHistory(workouts, n); if (h.length) res[n] = h; } });
+  var res = {};   // one pass over your workouts
+  workouts.forEach(function (w) { w.ex.forEach(function (e) { var ex = BYNAME[e.n]; if (!ex) return; var h = histEntry(ex, e, w.t); if (h) (res[e.n] = res[e.n] || []).push(h); }); });
+  Object.keys(res).forEach(function (n) { res[n].sort(function (a, b) { return a.t - b.t; }); });
   return res;
 }
 var DAY = 86400000;
-/* index of an exercise at time t: current strength / first-session strength, as a percentage */
+/* index of an exercise at time t: best of the 28 days up to your latest session (at or before t) / first-session strength, as a percentage */
 function exIndexAt(h, t) {
   var cur = null, i, last = -1;
   for (i = 0; i < h.length; i++) if (h[i].t <= t) last = i;
@@ -142,22 +140,30 @@ function suggest(workouts, name, lo, hi, unit) {
   var sets = ls.e.sets, top = 0;
   sets.forEach(function (s) { if ((+s.w || 0) > top) top = +s.w || 0; });
   var atTop = sets.filter(function (s) { return (+s.w || 0) === top; });
-  if (isBW(ex)) { var mr = 0; sets.forEach(function (s) { mr = Math.max(mr, +s.r || 0); }); return { w: top || 0, r: Math.max(lo, mr) }; }
-  var allHit = atTop.length >= 2 && atTop.every(function (s) { return (+s.r || 0) >= hi; });
+  if (isBW(ex)) {
+    // reps from the sets done at that weight; aim one past your weakest of them, never below what you did
+    var mn = Math.min.apply(null, atTop.map(function (s) { return +s.r || 0; })) || lo;
+    return { w: top || 0, r: Math.max(lo, mn + (mn < hi ? 1 : 0)) };
+  }
+  if (!top) return { w: null, r: lo };   // logged with no weight: we don't know what to load
+  var allHit = atTop.length >= 1 && atTop.every(function (s) { return (+s.r || 0) >= hi; });
   if (allHit) return { w: top + incrementLb(ex, unit), r: lo };
   var reps = atTop.length ? Math.min.apply(null, atTop.map(function (s) { return +s.r || lo; })) : lo;
   return { w: top, r: clamp(reps + (reps < hi ? 1 : 0), lo, hi) };
 }
 
 /* ---------- workout generator ---------- */
-var ENAME_WORDS = /\b(dumbbell|barbell|cable|machine|kettlebell|band|bands|ez|e-z|bar|smith|one|arm|two|alternate|alternating|seated|standing|lying|incline|decline|flat|with|on|the|a|an|and|to)\b/g;
+var ENAME_WORDS = /\b(dumbbell|dumbbells|barbell|cable|machine|kettlebell|band|bands|ez|e-z|bar|smith|one|arm|two|alternate|alternating|seated|standing|lying|incline|decline|flat|with|on|the|a|an|and|to|grip|neutral|narrow|wide|close|stance|single|leg|off|of|using)\b/g;
 function nameKey(n) {
   return n.toLowerCase().replace(/[^a-z ]/g, ' ').replace(ENAME_WORDS, ' ').split(/\s+/).filter(Boolean);
 }
 function similar(a, b) {
   var ka = nameKey(a), kb = nameKey(b); if (!ka.length || !kb.length) return false;
   var inter = ka.filter(function (x) { return kb.indexOf(x) >= 0; }).length;
-  return inter / Math.max(ka.length, kb.length) >= 0.6;
+  if (inter / Math.max(ka.length, kb.length) >= 0.6) return true;
+  // "Dumbbell Bench Press" and "Dumbbell Bench Press with a Twist": one name is the other plus extras, same equipment
+  var ea = BYNAME[a], eb = BYNAME[b];
+  return inter === Math.min(ka.length, kb.length) && inter >= 2 && !!ea && !!eb && ea.q === eb.q;
 }
 function rng(seed) { var s = seed >>> 0 || 1; return function () { s ^= s << 13; s >>>= 0; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return (s % 100000) / 100000; }; }
 function exTimeSec(sets, rest, work) { return sets * (work + rest) + 45; }
@@ -171,12 +177,18 @@ function famKey(n) {
   if (/crunch|sit-?up|v-up/.test(n)) return 'crunch';
   if (/wrist/.test(n)) return 'wrist';
   if (/leg curl|hamstring curl/.test(n)) return 'legcurl';
+  if (/leg extension/.test(n)) return 'legext';
+  if (/hip extension|back extension|hyperextension|reverse hyper/.test(n)) return 'backext';
+  if (/leg raise|knee raise|toes to bar|leg lift/.test(n)) return 'legraise';
+  if (/glute.?ham/.test(n)) return 'ghr';
+  if (/upright.*row/.test(n)) return 'upright';
+  if (/leg press/.test(n)) return 'legpress';
   if (/curl/.test(n)) return 'curl';
   if (/calf/.test(n)) return 'calf';
   if (/squat/.test(n)) return 'squat';
   if (/deadlift/.test(n)) return 'deadlift';
   if (/lunge|split squat|step.?up/.test(n)) return 'lunge';
-  if (/\brow\b|rows\b/.test(n)) return 'row';
+  if (/\brows?\b/.test(n)) return 'row';
   if (/raise/.test(n)) return 'raise';
   if (/fly|flye|crossover|butterfly/.test(n)) return 'fly';
   if (/pulldown|pull-down/.test(n)) return 'pulldown';
@@ -192,18 +204,19 @@ var STAPLE = /bench press|shoulder press|overhead press|military press|incline (
    hi = puts a lot of load or awkward range on the area, md = some load. "careful" skips hi, "avoid" skips hi and md. */
 var INJ_AREAS = [['shoulder', 'Shoulder'], ['elbow', 'Elbow'], ['wrist', 'Wrist'], ['back', 'Lower back'], ['neck', 'Neck'], ['hip', 'Hip'], ['knee', 'Knee'], ['ankle', 'Ankle / foot']];
 var INJ_RULES = {
-  shoulder: { hi: { test: function (n) { return /overhead|military|shoulder press|push press|arnold|behind the neck|upright|row to neck|high pull|around the world|\bdips?\b|handstand|snatch|jerk|pull-?over|kipping|muscle.?up|bradford|cuban|seesaw|see-saw|landmine press|z press|neck press/i.test(n) || (/press/i.test(n) && !/leg|calf|bench|chest|floor|board|pin|close|incline|decline|tricep|jm |tate|hip|crunch|sit-?up|pallof|pec|machine fly/i.test(n)); } }, md: /bench press|board press|pin press|incline|decline|\bfly|flye|cross ?over|wipers|triceps? extension|tricep extension|triceps press|deltoid raise|side lateral|pec deck|butterfly|lateral raise|front raise|push[- ]?ups?|pushups|pull[- ]?ups?|pullups|chin|pulldown|skull|french press|lying triceps|floor press|chest press|face pull/i },
+  shoulder: { hi: { test: function (n) { return /overhead|military|shoulder press|push press|arnold|behind the neck|upright|row to neck|high pull|around the world|\bdips?\b|handstand|snatch|jerk|pull-?over|kipping|muscle.?up|bradford|cuban|seesaw|see-saw|landmine press|z press|neck press/i.test(n) || (/press/i.test(n) && !/leg|calf|bench|chest|floor|board|pin|close|incline|decline|tricep|jm |tate|hip|crunch|sit-?up|pallof|pec|machine fly/i.test(n)); } }, md: /front .*raise|front raise|\by[- ]raise|rear delt raise|bench press|board press|pin press|incline|decline|\bfly|flye|cross ?over|wipers|triceps? extension|tricep extension|triceps press|deltoid raise|side lateral|pec deck|butterfly|lateral raise|front raise|push[- ]?ups?|pushups|pull[- ]?ups?|pullups|chin|pulldown|skull|french press|lying triceps|floor press|chest press|face pull/i },
   elbow: { hi: /skull|french press|lying triceps|close-grip bench|\bdips?\b|preacher|triceps? extension|tricep.*extension|overhead triceps|jm press|tate press|spider curl/i, md: /curl|pushdown|press-?down|kickback|push[- ]?ups?|pushups|chin|pull[- ]?ups?|pullups|bench press|pulldown/i },
   wrist: { hi: /front squat|clean|push[- ]?ups?|pushups|handstand|wrist|reverse curl|snatch|plank|\bdips?\b|zottman|reverse grip/i, md: /bench press|curl|press|row|deadlift|farmer/i },
   back: { hi: /deadlift|good morning|bent over (barbell |two-dumbbell )?row|barbell row|pendlay|romanian|stiff|hyperext|back extension|barbell squat|back squat|front squat|\bclean|snatch|t-bar|jefferson|zercher|swing|sit-?up|v-up|superman|reverse hyper|rack pull|jackknife/i, md: /squat|lunge|\brow\b|leg press|standing.*press|military|push press|overhead press|crunch|leg raise|hip thrust|glute bridge|shrug|step.?up|kettlebell/i },
   neck: { hi: /\bneck\b|shrug|upright row|behind the neck|headstand/i, md: /crunch|sit-?up|deadlift|overhead|military|bridge|farmer/i },
-  hip: { hi: /squat|lunge|deadlift|good morning|split|pistol|abduct|adduct|step.?up|sumo|hanging leg raise|leg raise/i, md: /leg press|hip thrust|glute bridge|swing|hyperext|kickback|leg curl|crunch/i },
+  hip: { hi: /squat|lunge|deadlift|good morning|split|pistol|abduct|adduct|step.?up|sumo|hanging leg raise|leg raise|thruster/i, md: /leg press|hip thrust|glute bridge|swing|hyperext|kickback|leg curl|crunch/i },
   knee: { hi: /squat|lunge|leg extension|jump|box|step.?up|pistol|sissy|hack|split|leg press|thruster/i, md: /deadlift|leg curl|swing|wall sit|calf.*leg press|good morning|hip thrust/i },
   ankle: { hi: /jump|lunge|calf raise|calf press|step.?up|box|run|sprint|skip|pistol|hop|split squat/i, md: /squat|deadlift|thruster|swing|farmer/i }
 };
 var injuryList = function () { return []; };   // the UI points this at Settings → Injuries: [{a: area, s: 'careful'|'avoid'}]
 function injuryHits(e) {
-  var out = []; injuryList().forEach(function (inj) { var R = INJ_RULES[inj.a]; if (!R || !e) return; var lv = R.hi.test(e.n) ? 'hi' : R.md.test(e.n) ? 'md' : null; if (lv) out.push({ a: inj.a, s: inj.s, lv: lv, block: lv === 'hi' || inj.s === 'avoid' }); });
+  var out = [], nm = e ? e.n + ' | ' + e.n.replace(/-/g, ' ').replace(/\brows\b/gi, 'row').replace(/\braises\b/gi, 'raise') : '';
+  injuryList().forEach(function (inj) { var R = INJ_RULES[inj.a]; if (!R || !e) return; var lv = R.hi.test(nm) ? 'hi' : R.md.test(nm) ? 'md' : null; if (lv) out.push({ a: inj.a, s: inj.s, lv: lv, block: lv === 'hi' || inj.s === 'avoid' }); });
   return out;
 }
 function injuryBlocked(e) { return injuryHits(e).some(function (h) { return h.block; }); }
@@ -268,7 +281,12 @@ function candidatePool(opts) {
     if ((LEVEL_RANK[e.l] || 2) > maxL) return false;
     if (WEIRD.test(e.n)) return false;
     if (injuryBlocked(e)) return false;
-    if (e.gear.length === 1 && e.gear[0] === 'bodyweight') { var txt = e.i.join(' ').toLowerCase(); if (!gm.smith && /smith machine/.test(txt)) return false; if (!gm.cable && /pulley|cable/.test(txt)) return false; if (!gm.barbell && /barbell|power rack|squat rack/.test(txt)) return false; }
+    if (e.gear.length === 1 && e.gear[0] === 'bodyweight') { var txt = e.i.join(' ').toLowerCase(); if (!gm.smith && /smith machine/.test(txt)) return false; if (!gm.cable && /pulley|cable/.test(txt)) return false; if (!gm.barbell && /barbell|power rack|squat rack/.test(txt)) return false;
+      var nl = e.n.toLowerCase();
+      if (!gm.bench && /\bbench\b|decline/.test(nl)) return false;
+      if (!gm.stability_ball && /exercise ball|stability ball|swiss ball/.test(nl + ' ' + txt)) return false;
+      if (!gm.dumbbell && /dumbbell/.test(nl + ' ' + txt)) return false;
+      if (!gm.barbell && !gm.pullup_bar && /\bbar\b/.test(txt)) return false; }
     return e.p.some(function (g) { return opts.groups.indexOf(g) >= 0; });
   });
 }
@@ -297,8 +315,13 @@ function generateWorkout(opts, workouts, seed) {
   }
   function plan(e, wantCompound) {
     var comp = isComp(e) && wantCompound, bw = isBW(e);
-    return { n: e.n, sets: comp ? G.cSets : G.aSets, lo: bw ? Math.max(10, comp ? G.cLo : G.aLo) : (comp ? G.cLo : G.aLo), hi: bw ? Math.max(15, comp ? G.cHi : G.aHi) : (comp ? G.cHi : G.aHi), rest: comp ? G.cRest : G.aRest, comp: comp, g: null };
+    // short sessions start every move at 2 sets so a second exercise fits; spare time is added back as sets below
+    return { n: e.n, sets: opts.minutes <= 20 ? 2 : comp ? G.cSets : G.aSets, lo: bw ? Math.max(10, comp ? G.cLo : G.aLo) : (comp ? G.cLo : G.aLo), hi: bw ? Math.max(15, comp ? G.cHi : G.aHi) : (comp ? G.cHi : G.aHi), rest: comp ? G.cRest : G.aRest, comp: comp, g: null };
   }
+  // one or two small muscles (e.g. just Biceps) only have a few kinds of move, so allow more of each kind
+  var narrow = groups.length <= 2 && groups.every(function (g) { return ['Biceps', 'Triceps', 'Forearms', 'Calves', 'Core', 'Shoulders'].indexOf(g) >= 0 || groups.length === 1; });
+  function famCap(fk) { return fk === 'shrug' || fk === 'crunch' ? (narrow ? 2 : 1) : (narrow ? 4 : 2); }
+  var famLimited = false;
   var maxEx = clamp(Math.round(opts.minutes / 7.5), 2, 9), guard = 0;
   while (guard++ < 60 && chosen.length < maxEx) {
     // pick the group with the fewest picks (ties follow the size order)
@@ -307,16 +330,24 @@ function generateWorkout(opts, workouts, seed) {
     var cands = pool.filter(function (e) {
       if (e.p.indexOf(g) < 0) return false;
       if (chosen.some(function (c) { return c.n === e.n || similar(c.n, e.n); })) return false;
-      var fk = famKey(e.n); if (fk && chosen.filter(function (c) { return famKey(c.n) === fk; }).length >= (fk === 'shrug' || fk === 'crunch' ? 1 : 2)) return false;
+      var fk = famKey(e.n); if (fk && chosen.filter(function (c) { return famKey(c.n) === fk; }).length >= famCap(fk)) return false;
       return true;
     });
-    if (!cands.length) { counts[g] += 99; if (groups.every(function (x) { return counts[x] >= 99; })) break; continue; }
+    if (!cands.length) {
+      if (pool.some(function (e) { return e.p.indexOf(g) >= 0 && !chosen.some(function (c) { return c.n === e.n; }); })) famLimited = true;
+      counts[g] += 99; if (groups.every(function (x) { return counts[x] >= 99; })) break; continue;
+    }
     var e = softPick(cands, function (x) { return weightOf(x, g, wantCompound); }, R, 5), p = plan(e, wantCompound); p.g = g;
     var t = exTimeSec(p.sets, p.rest, 40);
     if (used + t > budget) {
-      // try a smaller version, otherwise stop
+      // try a smaller version: 2 sets, then an accessory-style slot with shorter rest; otherwise this group is done
       p.sets = 2; t = exTimeSec(2, p.rest, 40);
-      if (used + t > budget && chosen.length) { counts[g] += 99; if (groups.every(function (x) { return counts[x] >= 99; })) break; continue; }
+      if (used + t > budget && chosen.length) {
+        var alt = softPick(cands, function (x) { return weightOf(x, g, false); }, R, 5), pa = plan(alt, false); pa.g = g; pa.sets = 2;
+        var ta = exTimeSec(2, pa.rest, 40);
+        if (used + ta <= budget) { e = alt; p = pa; t = ta; }
+        else { counts[g] += 99; if (groups.every(function (x) { return counts[x] >= 99; })) break; continue; }
+      }
     }
     chosen.push(p); used += t;
     e.p.forEach(function (pg) { if (counts[pg] != null && counts[pg] < 99) counts[pg] += (pg === g ? 1 : 0.5); });
@@ -339,14 +370,17 @@ function generateWorkout(opts, workouts, seed) {
   chosen = chosen.filter(function (c) { return c.g !== 'Core'; }).concat(core);
   var secs = 0; chosen.forEach(function (c) { secs += exTimeSec(c.sets, c.rest, 40); });
   var est = Math.round((secs + (opts.minutes >= 30 ? 240 : 120)) / 60);
-  return { items: chosen, estMin: est, short: est < opts.minutes * 0.7 };
+  var short = est < opts.minutes * 0.7;
+  return { items: chosen, estMin: est, short: short, why: short ? (famLimited ? 'variety' : 'gear') : '' };
 }
 function swapExercise(opts, current, item, workouts, seed) {
   var R = rng(seed || 7), pool = candidatePool(opts);
   var g = item.g || opts.groups[0];
-  var cands = pool.filter(function (e) {
-    return e.p.indexOf(g) >= 0 && !current.some(function (c) { return c.n === e.n || similar(c.n, e.n); });
-  });
+  var others = current.filter(function (c) { return c.n !== item.n; });
+  var base = pool.filter(function (e) { return e.p.indexOf(g) >= 0 && !current.some(function (c) { return c.n === e.n || similar(c.n, e.n); }); });
+  // keep the family limits the builder uses (e.g. one crunch), unless that leaves nothing
+  var cands = base.filter(function (e) { var fk = famKey(e.n); return !fk || fk === famKey(item.n || '') || others.filter(function (c) { return famKey(c.n) === fk; }).length < (fk === 'shrug' || fk === 'crunch' ? 1 : 2); });
+  if (!cands.length) cands = base;
   if (!cands.length) return null;
   var hasHist = {}; workouts.forEach(function (w) { w.ex.forEach(function (x) { hasHist[x.n] = 1; }); });
   var rec = recency(workouts), best = null, bs = -1e9;
@@ -354,7 +388,9 @@ function swapExercise(opts, current, item, workouts, seed) {
     var s = R() * 2 + (item.comp ? (isComp(e) ? 1.5 : 0) : (!isComp(e) ? 1 : 0)) + (hasHist[e.n] ? 0.5 : 0) - recencyPenalty(rec[e.n]) * 0.5;
     if (s > bs) { bs = s; best = e; }
   });
-  return { n: best.n, sets: item.sets, lo: item.lo, hi: item.hi, rest: item.rest, comp: item.comp && best.m === 'compound', g: g };
+  // a fresh rep range and rest for the new move (bodyweight moves get higher reps), keeping your set count
+  var G = GOALS[opts.goal] || GOALS.strength, comp = !!item.comp && isComp(best), bw = isBW(best);
+  return { n: best.n, sets: item.sets, lo: bw ? Math.max(10, comp ? G.cLo : G.aLo) : (comp ? G.cLo : G.aLo), hi: bw ? Math.max(15, comp ? G.cHi : G.aHi) : (comp ? G.cHi : G.aHi), rest: comp ? G.cRest : G.aRest, comp: comp, g: g };
 }
 
 /* ---------- building a live workout from a plan ---------- */
@@ -381,9 +417,11 @@ function finishDraft(draft, now) {
 function workoutVolume(w) { var v = 0; w.ex.forEach(function (e) { e.sets.forEach(function (s) { v += (+s.w || 0) * (+s.r || 0); }); }); return v; }
 function workoutSets(w) { var n = 0; w.ex.forEach(function (e) { n += e.sets.length; }); return n; }
 function findPRs(prior, w) {
-  var res = [];
+  var res = [], seen = {};
   w.ex.forEach(function (e) {
-    var ex = BYNAME[e.n], h = exHistory(prior, e.n), best = sessionBest(ex, e.sets), prev = 0;
+    if (seen[e.n]) return; seen[e.n] = 1;
+    var ex = BYNAME[e.n], h = exHistory(prior, e.n), best = 0, prev = 0;
+    w.ex.forEach(function (o) { if (o.n === e.n) best = Math.max(best, sessionBest(ex, o.sets, w.t)); });
     h.forEach(function (x) { if (x.best > prev) prev = x.best; });
     if (best > 0 && prev > 0 && best > prev * 1.0001) res.push({ n: e.n, best: best, prev: prev });
   });
@@ -452,7 +490,12 @@ function bwAt(b, t) {
 function effBW(sex, hCm, wLb) { return wLb; }
 /* standard anchors (Beginner..Elite = 5/20/50/80/95th percentile) for a lift at a bodyweight, log-log interpolated */
 function stdName(cls) { return CLASS_NAME[cls] || (DATA.std[cls] && DATA.std[cls].name) || cls; }
+var STD_MEMO = {};
 function stdAt(cls, sex, bw) {
+  var mk = cls + '|' + sex + '|' + Math.round(bw * 4), hit = STD_MEMO[mk]; if (hit) return hit.slice();
+  var r = stdAt0(cls, sex, Math.round(bw * 4) / 4); if (r) STD_MEMO[mk] = r.slice(); return r;
+}
+function stdAt0(cls, sex, bw) {
   var st = DATA.std[cls]; if (!st) return null;
   var rows = st[sex], keys = Object.keys(rows).map(Number).sort(function (a, b) { return a - b; });
   var x = Math.log(clamp(bw, keys[0] * 0.7, keys[2] * 1.5)), xs = keys.map(Math.log), out = [];
@@ -533,7 +576,8 @@ function recLoads(w) {
 function fatigueAt(workouts, g, t) {
   var f = 0;
   workouts.forEach(function (w) {
-    var end = w.t + (w.dur || 3600) * 1000; if (end > t || t - end > 7 * DAY) return;
+    if (w.t > t) return;
+    var end = Math.min(t, w.t + (w.dur || 3600) * 1000); if (t - end > 7 * DAY) return;
     var load = recLoads(w)[g]; if (!load) return;
     var need = REC_BASE[g] * clamp(0.55 + 0.1 * load, 0.55, 1.5);
     f += Math.max(0, 1 - ((t - end) / 3600000) / need);

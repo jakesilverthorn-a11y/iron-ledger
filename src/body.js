@@ -17,16 +17,21 @@ var FOCUS = {
 var FOCUS_IDS = Object.keys(FOCUS);
 var PHOTO_KEY = 'ironledger.photos', PHOTOS = null, PHOTO_MAX = 60, PHOTO_IDB = null;
 /* photos live in IndexedDB (room for many); older versions kept a few in localStorage, which we move over once */
+var IDB_P = null;
 function idbOpen() {
-  return new Promise(function (ok, bad) {
+  if (IDB_P) return IDB_P;
+  IDB_P = new Promise(function (ok, bad) {
     if (!window.indexedDB) { bad(new Error('no idb')); return; }
     var r = indexedDB.open('ironledger', 1);
     r.onupgradeneeded = function () { r.result.createObjectStore('kv'); };
-    r.onsuccess = function () { ok(r.result); }; r.onerror = function () { bad(r.error); };
+    r.onsuccess = function () { var db = r.result; db.onversionchange = function () { db.close(); IDB_P = null; }; db.onclose = function () { IDB_P = null; }; ok(db); };
+    r.onerror = function () { bad(r.error); }; r.onblocked = function () { bad(new Error('blocked')); };
   });
+  IDB_P.catch(function () { IDB_P = null; });
+  return IDB_P;
 }
 function idbGet(k) { return idbOpen().then(function (db) { return new Promise(function (ok, bad) { var q = db.transaction('kv').objectStore('kv').get(k); q.onsuccess = function () { ok(q.result); }; q.onerror = function () { bad(q.error); }; }); }); }
-function idbSet(k, v) { return idbOpen().then(function (db) { return new Promise(function (ok, bad) { var tx = db.transaction('kv', 'readwrite'); tx.objectStore('kv').put(v, k); tx.oncomplete = function () { ok(); }; tx.onerror = function () { bad(tx.error); }; }); }); }
+function idbSet(k, v) { return idbOpen().then(function (db) { return new Promise(function (ok, bad) { var tx = db.transaction('kv', 'readwrite'); tx.objectStore('kv').put(v, k); tx.oncomplete = function () { ok(); }; tx.onerror = function () { bad(tx.error); }; tx.onabort = function () { bad(tx.error || new Error('aborted')); }; }); }); }
 function legacyPhotos() { try { var a = JSON.parse(localStorage.getItem(PHOTO_KEY) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
 function photosInit() {
   return idbGet('photos').then(function (a) {
@@ -36,28 +41,46 @@ function photosInit() {
   }).catch(function () { PHOTO_IDB = false; PHOTOS = legacyPhotos(); }).then(function () { if (U.tab === 'body') render(); });
 }
 function photosLoad() { return PHOTOS || legacyPhotos(); }
+/* keep the first photo (your baseline) and thin out the middle when there are too many */
+function photosTrim(a, max) { a = a.slice(); while (a.length > max) a.splice(Math.max(1, Math.floor(a.length / 2)), 1); return a; }
+var PHOTO_LS_MAX = 3;   // without IndexedDB, photos share the small space your workouts are saved in
 function photosSave(a) {
-  if (PHOTO_IDB) { PHOTOS = a.slice(-PHOTO_MAX); idbSet('photos', PHOTOS).catch(function () { toast('Could not save the photo. Your phone may be out of space.'); }); return true; }
-  try { PHOTOS = a.slice(-8); localStorage.setItem(PHOTO_KEY, JSON.stringify(PHOTOS)); return true; } catch (e) { toast('Not enough space on this phone for another photo. Delete an old one.'); return false; }
+  var prev = PHOTOS;
+  if (PHOTO_IDB) {
+    var next = photosTrim(a, PHOTO_MAX); PHOTOS = next;
+    return idbSet('photos', next).then(function () { return true; }, function () { PHOTOS = prev; toast('Could not save the photo. Your phone may be out of space.'); if (U.tab === 'body') render(); return false; });
+  }
+  var nx = photosTrim(a, PHOTO_LS_MAX);
+  try { localStorage.setItem(PHOTO_KEY, JSON.stringify(nx)); PHOTOS = nx; return Promise.resolve(true); } catch (e) { toast('Not enough space on this phone for another photo. Delete an old one.'); return Promise.resolve(false); }
 }
+/* "Delete all data": photos, the sharper analysis copy and the API key */
+function photosWipe() {
+  PHOTOS = []; BODY_FULL = null; AI.err = '';
+  try { localStorage.removeItem(PHOTO_KEY); } catch (e) { }
+  if (PHOTO_IDB) idbSet('photos', []).catch(function () { });
+  aiKeySet(''); aiDetect().then(function () { if (U.tab === 'body') render(); });
+}
+function photoMaxNow() { return PHOTO_IDB ? PHOTO_MAX : PHOTO_LS_MAX; }
 async function savePhotoFile(p) {
   var blob = dataURLBlob(p.d), name = 'progress-' + new Date(p.t).toISOString().slice(0, 10) + '.jpg';
   await saveBlob(blob, name, 'image/jpeg', 'Photo saved');
 }
 async function saveBlob(blob, name, type, okMsg) {
-  try { var f = new File([blob], name, { type: type }); if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f] }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
-  try { var url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function () { URL.revokeObjectURL(url); }, 5000); toast(okMsg); } catch (e) { toast('Could not save it.'); }
+  try { var f = new File([blob], name, { type: type }); if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f] }); return true; } } catch (e) { if (e && e.name === 'AbortError') return true; if (e && e.name === 'NotAllowedError') return false; }
+  try { var url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function () { URL.revokeObjectURL(url); }, 120000); toast(okMsg); } catch (e) { toast('Could not save it.'); }
 }
 function BS() { var b = S.settings.bodyFocus; if (!b || typeof b !== 'object') b = S.settings.bodyFocus = { res: null, goal: 'both', pick: [] }; if (!b.pick) b.pick = []; return b; }
 
-function shrinkImage(file, max, q) {
+function shrinkImage(file, sizes) {
   return new Promise(function (ok, bad) {
     var img = new Image(), url = URL.createObjectURL(file);
     img.onload = function () {
-      var s = Math.min(1, max / Math.max(img.width, img.height)), c = document.createElement('canvas');
-      c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
-      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
-      ok(c.toDataURL('image/jpeg', q || 0.8));
+      var out = sizes.map(function (z) {
+        var s = Math.min(1, z[0] / Math.max(img.width, img.height)), c = document.createElement('canvas');
+        c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); var d = c.toDataURL('image/jpeg', z[1] || 0.8); c.width = c.height = 0; return d;
+      });
+      URL.revokeObjectURL(url); ok(out);
     };
     img.onerror = function () { URL.revokeObjectURL(url); bad(new Error('Could not read that picture.')); };
     img.src = url;
@@ -106,8 +129,20 @@ async function aiAnthropic(du, prompt, key) {
     throw er;
   }
   var txt = ((j && j.content) || []).filter(function (c) { return c.type === 'text'; }).map(function (c) { return c.text; }).join('');
-  var m = txt.match(/\{[\s\S]*\}/); if (!m) throw new Error('The answer did not come back in the expected form. Try again.');
-  return JSON.parse(m[0]);
+  return parseReplyJSON(txt);
+}
+/* the first complete {...} block in a reply (ignores text and stray braces around it) */
+function parseReplyJSON(txt) {
+  txt = String(txt || ''); var bad = new Error('The answer did not come back in the expected form. Try again.');
+  for (var st = txt.indexOf('{'); st >= 0; st = txt.indexOf('{', st + 1)) {
+    var dep = 0, inS = false, esc2 = false;
+    for (var i = st; i < txt.length; i++) {
+      var ch = txt[i];
+      if (inS) { if (esc2) esc2 = false; else if (ch === '\\') esc2 = true; else if (ch === '"') inS = false; continue; }
+      if (ch === '"') inS = true; else if (ch === '{') dep++; else if (ch === '}' && --dep === 0) { try { return JSON.parse(txt.slice(st, i + 1)); } catch (e) { break; } }
+    }
+  }
+  throw bad;
 }
 function keySheet() {
   var k = aiKey();
@@ -119,8 +154,8 @@ function keySheet() {
     (k ? '<button class="btn block ghost danger" data-act="bodyKeyDel">Remove key from this phone</button>' : '') +
     '<div class="note">Keep the key private: anyone who has it can spend your API credit. Friends using your app link need their own key (or your friends server).</div>');
 }
-function aiPrompt() {
-  var B = profB(), wk = weakGroups(), F = BS();
+function aiPrompt(noStats) {
+  var B = noStats ? null : profB(), wk = weakGroups(), F = BS();
   var info = B ? (B.sex === 'M' ? 'Man' : 'Woman') + ', ' + Math.round(B.h) + ' cm, ' + Math.round(curWeightLb(B) / LB) + ' kg.' : 'Sex, height and weight not given.';
   var nums = wk.length ? ' Strength ranks for their size (1–100): ' + wk.map(function (x) { return x.g + ' ' + Math.round(x.s); }).join(', ') + '.' : '';
   var goal = { lose: 'lose fat', build: 'build muscle', both: 'lose fat and build muscle' }[F.goal] || 'get fitter';
@@ -134,12 +169,12 @@ function aiPrompt() {
 function cleanAI(o) {
   if (!o || typeof o !== 'object') throw new Error('The answer did not come back in the expected form. Try again.');
   if (o.ok === false) return { ok: false, reason: String(o.reason || 'The photo was not clear enough.').slice(0, 200) };
-  var seen = {}, focus = (Array.isArray(o.focus) ? o.focus : []).filter(function (f) { return f && FOCUS[f.area] && !seen[f.area] && (seen[f.area] = 1); }).slice(0, 4).map(function (f) { return { area: f.area, why: String(f.why || '').slice(0, 140) }; });
+  var seen = {}, focus = (Array.isArray(o.focus) ? o.focus : []).filter(function (f) { return f && typeof f.area === 'string' && FOCUS_IDS.indexOf(f.area) >= 0 && !seen[f.area] && (seen[f.area] = 1); }).slice(0, 4).map(function (f) { return { area: f.area, why: String(f.why || '').slice(0, 140) }; });
   if (!focus.length) throw new Error('No focus areas came back. Try another photo.');
-  return { ok: true, build: String(o.build || '').slice(0, 120), bf: String(o.bf || '').slice(0, 20), focus: focus, strengths: (Array.isArray(o.strengths) ? o.strengths : []).slice(0, 3).map(function (s) { return String(s).slice(0, 60); }), eat: FGOALS[o.eat] ? o.eat : null, note: String(o.note || '').slice(0, 200) };
+  return { ok: true, build: String(o.build || '').slice(0, 120), bf: String(o.bf || '').slice(0, 20), focus: focus, strengths: (Array.isArray(o.strengths) ? o.strengths : []).slice(0, 3).map(function (s) { return String(s).slice(0, 60); }), eat: typeof o.eat === 'string' && Object.prototype.hasOwnProperty.call(FGOALS, o.eat) ? o.eat : null, note: String(o.note || '').slice(0, 200) };
 }
 async function aiAnalyze(du) {
-  var prompt = aiPrompt();
+  var prompt = aiPrompt(AI.kind === 'server');   // a friends server is someone else's computer: leave your height and weight out
   if (AI.kind === 'claude') {
     AI.ctl = new AbortController();
     var j = await AI.sample.json(prompt, { images: [dataURLBlob(du)], signal: AI.ctl.signal, cache: false });
@@ -147,7 +182,7 @@ async function aiAnalyze(du) {
   }
   if (AI.kind === 'key') return cleanAI(await aiAnthropic(du, prompt, aiKey()));
   if (AI.kind === 'server') {
-    var r = await srvRaw('POST', '/analyze', { image: du, prompt: prompt });
+    var r = await srvRaw('POST', '/analyze', { image: du, prompt: prompt }, true, 90000);
     return cleanAI(r.data);
   }
   throw new Error('Photo analysis is not available here.');
@@ -168,6 +203,8 @@ function focusFromSelf() {
   pick.forEach(function (a) { from[a] = 'You picked this'; });
   wk.slice(0, 2).forEach(function (x) { var a = areaForGroup(x.g); if (a && !from[a] && x.s < 45) { from[a] = 'Your ' + x.g.toLowerCase() + ' rank is ' + Math.round(x.s) + ', one of your lowest for your size'; pick.push(a); } });
   if (F.goal !== 'build' && pick.indexOf('belly') < 0 && F.goal === 'lose') { pick.unshift('belly'); from.belly = 'Your goal is to lose fat'; }
+  // nothing picked and no rank stands out: use your lowest one
+  if (!pick.length && wk.length) { var lo = wk[0], la = areaForGroup(lo.g); if (la) { pick.push(la); from[la] = 'Your ' + lo.g.toLowerCase() + ' rank (' + Math.round(lo.s) + ') is your lowest for your size'; } }
   return { ok: true, src: 'self', at: Date.now(), focus: pick.slice(0, 4).map(function (a) { return { area: a, why: from[a] }; }), eat: F.goal === 'lose' ? 'lose' : F.goal === 'build' ? 'lean' : 'recomp', build: '', bf: '', strengths: [], note: '' };
 }
 function focusExercises(area, n) {
@@ -211,11 +248,11 @@ function viewBody() {
   var last = photos[photos.length - 1], first = photos[0];
   var photoCard = '<div class="card section" style="gap:12px"><h2>Progress photo</h2>' +
     (last ? '<div class="pcmp">' + (photos.length > 1 ? '<figure><img src="' + first.d + '" alt="First photo"><figcaption>' + fmtDate(first.t) + '</figcaption></figure>' : '') + '<figure><img src="' + last.d + '" alt="Latest photo"><figcaption>' + (photos.length > 1 ? 'Latest · ' : '') + fmtDate(last.t) + '</figcaption></figure></div>' : '<div class="note">Take a front photo in good light, standing relaxed, in shorts or fitted clothes. Same spot and time of day each time makes progress easy to see.</div>') +
-    '<label class="btn ' + (last ? '' : 'primary ') + 'block filebtn">' + (last ? 'Add a new photo' : 'Take or choose a photo') + '<input type="file" id="bodyfile" accept="image/*" capture="user" hidden></label>' +
+    '<label class="btn ' + (last ? '' : 'primary ') + 'block filebtn">' + (last ? 'Add a new photo' : 'Take or choose a photo') + '<input type="file" id="bodyfile" accept="image/*" hidden></label>' +
     (last ? (AI.kind ? '<button class="btn primary block" data-act="bodyAnalyze"' + (AI.busy ? ' disabled' : '') + '>' + (AI.busy ? 'Looking at your photo…' : 'Analyze my latest photo') + '</button>' : '<button class="btn primary block" data-act="bodyKey">Turn on photo analysis</button><div class="note">One-time setup with your own Claude API key (about 1–2 cents per photo). Or use the self-check below.</div>') : '') +
     (last && AI.kind !== 'claude' ? '<button class="btn block" data-act="bodyChat">💬 Analyze in my Claude app</button>' : '') +
     (AI.kind === 'key' ? '<button class="linkbtn" style="font-size:13px;color:var(--muted)" data-act="bodyKey">Photo analysis settings</button>' : '') +
-    (AI.busy && (AI.kind === 'claude' || AI.kind === 'key') ? '<button class="btn small ghost" data-act="bodyStop">Stop</button>' : '') +
+    (AI.busy && AI.kind !== 'server' ? '<button class="btn small ghost" data-act="bodyStop">Stop</button>' : '') +
     (AI.err ? '<div class="banner"><span>' + esc(AI.err) + '</span></div>' : '') +
     (photos.length ? '<div class="row" style="gap:8px">' + (photos.length > 1 ? '<button class="btn grow" data-act="bodyTimeline">▶ Timeline</button>' : '') + '<button class="btn grow" data-act="bodyPhotos">All photos (' + photos.length + ')</button></div>' : '') +
     '<div class="note">Photos stay on this phone. When you tap Analyze, the photo is sent once to ' + (AI.kind === 'server' ? 'your friends server\'s AI' : AI.kind === 'key' ? 'Claude (Anthropic) using your key' : 'Claude') + ' to read it, and the app does not keep it anywhere else.</div></div>';
@@ -224,7 +261,8 @@ function viewBody() {
     '<div><span class="field-label">I want to improve</span><div class="chips">' + FOCUS_IDS.map(function (a) { return '<button class="chip" aria-pressed="' + (F.pick.indexOf(a) >= 0) + '" data-act="bodyPick" data-k="' + a + '">' + FOCUS[a].e + ' ' + (a === 'belly' ? 'Lose the gut' : FOCUS[a].n) + '</button>'; }).join('') + '</div></div>' +
     '<button class="btn block" data-act="bodySelf"' + (F.pick.length || weakGroups().length ? '' : ' disabled') + '>Make my focus plan</button></div>';
   var wk = weakGroups(), numbers = wk.length ? '<div class="card section" style="gap:8px"><div class="xname">What your numbers say</div><div class="note">Lowest strength ranks for your size: ' + wk.slice(0, 3).map(function (x) { return '<b>' + x.g + '</b> ' + Math.round(x.s); }).join(' · ') + '</div></div>' : '';
-  var plan = F.res && F.res.ok ? '<div class="section"><h2>Your focus</h2>' + planHTMLBody(F.res) + '</div>' : (F.res && F.res.ok === false ? '<div class="banner"><span>' + esc(F.res.reason) + '</span></div>' : '');
+  var planBody = ''; if (F.res && F.res.ok) { try { planBody = planHTMLBody(F.res); } catch (e) { F.res = null; } }
+  var plan = planBody ? '<div class="section"><h2>Your focus</h2>' + planBody + '</div>' : (F.res && F.res.ok === false ? '<div class="banner"><span>' + esc(F.res.reason) + '</span></div>' : '');
   return '<div class="screen">' + head + plan + photoCard + self + numbers + '<div class="note">This is training advice, not a medical assessment. If you have pain, an injury or a health condition, check with a professional first.</div></div>';
 }
 function photosSheet() {
@@ -262,8 +300,8 @@ function tlDraw(x, W, H, imgs, list, t) {
   [0, n - 1].forEach(function (idx, j) { var im = imgs[idx]; if (!im) return; var s = Math.max(half / im.width, (H - 170) / im.height), w = im.width * s, h = im.height * s; x.save(); x.beginPath(); x.rect(j * (half + 12), 80, half, H - 170); x.clip(); x.drawImage(im, j * (half + 12) + (half - w) / 2, 80 + (H - 170 - h) / 2, w, h); x.restore(); });
   x.fillStyle = '#0f1113'; x.fillRect(0, 0, W, 80); x.fillRect(0, H - 90, W, 90);
   x.fillStyle = '#f2c230'; x.font = '700 30px ' + fd; x.fillText('IRON LEDGER', 22, 48);
-  var weeks = Math.max(1, Math.round((list[n - 1].t - list[0].t) / (7 * DAY)));
-  x.fillStyle = '#eceae4'; x.font = '700 40px ' + fd; x.textAlign = 'right'; x.fillText(weeks + (weeks === 1 ? ' week' : ' weeks'), W - 22, 52); x.textAlign = 'left';
+  var gapD = Math.round((list[n - 1].t - list[0].t) / DAY), weeks = Math.round(gapD / 7), span = gapD < 7 ? Math.max(1, gapD) + (Math.max(1, gapD) === 1 ? ' day' : ' days') : weeks + (weeks === 1 ? ' week' : ' weeks');
+  x.fillStyle = '#eceae4'; x.font = '700 40px ' + fd; x.textAlign = 'right'; x.fillText(span, W - 22, 52); x.textAlign = 'left';
   x.font = '600 22px ' + fb; x.fillStyle = '#99a0a9';
   x.fillText(fmtDate(list[0].t), 22, H - 52); x.textAlign = 'right'; x.fillText(fmtDate(list[n - 1].t), W - 22, H - 52); x.textAlign = 'left';
   if (B) { var w0 = bwAt(B, list[0].t), w1 = bwAt(B, list[n - 1].t); if (w0 && w1 && Math.abs(w1 - w0) >= 0.5) { var dlt = w1 - w0; x.fillStyle = '#eceae4'; x.font = '700 26px ' + fb; x.textAlign = 'center'; x.fillText((dlt > 0 ? '+' : '−') + toDisp(Math.abs(dlt), unit()) + ' ' + u, W / 2, H - 22); x.textAlign = 'left'; } }
@@ -272,6 +310,7 @@ function tlDraw(x, W, H, imgs, list, t) {
 }
 function tlStop() { cancelAnimationFrame(TL.raf); TL.raf = 0; }
 function timelineSheet() {
+  TL.video = null;
   var list = tlFrames(); if (list.length < 2) { toast('Add at least two photos first.'); return; }
   var canRec = !!(window.MediaRecorder && HTMLCanvasElement.prototype.captureStream);
   openSheet('Your timeline', '<canvas id="tlc" width="540" height="760" style="width:100%;border-radius:16px;background:#0f1113"></canvas>' +
@@ -287,20 +326,27 @@ function tlPlay() {
   });
 }
 function tlRecord() {
-  var list = tlFrames(), btn = $('#tlsave'); if (TL.rec) return;
+  var list = tlFrames(), btn = $('#tlsave'); if (TL.rec || TL.busy) return;
+  // the video is ready from an earlier tap: share it now, while this tap still counts on iPhone
+  if (TL.video) { var v = TL.video; saveBlob(v.blob, v.name, v.type, 'Choose where to save the video').then(function (ok) { if (ok === false) toast('Could not open the share sheet. Tap Share video again.'); }); return; }
+  TL.busy = true; if (btn) { btn.disabled = true; btn.textContent = 'Making video…'; }
+  function reset(msg) { TL.busy = false; TL.rec = null; var b0 = $('#tlsave'); if (b0) { b0.disabled = false; b0.textContent = 'Save video'; } if (msg) toast(msg); }
   var c = document.createElement('canvas'); c.width = 540; c.height = 760; var x = c.getContext('2d');
   var types = ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm'], type = types.filter(function (t) { return MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t); })[0] || '';
   tlLoadImgs(list).then(function (imgs) {
     var stream = c.captureStream(30), rec, chunks = [];
-    try { rec = type ? new MediaRecorder(stream, { mimeType: type, videoBitsPerSecond: 2500000 }) : new MediaRecorder(stream); } catch (e) { toast('This browser cannot make videos.'); return; }
-    TL.rec = rec; if (btn) { btn.disabled = true; btn.textContent = 'Making video…'; }
+    try { rec = type ? new MediaRecorder(stream, { mimeType: type, videoBitsPerSecond: 2500000 }) : new MediaRecorder(stream); } catch (e) { reset('This browser cannot make videos.'); return; }
+    TL.rec = rec;
     rec.ondataavailable = function (e) { if (e.data && e.data.size) chunks.push(e.data); };
+    rec.onerror = function () { reset('The video could not be made on this phone.'); };
     rec.onstop = function () {
-      TL.rec = null; var mt = rec.mimeType || type || 'video/webm', ext = /mp4/.test(mt) ? 'mp4' : 'webm', blob = new Blob(chunks, { type: mt.split(';')[0] });
-      var b2 = $('#tlsave'); if (b2) { b2.disabled = false; b2.textContent = 'Save video'; }
-      saveBlob(blob, 'iron-ledger-timeline.' + ext, mt.split(';')[0], 'Video saved');
+      TL.rec = null; TL.busy = false; var mt = rec.mimeType || type || 'video/webm', ext = /mp4/.test(mt) ? 'mp4' : 'webm', blob = new Blob(chunks, { type: mt.split(';')[0] });
+      if (!blob.size) { reset('The video came out empty. Try again.'); return; }
+      TL.video = { blob: blob, name: 'iron-ledger-timeline.' + ext, type: mt.split(';')[0] };
+      var b2 = $('#tlsave'); if (b2) { b2.disabled = false; b2.textContent = 'Share video'; }
+      toast('Video ready. Tap Share video to save it.');
     };
-    rec.start(250);
+    try { rec.start(250); } catch (e) { reset('The video could not be made on this phone.'); return; }
     var t0 = performance.now();
     (function step() { var done = tlDraw(x, c.width, c.height, imgs, list, (performance.now() - t0) / 1000); if (done) { setTimeout(function () { rec.stop(); }, 150); } else setTimeout(step, 1000 / 30); })();
   });
@@ -312,13 +358,14 @@ function bodyClick(a, d) {
   switch (a) {
     case 'bodyGoal': F.goal = d.k; persist({ settings: true }); render(); return true;
     case 'bodyPick': { var i = F.pick.indexOf(d.k); if (i >= 0) F.pick.splice(i, 1); else F.pick.push(d.k); persist({ settings: true }); render(); return true; }
-    case 'bodySelf': F.res = focusFromSelf(); persist({ settings: true }); render(); window.scrollTo(0, 0); return true;
+    case 'bodySelf': { var fr = focusFromSelf(); if (!fr.focus.length) { toast('Tap at least one area you want to improve.'); return true; } F.res = fr; persist({ settings: true }); render(); window.scrollTo(0, 0); return true; }
     case 'bodyAnalyze': {
       var ph = photosLoad(), last = ph[ph.length - 1]; if (!last || AI.busy) return true;
       AI.busy = true; AI.err = ''; render();
-      aiAnalyze(BODY_FULL || last.d).then(function (res) {
+      aiAnalyze(latestFull(last)).then(function (res) {
         AI.busy = false;
-        if (!res.ok) { F.res = res; } else { res.src = AI.kind; res.at = Date.now(); F.res = res; }
+        // an unclear photo shouldn't wipe out a plan you already have
+        if (!res.ok) { if (F.res && F.res.ok) { AI.err = res.reason; render(); return; } F.res = res; } else { res.src = AI.kind; res.at = Date.now(); F.res = res; }
         persist({ settings: true }); render(); window.scrollTo(0, 0);
       }, function (e) { AI.busy = false; AI.err = aiErrText(e); render(); });
       return true;
@@ -328,33 +375,37 @@ function bodyClick(a, d) {
     case 'bodyKey': keySheet(); return true;
     case 'bodyChat': chatSheet(); return true;
     case 'bodyChatSend': chatSend(); return true;
-    case 'bodyChatCopy': copyText(chatPrompt()); return true;
+    case 'bodyChatCopy': copyText(chatPrompt(), 'Instructions copied. Paste them into the Claude chat with your photo.'); return true;
     case 'bodyChatUse': {
-      var tx = ($('#chatans') || {}).value || '', er = $('#chat-err'), m = tx.match(/\{[\s\S]*\}/);
-      try { if (!m) throw new Error('Paste Claude\'s whole reply (it should contain a block that starts with { and ends with }).'); var res = cleanAI(JSON.parse(m[0])); if (res.ok) { res.src = 'chat'; res.at = Date.now(); } F.res = res; persist({ settings: true }); closeSheet(); render(); window.scrollTo(0, 0); toast(res.ok ? 'Focus plan added' : 'Claude could not use that photo'); }
+      var tx = ($('#chatans') || {}).value || '', er = $('#chat-err');
+      try { if (tx.indexOf('{') < 0) throw new Error('Paste Claude\'s whole reply (it should contain a block that starts with { and ends with }).'); var pj; try { pj = parseReplyJSON(tx); } catch (e0) { throw new Error('That reply could not be read. Ask Claude to "reply with only the JSON" and paste again.'); } var res = cleanAI(pj);
+        if (!res.ok && F.res && F.res.ok) { if (er) er.textContent = res.reason; return true; } if (res.ok) { res.src = 'chat'; res.at = Date.now(); } F.res = res; persist({ settings: true }); closeSheet(); render(); window.scrollTo(0, 0); toast(res.ok ? 'Focus plan added' : 'Claude could not use that photo'); }
       catch (e) { if (er) er.textContent = (e instanceof SyntaxError) ? 'That reply could not be read. Ask Claude to "reply with only the JSON" and paste again.' : e.message; }
       return true; }
     case 'bodyKeySave': { var kv = (($('#akin') || {}).value || '').trim(), ke = $('#ak-err');
       if (!/^sk-ant-[A-Za-z0-9_\-]{20,}$/.test(kv)) { if (ke) ke.textContent = 'That does not look like a Claude API key. It should start with sk-ant-.'; return true; }
-      aiKeySet(kv); if (!window.claude) AI.kind = 'key'; AI.err = ''; closeSheet(); render(); toast('Photo analysis is on'); return true; }
-    case 'bodyKeyDel': aiKeySet(''); AI.kind = srvOn() ? 'server' : (window.claude ? AI.kind : null); closeSheet(); render(); toast('Key removed'); return true;
+      aiKeySet(kv); AI.err = ''; closeSheet(); aiDetect().then(render); toast('Photo analysis is on'); return true; }
+    case 'bodyKeyDel': aiKeySet(''); closeSheet(); aiDetect().then(render); toast('Key removed'); return true;
     case 'bodySavePhoto': { var sp = photosLoad()[+d.i]; if (sp) savePhotoFile(sp); return true; }
     case 'bodyTimeline': timelineSheet(); return true;
     case 'bodyTlPlay': tlPlay(); return true;
     case 'bodyTlSave': tlRecord(); return true;
-    case 'bodyDelPhoto': { var p = photosLoad(); p.splice(+d.i, 1); photosSave(p); photosSheet(); render(); return true; }
+    case 'bodyDelPhoto': { var p = photosLoad().slice(), gone = p.splice(+d.i, 1)[0]; if (gone && BODY_FULL && BODY_FULL.t === gone.t) BODY_FULL = null; photosSave(p).then(function () { if (sheetOpen()) photosSheet(); render(); }); return true; }
     case 'bodyTrain': { var gs = d.g.split(',').filter(function (g) { return GROUPS.indexOf(g) >= 0; }); if (gs.length) S.settings.groups = gs; persist({ settings: true }); U.tab = 'train'; U.plan = null; render(); window.scrollTo(0, 0); toast('Focus muscles selected. Tap Build my workout.'); return true; }
     case 'bodyEat': { var FF = FS(); FF.goal = d.k; FF.days = {}; persist({ settings: true }); toast('Eat goal set to ' + FGOALS[d.k].n); render(); return true; }
   }
   return false;
 }
-var BODY_FULL = null;   // sharper copy of the newest photo, kept in memory only for analysis
+var BODY_FULL = null;   // { t, d }: sharper copy of the newest photo, kept in memory only for analysis
+function latestFull(last) { return BODY_FULL && last && BODY_FULL.t === last.t ? BODY_FULL.d : (last && last.d); }
 function bodyChange(t) {
   if (t.id !== 'bodyfile' || !t.files || !t.files[0]) return false;
   var file = t.files[0]; t.value = '';
-  Promise.all([shrinkImage(file, 720, 0.8), shrinkImage(file, 1024, 0.82)]).then(function (r) {
-    var p = photosLoad(); p.push({ t: Date.now(), d: r[0] });
-    if (photosSave(p)) { BODY_FULL = r[1]; AI.err = ''; render(); toast('Photo saved on this phone'); }
+  var have = photosLoad();
+  if (have.length >= photoMaxNow() && !confirm('You have ' + have.length + ' photos, the most this app keeps. Adding this one removes a photo from the middle (your first photo stays). Tap Save under All photos first if you want a copy. Add it?')) return true;
+  shrinkImage(file, [[720, 0.8], [1024, 0.82]]).then(function (r) {
+    var p = photosLoad().slice(), pt = Date.now(); p.push({ t: pt, d: r[0] });
+    return photosSave(p).then(function (ok) { if (ok) { BODY_FULL = { t: pt, d: r[1] }; AI.err = ''; render(); toast('Photo saved on this phone'); } });
   }, function (e) { toast(e.message); });
   return true;
 }
@@ -364,13 +415,14 @@ function chatPrompt() { return 'Iron Ledger photo check. ' + aiPrompt() + '\n\nR
 async function chatSend() {
   var ph = photosLoad(), last = ph[ph.length - 1]; if (!last) return;
   var prompt = chatPrompt();
-  try { if (navigator.clipboard) await navigator.clipboard.writeText(prompt); } catch (e) { }
-  var blob = dataURLBlob(BODY_FULL || last.d), file = new File([blob], 'progress-photo.jpg', { type: 'image/jpeg' });
+  var blob = dataURLBlob(latestFull(last)), file = new File([blob], 'progress-photo.jpg', { type: 'image/jpeg' });
+  // start the copy but don't wait for it: iPhone only allows the share sheet right after your tap
+  try { if (navigator.clipboard) navigator.clipboard.writeText(prompt).catch(function () { }); } catch (e) { }
   try {
     if (navigator.canShare && navigator.canShare({ files: [file], text: prompt })) { await navigator.share({ files: [file], text: prompt }); U.chatSent = true; chatSheet(); return; }
     if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file] }); U.chatSent = true; chatSheet(); toast('The instructions are copied. Paste them into the chat with the photo.'); return; }
   } catch (e) { if (e && e.name === 'AbortError') return; }
-  await saveBlob(blob, 'progress-photo.jpg', 'image/jpeg', 'Photo saved'); U.chatSent = true; chatSheet();
+  await saveBlob(blob, 'progress-photo.jpg', 'image/jpeg', 'Choose where to save the photo'); U.chatSent = true; chatSheet();
   toast('Photo saved and instructions copied. Attach the photo in a Claude chat and paste.');
 }
 function chatSheet() {

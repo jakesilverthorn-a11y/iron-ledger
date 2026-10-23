@@ -9,15 +9,22 @@ function srvLoad() {
     var m = (location.hash || '').match(/[#&]s=([^&]+)/);
     var cfg = srvNorm(window.IL_SERVER || '');
     var a = JSON.parse(localStorage.getItem('il-auth') || 'null') || {};
-    if (m) { var u = srvNorm(decodeURIComponent(m[1])); if (u) { if (a.url !== u) a = { url: u }; history.replaceState(null, '', location.pathname + location.search); } }
+    if (m) {
+      var u = srvNorm(decodeURIComponent(m[1]));
+      if (u) {
+        // an invite for a different server only replaces a signed-in one if you say so
+        if (a.url !== u && (!a.token || confirm('Switch your friends server to ' + u.replace(/^https?:\/\//, '') + '? You will be signed out of ' + String(a.url || '').replace(/^https?:\/\//, '') + '.'))) a = { url: u };
+        history.replaceState(null, '', location.pathname + location.search);
+      }
+    }
     else if (cfg && !a.url) a = { url: cfg };
     SRV.url = a.url || ''; SRV.token = a.token || ''; SRV.uid = a.uid || ''; SRV.name = a.name || '';
   } catch (e) { }
 }
 function srvSave() { try { localStorage.setItem('il-auth', JSON.stringify({ url: SRV.url, token: SRV.token, uid: SRV.uid, name: SRV.name })); } catch (e) { } }
 function srvInvite() { return location.origin + location.pathname + '#s=' + encodeURIComponent(SRV.url); }
-async function srvRaw(method, path, body, auth) {
-  var ctl = new AbortController(), to = setTimeout(function () { ctl.abort(); }, 12000), h = { 'Content-Type': 'application/json' };
+async function srvRaw(method, path, body, auth, ms) {
+  var ctl = new AbortController(), to = setTimeout(function () { ctl.abort(); }, ms || 12000), h = { 'Content-Type': 'application/json' };
   if (auth !== false && SRV.token) h.Authorization = 'Bearer ' + SRV.token;
   var r;
   try { r = await fetch(SRV.url + path, { method: method, headers: h, body: body == null ? undefined : JSON.stringify(body), signal: ctl.signal }); }
@@ -25,7 +32,9 @@ async function srvRaw(method, path, body, auth) {
   clearTimeout(to);
   var j = null; try { j = await r.json(); } catch (e) { }
   if (!r.ok) { var e2 = new Error((j && j.error) || 'Server error'); e2.code = r.status; if (r.status === 401 && SRV.token && auth !== false && path !== '/login') srvExpired(); throw e2; }
-  return j || {};
+  // a Wi-Fi login page or proxy can answer 200 with HTML: treat that as offline, never as "the server is empty"
+  if (!j || typeof j !== 'object') { var e3 = new Error('Could not reach the friends server. Check your connection.'); e3.code = 'network'; throw e3; }
+  return j;
 }
 function srvExpired() { srvStop(); SRV.token = ''; srvSave(); toast('Signed out. Sign in again.'); if (U.tab === 'friends') render(); }
 function srvDb() {
@@ -39,31 +48,42 @@ function srvDb() {
   }
   function docRef(col, id) {
     return {
-      set: async function (d) { await srvRaw('PUT', '/c/' + col + '/' + id, d); srvPoll(); },
-      delete: async function () { await srvRaw('DELETE', '/c/' + col + '/' + id); srvPoll(); },
+      set: function (d) { return srvQueue(function () { return srvRaw('PUT', '/c/' + col + '/' + id, d); }); },
+      delete: function () { return srvQueue(function () { return srvRaw('DELETE', '/c/' + col + '/' + id); }); },
       get: async function () { var r = await srvRaw('GET', '/all'); var x = (r[col] || {})[id]; return { id: id, data: function () { return x || null; } }; },
       acquire: async function () { return { acquired: true }; }
     };
   }
   return { collection: sub, doc: function (p) { var s = p.split('/'); return docRef(s[0], s[1]); } };
 }
+/* one write at a time from this phone (the server stores all of your data in one record, so two at once could undo each other) */
+var SRVQ = Promise.resolve();
+function srvQueue(fn) { var p = SRVQ.then(fn, fn); SRVQ = p.then(function () { }, function () { }); return p.then(function (r) { srvPoll(true); return r; }); }
 function srvDocs(map) { return Object.keys(map || {}).map(function (id) { return { id: id, data: function () { return map[id]; } }; }); }
 function srvDeliver() {
   ['people', 'ch', 'cp', 'tg'].forEach(function (c) { var docs = srvDocs(SRV.last && SRV.last[c]); SRV.subs[c].slice().forEach(function (s) { try { s.ok({ docs: docs }); } catch (e) { } }); });
 }
-async function srvPoll() {
-  if (!srvOn() || SRV.busy) return; SRV.busy = true;
-  try { SRV.last = await srvRaw('GET', '/all'); srvDeliver(); }
+async function srvPoll(force) {
+  if (!srvOn()) return;
+  if (SRV.busy) { if (force) SRV.again = true; return; }
+  SRV.busy = true;
+  try {
+    var v = SRV.last && SRV.last.v && !force ? SRV.last.v : '';
+    var r = await srvRaw('GET', '/all' + (v ? '?v=' + encodeURIComponent(v) : ''));
+    if (!r.same) { SRV.last = r; srvDeliver(); }
+  }
   catch (e) { if (e.code === 'network') ['people', 'ch', 'cp', 'tg'].forEach(function (c) { SRV.subs[c].forEach(function (s) { if (s.bad) s.bad({ code: 'network' }); }); }); }
   SRV.busy = false;
+  if (SRV.again) { SRV.again = false; srvPoll(true); }
 }
 function srvStart() {
   if (!srvOn() || SOC.db) return;
   SRV.last = null; SRV.subs = { people: [], ch: [], cp: [], tg: [] };
   socInit(srvDb(), { can: async function () { return true; } }, SRV.uid);
-  clearInterval(SRV.timer); SRV.timer = setInterval(function () { if (!document.hidden) srvPoll(); }, 20000);
+  clearInterval(SRV.timer); SRV.timer = setInterval(function () { if (!document.hidden && !(typeof tgOn === 'function' && tgOn())) srvPoll(); }, 20000);
   srvPoll();
-  if (profB()) socClaim(SRV.name).then(function () { if (U.tab === 'friends') render(); });
+  // publish your profile automatically only if you have not removed it from the leaderboard
+  if (profB() && !S.settings.socHidden) socClaim(SRV.name).then(function () { if (U.tab === 'friends') render(); });
   if (typeof aiDetect === 'function') aiDetect();
 }
 function srvStop() {

@@ -112,7 +112,7 @@ var FOODS = (function () {
 })();
 var FOOD_BY = {}; FOODS.forEach(function (f) { FOOD_BY[f.id] = f; });
 var CUSTOM_USE = [['main', 'Main protein'], ['carb', 'Carb side'], ['veg', 'Vegetable'], ['bfast', 'Breakfast'], ['snack', 'Snack'], ['none', 'Just for logging']];
-var CUSTOM_HAS = [['meat', 'Meat'], ['poultry', 'Poultry'], ['fish', 'Fish'], ['pork', 'Pork'], ['dairy', 'Dairy'], ['egg', 'Egg'], ['gluten', 'Gluten'], ['nuts', 'Nuts'], ['peanuts', 'Peanuts'], ['soy', 'Soy']];
+var CUSTOM_HAS = [['meat', 'Meat'], ['poultry', 'Poultry'], ['fish', 'Fish'], ['pork', 'Pork'], ['dairy', 'Dairy'], ['egg', 'Egg'], ['gluten', 'Gluten'], ['nuts', 'Nuts'], ['peanuts', 'Peanuts'], ['soy', 'Soy'], ['shellfish', 'Shellfish'], ['honey', 'Honey'], ['spicy', 'Spicy']];
 var CUSTOM_KEY = null;
 function syncCustom(F) {
   var key = JSON.stringify(F.custom || []); if (key === CUSTOM_KEY) return; CUSTOM_KEY = key;
@@ -120,7 +120,7 @@ function syncCustom(F) {
   (F.custom || []).forEach(function (c) {
     var roles = { main: ['main'], carb: ['grain', 'potato'], veg: ['veg'], bfast: ['cbf'], snack: ['snackP'], none: [] }[c.use] || [];
     var cat = { main: 'protein', carb: 'carb', veg: 'veg', bfast: 'protein', snack: 'extra', none: 'extra' }[c.use] || 'extra';
-    var fd = { id: c.id, n: c.n, e: c.e || '🍽️', cat: cat, r: roles, u: c.u || 'serving', g: 0, k: +c.k || 0, p: +c.p || 0, c: +c.c || 0, f: +c.f || 0, x: c.x || [], st: 0.5, mn: c.use === 'veg' ? 1 : 0.5, mx: c.use === 'main' || c.use === 'carb' ? 3 : 2, custom: 1 };
+    var fd = { id: c.id, n: String(c.n || 'Food'), e: String(c.e || '🍽️').slice(0, 4), cat: cat, r: roles, u: c.u || 'serving', g: 0, k: Math.max(0, +c.k || 0), p: Math.max(0, +c.p || 0), c: Math.max(0, +c.c || 0), f: Math.max(0, +c.f || 0), x: Array.isArray(c.x) ? c.x : [], st: 0.5, mn: c.use === 'veg' ? 1 : 0.5, mx: c.use === 'main' || c.use === 'carb' ? 3 : 2, custom: 1 };
     FOODS.push(fd); FOOD_BY[fd.id] = fd;
   });
 }
@@ -164,12 +164,16 @@ function foodTargets() {
     var kg = curWeightLb(B) / LB, cm = B.h, age = +F.age || 30;
     var bmr = 10 * kg + 6.25 * cm - 5 * age + (B.sex === 'M' ? 5 : -161), tdee = bmr * (+F.act || 1.55);
     var adj = tdee * g.adj; if (g.cap < 0) adj = Math.max(adj, g.cap); else if (g.cap > 0) adj = Math.min(adj, g.cap);
-    out.tdee = Math.round(tdee / 10) * 10; out.kcal = Math.round((tdee + adj) / 10) * 10; out.p = Math.round(kg * g.ppk / 5) * 5; out.est = false;
+    // protein from bodyweight, but not more than a lean-ish weight for your height (BMI 27) so heavy users aren't told to eat 250 g+
+    var kgRef = Math.min(kg, 27 * Math.pow(cm / 100, 2));
+    out.tdee = Math.round(tdee / 10) * 10; out.kcal = Math.round((tdee + adj) / 10) * 10; out.p = Math.round(kgRef * g.ppk / 5) * 5; out.est = false;
   }
   if (F.kcal > 800) out.kcal = +F.kcal;
   if (F.prot > 30) out.p = +F.prot;
-  var floor = B && B.sex === 'F' ? 1200 : 1500; if (out.kcal < floor) out.kcal = floor;
-  out.p = Math.min(out.p, Math.round(out.kcal * 0.4 / 4));
+  // safety floor, but never above maintenance (a "deficit" above maintenance makes no sense for small or older users)
+  var floor = B && B.sex === 'F' ? 1200 : 1500; if (out.tdee && floor > out.tdee) floor = out.tdee;
+  if (out.kcal < floor) { out.kcal = floor; out.floored = true; }
+  var pmax = Math.round(out.kcal * 0.4 / 4); if (out.p > pmax) { out.p = pmax; out.pcapped = true; }
   if (F.diet === 'keto') { out.c = 40; out.f = Math.max(40, Math.round((out.kcal - out.p * 4 - out.c * 4) / 9)); }
   else { out.f = Math.round(out.kcal * 0.28 / 9); out.c = Math.max(50, Math.round((out.kcal - out.p * 4 - out.f * 9) / 4)); }
   return out;
@@ -179,9 +183,11 @@ function foodTargets() {
 function foodOK(fd) {
   var F = FS(), no = (DIETS[F.diet] || DIETS.any).no.concat(F.avoid || []);
   if (F.never.indexOf(fd.id) >= 0) return false;
-  if (no.indexOf('spicy') >= 0 && fd.r.indexOf('spicy') >= 0) return false;
+  if (no.indexOf('spicy') >= 0 && (fd.r.indexOf('spicy') >= 0 || fd.x.indexOf('spicy') >= 0)) return false;
   for (var i = 0; i < fd.x.length; i++) if (no.indexOf(fd.x[i]) >= 0) return false;
   if (F.diet === 'keto' && (fd.cat === 'carb' || fd.r.indexOf('legume') >= 0 || fd.r.indexOf('sweet') >= 0 || fd.id === 'corn' || fd.id === 'peas' || fd.id === 'bar')) return false;
+  // keto: fruit only as berries, milk only unsweetened almond (2 cups of milk or an apple alone use up the day's carbs)
+  if (F.diet === 'keto' && ((fd.cat === 'fruit' && fd.r.indexOf('berry') < 0) || (fd.r.indexOf('milk') >= 0 && fd.id !== 'almondmilk'))) return false;
   return true;
 }
 function foodPool(role) {
@@ -192,14 +198,15 @@ function foodPool(role) {
 /* ----- meal templates -----
    slots: [key, role or [roles], kind] — kind: P main protein (sized for protein), C carb (fills calories), V veg (fixed), X extra (fixed), O optional extra */
 var MEALT = [
-  { id: 'scramble', m: 'b', cu: 'american', slots: [['p', 'egg', 'P'], ['v', 'veg', 'V'], ['c', ['bread', 'potato'], 'C'], ['o', 'cheese', 'O']], name: function (s) { return 'Egg scramble with ' + low(s.v) + (s.c ? ' and ' + carbWord(s.c) : ''); }, how: ['Sauté the {v} for 2–3 minutes.', 'Add the whisked eggs{?o: and %} and stir until just set.', '{?c:Serve with %.}'] },
-  { id: 'omelet', m: 'b', cu: 'american', keto: 1, slots: [['p', 'egg', 'P'], ['v', 'veg', 'V'], ['x', ['cheese', 'avo'], 'X'], ['s', 'side', 'O']], name: function (s) { return low(s.v, 1) + ' omelette' + (s.x ? ' with ' + low(s.x) : ''); }, how: ['Cook the {v} first, then pour the eggs over.', 'Fold{?x: in the %} and serve{?s: with %}.'] },
+  { id: 'scramble', m: 'b', cu: 'american', slots: [['p', ['egg', 'egg2'], 'P'], ['v', 'veg', 'V'], ['c', ['bread', 'potato'], 'C'], ['o', 'cheese', 'O']], name: function (s) { return 'Egg scramble with ' + low(s.v) + (s.c ? ' and ' + carbWord(s.c) : ''); }, how: ['Sauté the {v} for 2–3 minutes.', 'Add the whisked eggs{?o: and %} and stir until just set.', '{?c:Serve with %.}'] },
+  { id: 'omelet', m: 'b', cu: 'american', keto: 1, slots: [['p', ['egg', 'egg2'], 'P'], ['v', 'veg', 'V'], ['x', ['cheese', 'avo'], 'X'], ['s', 'side', 'O']], name: function (s) { return low(s.v, 1) + ' omelette' + (s.x ? ' with ' + low(s.x) : ''); }, how: ['Cook the {v} first, then pour the eggs over.', 'Fold{?x: in the %} and serve{?s: with %}.'] },
   { id: 'yogbowl', m: 'bs', cu: 'american', slots: [['p', 'yog', 'P'], ['f', 'fruit', 'C'], ['t', 'topping', 'X']], name: function (s) { return low(s.p, 1) + ' bowl with ' + low(s.f) + j(' and ', s.t); }, how: ['Spoon the {p} into a bowl.', 'Top with {f}{?t: and %}.'] },
-  { id: 'oats', m: 'b', cu: 'american', slots: [['c', 'oats', 'C'], ['m', 'milk', 'X'], ['f', 'fruit', 'V'], ['t', ['nutbutter', 'topping'], 'X'], ['p', 'shake', 'P']], name: function (s) { return (s.p ? 'Protein oats' : 'Oatmeal') + ' with ' + low(s.f) + j(' and ', s.t); }, how: ['Cook the oats with {?m:% or }water (2 minutes in the microwave), or soak overnight in the fridge.', '{?p:Stir in the protein powder after cooking.}', 'Top with {f}{?t: and %}.'] },
-  { id: 'smoothie', m: 'bs', cu: 'american', slots: [['p', 'shake', 'P'], ['m', 'milk', 'X'], ['f', 'fruit', 'C'], ['t', ['nutbutter', 'oats'], 'O']], name: function (s) { return low(s.f, 1) + ' protein smoothie'; }, how: ['Blend everything with a handful of ice for 30 seconds.'] },
+  { id: 'oats', m: 'b', cu: 'american', slots: [['c', 'oats', 'C'], ['m', 'milk', 'X'], ['f', 'fruit', 'V'], ['t', ['nutbutter', 'topping'], 'X'], ['p', 'shake', 'P', 0, 1]], name: function (s) { return (s.p ? 'Protein oats' : 'Oatmeal') + ' with ' + low(s.f) + j(' and ', s.t); }, how: ['Cook the oats with {?m:% or }water (2 minutes in the microwave), or soak overnight in the fridge.', '{?p:Stir in the protein powder after cooking.}', 'Top with {f}{?t: and %}.'] },
+  { id: 'smoothie', m: 'bs', cu: 'american', slots: [['p', ['shake', 'yog'], 'P'], ['m', 'milk', 'X'], ['f', 'fruit', 'C'], ['t', ['nutbutter', 'oats'], 'O']], name: function (s) { return low(s.f, 1) + ' protein smoothie'; }, how: ['Blend everything with a handful of ice for 30 seconds.'] },
   { id: 'tofuscr', m: 'b', cu: 'american', slots: [['p', 'tofu', 'P'], ['v', 'veg', 'V'], ['c', 'bread', 'C']], name: function (s) { return 'Tofu scramble with ' + low(s.v) + ' and toast'; }, how: ['Crumble the tofu into a hot pan with the {v}.', 'Season with salt, pepper and a pinch of turmeric. Serve with {c}.'] },
   { id: 'avotoast', m: 'b', cu: 'american', slots: [['p', 'egg', 'P'], ['c', 'bread', 'C'], ['x', 'avo', 'X', 1]], name: function (s) { return 'Avocado toast with eggs'; }, how: ['Toast the {c} and mash the avocado on top.', 'Add the eggs, fried, poached or boiled.'] },
   { id: 'brekburrito', m: 'b', cu: 'mexican', slots: [['p', 'egg', 'P'], ['c', 'wrap', 'C'], ['x', 'cheese', 'O'], ['s', 'mexican', 'O'], ['v', 'veg', 'V']], name: function (s) { return 'Breakfast burrito with ' + low(s.v); }, how: ['Scramble the eggs with the {v}.', 'Wrap in the tortilla{?x: with %}{?s: and %}.'] },
+  { id: 'ketobox', m: 'b', cu: 'any', keto: 1, slots: [['p', ['deli', 'yog', 'snackP'], 'P'], ['x', ['cheese', 'avo', 'nuts'], 'X'], ['v', 'raw', 'V'], ['f', 'berry', 'O']], name: function (s) { return 'Breakfast plate: ' + low(s.p) + j(', ', s.x) + j(' and ', s.v); }, how: ['Plate the {p}{?x: with %}{?v: and sliced %}{?f:, plus a few %}.'] },
   { id: 'custombf', m: 'b', cu: 'any', slots: [['p', 'cbf', 'P'], ['f', 'fruit', 'O']], name: function (s) { return low(s.p, 1) + j(' with ', s.f); }, how: [] },
   { id: 'bowl', m: 'ld', cu: 'any', slots: [['p', 'main', 'P'], ['c', 'grain', 'C'], ['v', 'veg', 'V'], ['v2', 'veg', 'V'], ['s', 'sauce', 'O'], ['o', 'oil', 'O']], name: function (s) { return low(s.p, 1) + ' bowl with ' + low(s.c) + (s.v2 ? ', ' + low(s.v) + ' and ' + low(s.v2) : ' and ' + low(s.v)); }, how: ['Cook the {c}.', 'Cook the {p}{?o: in %} and season with salt and pepper.', 'Roast or steam the {v}{?v2: and %}. Pile it all in a bowl{?s: and top with %}.'] },
   { id: 'plate', m: 'd', cu: 'american', slots: [['p', 'main', 'P'], ['c', 'potato', 'C'], ['v', 'veg', 'V'], ['o', 'oil', 'X']], name: function (s) { return low(s.p, 1) + ' with ' + low(s.c) + ' and ' + low(s.v); }, how: ['Bake the {c} at 425°F / 220°C for 25–35 minutes{?o: with a little %}.', 'Grill or pan-sear the {p}.', 'Steam or roast the {v}.'] },
@@ -228,7 +235,7 @@ function buildMeal(m, K, P, exclude) {
   var F = FS(), keto = F.diet === 'keto', cus = F.cuisines || [];
   var cands = MEALT.filter(function (t) { return t.m.indexOf(m) >= 0 && (!keto || t.keto || (t.m === 's' && t.id !== 'cakes')); });
   var weighted = []; cands.forEach(function (t) { var w = cus.length && cus.indexOf(t.cu) >= 0 ? 4 : 1; if (!keto && t.keto && t.m !== 's') w *= 0.4; if (exclude && exclude.indexOf(t.id) >= 0) w = 0.2; for (var i = 0; i < w * 5; i++) weighted.push(t); });
-  var best = null, bestErr = 1e9;
+  var best = null, bestErr = 1e9, all = [], cb = keto ? Math.max(8, 40 * K / Math.max(1200, foodTargets().kcal)) : 0;
   for (var tries = 0; tries < 40; tries++) {
     var t = weighted[Math.floor(Math.random() * weighted.length)]; if (!t) return null;
     var sel = {}, used = [], ok = true;
@@ -238,17 +245,22 @@ function buildMeal(m, K, P, exclude) {
       roles.forEach(function (r) { foodPool(r).forEach(function (f) { if (pool.indexOf(f) < 0) pool.push(f); }); });
       if (keto && sl[2] === 'C') return;                                  // no starch on keto
       if (F.simple && sl[2] === 'O') return;
-      var f = pickOne(pool, used); if (f && used.indexOf(f.id) >= 0 && (sl[2] !== 'P' && sl[2] !== 'C' && sl[0] !== 'v')) f = null;
+      var f = pickOne(pool, used); if (f && used.indexOf(f.id) >= 0 && (sl[2] !== 'P' && sl[0] !== 'v')) f = null;   // never the same food twice (e.g. lentils as protein and carb)
       if (!f && sl[3]) { ok = false; return; }
-      if (!f) { if (sl[2] === 'O' || sl[2] === 'X' || (sl[2] === 'V' && sl[0] !== 'v')) return; ok = false; return; }
+      if (!f) { if (sl[2] === 'O' || sl[2] === 'X' || sl[4] || (sl[2] === 'C' && t.slots.some(function (z) { return z[2] === 'P'; }) && t.id === 'salad') || (sl[2] === 'V' && sl[0] !== 'v')) return; ok = false; return; }
       sel[sl[0]] = f; used.push(f.id);
     });
     if (!ok) continue;
     var meal = sizeMeal(t, sel, K, P); if (!meal) continue;
-    var err = Math.abs(meal.k - K) / K + Math.max(0, P - meal.p) / P * 0.7;
+    var err = Math.abs(meal.k - K) / K + Math.max(0, P - meal.p) / P * 0.7 + (keto ? Math.max(0, meal.c - cb) / cb * 0.6 : 0);
+    all.push({ m: meal, e: err });
     if (err < bestErr) { best = meal; bestErr = err; }
-    if (err < 0.12) break;
+    if (err < 0.12 && all.length >= 3) break;
   }
+  // pick at random among the near-best, so reshuffling shows something new even when no meal is a perfect fit
+  var near = all.filter(function (x) { return x.e <= bestErr + 0.06; });
+  if (near.length > 1) best = near[Math.floor(Math.random() * near.length)].m;
+  if (best) best.short = best.k < K * 0.8;
   return best;
 }
 function roundTo(v, st) { return Math.round(v / st) * st; }
@@ -259,18 +271,21 @@ function sizeMeal(t, sel, K, P) {
   items.forEach(function (it) { it.q = base(it); });
   function tot(k) { return items.reduce(function (a, it) { return a + it.f[k] * it.q; }, 0); }
   var Pi = items.filter(function (it) { return it.kind === 'P'; })[0], Ci = items.filter(function (it) { return it.kind === 'C'; })[0];
-  for (var pass = 0; pass < 3; pass++) {
+  for (var pass = 0; pass < (Ci ? 3 : 7); pass++) {
     if (Pi) { var otherP = tot('p') - Pi.f.p * Pi.q; Pi.q = Math.min(Pi.f.mx, Math.max(Pi.f.mn, roundTo((P - otherP) / Pi.f.p, Pi.f.st))); }
     if (Ci) { var otherK = tot('k') - Ci.f.k * Ci.q, cmx = Ci.f.u === 'g' ? Math.min(Ci.f.mx, Ci.f.mx * 0.75) : Ci.f.mx; Ci.q = Math.min(cmx, Math.max(Ci.f.mn, roundTo((K - otherK) / Ci.f.k, Ci.f.st))); if (Pi && pass === 2) { var room2 = K - tot('k'); if (room2 > 80) { var pcap = (P * 1.3 - (tot('p') - Pi.f.p * Pi.q)) / Pi.f.p; Pi.q = Math.max(Pi.q, Math.min(Pi.f.mx, pcap, roundTo(Pi.q + room2 / Pi.f.k, Pi.f.st))); Pi.q = roundTo(Pi.q, Pi.f.st); } } }
     else {
       // no carb slot (keto or protein snack): grow fats/extras toward calories
-      var room = K - tot('k'), fx = items.filter(function (it) { return it.kind === 'X' && it.f.k > 20; })[0];
-      if (fx && room > 60) fx.q = Math.min(fx.f.mx, Math.max(fx.f.mn, roundTo(fx.q + room / fx.f.k, fx.f.st)));
-      else if (Pi && room > 80) { var pc = (P * 1.6 - (tot('p') - Pi.f.p * Pi.q)) / Pi.f.p; Pi.q = Math.max(Pi.q, roundTo(Math.min(Pi.f.mx, pc, Pi.q + room / Pi.f.k), Pi.f.st)); }
+      // grow one item at a time: an extra that still has room, else the protein, else the next extra
+      var room = K - tot('k'), fx = items.filter(function (it) { return (it.kind === 'X' || it.kind === 'O') && it.f.k > 20 && it.q < it.f.mx; })[0];
+      if (room <= 60) break;
+      if (fx && (!Pi || pass % 2 === 0 || Pi.q >= Pi.f.mx)) fx.q = Math.min(fx.f.mx, Math.max(fx.f.mn, roundTo(fx.q + room / fx.f.k, fx.f.st)));
+      else if (Pi && Pi.q < Pi.f.mx) { var pc = (P * 1.6 - (tot('p') - Pi.f.p * Pi.q)) / Pi.f.p; Pi.q = Math.max(Pi.q, roundTo(Math.min(Pi.f.mx, pc, Pi.q + room / Pi.f.k), Pi.f.st)); }
+      else if (fx) fx.q = Math.min(fx.f.mx, Math.max(fx.f.mn, roundTo(fx.q + room / fx.f.k, fx.f.st)));
     }
   }
   var k = tot('k'), p = tot('p');
-  if (k > K * 1.45 || k < K * 0.45) return null;
+  if (k > K * 1.45 || k < K * 0.6) return null;
   return { t: t.id, n: t.name(sel), it: items.map(function (it) { return { id: it.f.id, q: it.q, key: it.key }; }), k: Math.round(k), p: Math.round(p), c: Math.round(tot('c')), f: Math.round(tot('f')) };
 }
 function mealHow(meal) {
@@ -281,10 +296,13 @@ function mealHow(meal) {
       .replace(/\{(\w+)\}/g, function (_, k) { return by[k] ? low(by[k]) : ''; });
   }).filter(function (h) { return h.trim(); });
 }
+/* weights in FOODS are cooked; grocery amounts are raw/dry. factor = raw weight per cooked gram */
+var COOKED = { chicken: 1.33, thigh: 1.33, turkey: 1.3, beef: 1.3, steak: 1.3, pork: 1.33, salmon: 1.25, shrimp: 1.25, cod: 1.25, lentils: 0.4, blackbeans: 0.42, chickpeas: 0.45,
+  rice: 0.36, brownrice: 0.4, quinoa: 0.37, couscous: 0.4, pasta: 0.44, potato: 1, sweetpot: 1, broccoli: 1, greenbeans: 1, asparagus: 1, cauli: 1, mixedveg: 1, corn: 1, peas: 1 };
 function qtyText(id, q) {
   var f = FOOD_BY[id]; if (!f) return '';
-  if (f.custom) return (q === 1 ? '' : (q === 0.5 ? '½' : String(q).replace('.5', '½')) + ' × ') + f.u;
-  if (f.u === 'g') { var oz = unit() === 'lb' && (f.cat === 'protein' || f.cat === 'carb') ? ' (' + (Math.round(q / 28.35 * 2) / 2) + ' oz)' : ''; return q + ' g' + oz; }
+  if (f.custom) return (q === 1 ? '' : (q === 0.5 ? '½' : String(q).replace('.5', '½')) + ' × ') + esc(f.u);
+  if (f.u === 'g') { var oz = unit() === 'lb' && (f.cat === 'protein' || f.cat === 'carb') ? ' (' + (Math.round(q / 28.35 * 2) / 2) + ' oz)' : ''; return q + ' g' + (COOKED[f.id] ? ' cooked' : '') + oz; }
   var n = q === 0.5 ? '½' : q === 1.5 ? '1½' : String(q).replace('.5', '½');
   var u = f.u; if (q > 1 && u !== 'tbsp' && u !== 'tsp') u = u + 's';
   return n + ' ' + u;
@@ -292,7 +310,10 @@ function qtyText(id, q) {
 
 function buildMealAny(m, K, P, ex) {
   var F = FS(), ml = buildMeal(m, K, P, ex);
-  if (!ml && F.onlyHave && F.have.length >= 4) { F.onlyHave = false; try { ml = buildMeal(m, K, P, ex); } finally { F.onlyHave = true; } if (ml) ml.shop = 1; }
+  if ((!ml || ml.k < K * 0.75) && F.onlyHave && F.have.length >= 4) {
+    var m2 = null; F.onlyHave = false; try { m2 = buildMeal(m, K, P, ex); } finally { F.onlyHave = true; }
+    if (m2 && (!ml || Math.abs(m2.k - K) < Math.abs(ml.k - K))) { ml = m2; ml.shop = 1; }
+  }
   return ml;
 }
 /* ----- plans: one per day (today and the coming week) ----- */
@@ -343,7 +364,7 @@ function viewEat() {
   var shop = shoppingList(pl);
   var logL = todayLog();
   var logHTML = '<div class="section"><div class="row"><h2 class="grow">Eaten today</h2><button class="btn small ghost" data-act="eatQuick">+ Add food</button></div>' +
-    (logL.length ? '<div class="card" style="padding:0 14px">' + logL.map(function (e, i) { return '<div class="lrow"><span class="grow">' + esc(e.n) + '</span><span class="num" style="font-size:16px">' + Math.round(e.k) + ' kcal · ' + Math.round(e.p) + ' g P</span><button class="icon-btn" data-act="eatUnlog" data-i="' + i + '" aria-label="Remove ' + esc(e.n) + '">' + ico('x') + '</button></div>'; }).join('') + '</div>' : '<div class="note">Tap "I ate this" on a meal, or add any food.</div>') + '</div>';
+    (logL.length ? '<div class="card" style="padding:0 14px">' + logL.map(function (e, i) { return '<div class="lrow"><span class="grow">' + esc(e.n) + '</span><span class="num" style="font-size:16px">' + Math.round(e.k) + ' kcal · ' + Math.round(e.p) + ' g P</span><button class="icon-btn" data-act="eatUnlog" data-i="' + i + '" data-dk="' + dayKey() + '" aria-label="Remove ' + esc(e.n) + '">' + ico('x') + '</button></div>'; }).join('') + '</div>' : '<div class="note">Tap "I ate this" on a meal, or add any food.</div>') + '</div>';
   var foodsBtn = '<div class="card row" style="gap:12px"><div class="grow"><div class="xname">My foods</div><div class="xmeta">' + (pantryN ? pantryN + ' foods ticked' + (F.onlyHave && pantryN >= 4 ? ' · ideas use only these' : '') : 'Tick what you have and meal ideas will use it') + '</div></div><button class="btn small" data-act="eatFoods">' + (pantryN ? 'Edit' : 'Pick foods') + '</button></div>';
   var prefsBtn = '<div class="card row" style="gap:12px"><div class="grow"><div class="xname">Preferences</div><div class="xmeta">' + esc(prefSummary()) + '</div></div><button class="btn small" data-act="eatPrefs">Edit</button></div>';
   var seg = '<div class="seg" role="group" aria-label="Plan view"><button aria-pressed="' + (U.eatView !== 'week') + '" data-act="eatView" data-k="today">Today</button><button aria-pressed="' + (U.eatView === 'week') + '" data-act="eatView" data-k="week">This week</button></div>';
@@ -364,19 +385,19 @@ function mealCard(s, i, dk) {
   dk = dk || dayKey(); var isToday = dk === dayKey(), dka = ' data-dk="' + dk + '"';
   var ml = s.meal, label = MEALN[s.m];
   if (!ml) return '<div class="card section meal"><div class="row"><div class="grow"><div class="mtag">' + label + '</div><div class="xname">No idea fits yet</div></div><button class="icon-btn" data-act="eatShuffle" data-i="' + i + '"' + dka + ' aria-label="Try again">' + ico('shuffle') + '</button></div><div class="note">Tick a few more foods under My foods, or loosen your preferences.</div></div>';
-  var emo = ml.it.map(function (x) { return FOOD_BY[x.id] ? FOOD_BY[x.id].e : ''; }).join('');
-  var lst = ml.it.map(function (x) { var f = FOOD_BY[x.id]; if (!f) return ''; var miss = FS().have.length && FS().have.indexOf(f.id) < 0; return '<li><span class="grow">' + f.e + ' ' + esc(f.n) + (miss ? ' <span class="tag">buy</span>' : '') + '</span><span class="faint">' + qtyText(f.id, x.q) + '</span></li>'; }).join('');
+  var emo = esc(ml.it.map(function (x) { return FOOD_BY[x.id] ? FOOD_BY[x.id].e : ''; }).join(''));
+  var lst = ml.it.map(function (x) { var f = FOOD_BY[x.id]; if (!f) return ''; var miss = FS().have.length && FS().have.indexOf(f.id) < 0; return '<li><span class="grow">' + esc(f.e) + ' ' + esc(f.n) + (miss ? ' <span class="tag">buy</span>' : '') + '</span><span class="faint">' + qtyText(f.id, x.q) + '</span></li>'; }).join('');
   var how = mealHow(ml), logged = isToday && !!todayLog().filter(function (e) { return e.mi === i && e.t === ml.t; }).length;
-  return '<div class="card section meal"><div class="row" style="gap:10px;align-items:flex-start"><div class="grow"><div class="mtag">' + label + ' · ' + ml.k + ' kcal · ' + ml.p + ' g protein</div><div class="xname" style="font-size:18px">' + esc(ml.n) + '</div><div class="memo" aria-hidden="true">' + emo + '</div></div><button class="icon-btn" data-act="eatShuffle" data-i="' + i + '"' + dka + ' aria-label="Shuffle ' + label + '">' + ico('shuffle') + '</button></div>' +
+  return '<div class="card section meal"><div class="row" style="gap:10px;align-items:flex-start"><div class="grow"><div class="mtag">' + label + ' · ' + ml.k + ' kcal · ' + ml.p + ' g protein' + (ml.short ? ' · <span style="color:var(--down)">below target</span>' : '') + '</div><div class="xname" style="font-size:18px">' + esc(ml.n) + '</div><div class="memo" aria-hidden="true">' + emo + '</div></div><button class="icon-btn" data-act="eatShuffle" data-i="' + i + '"' + dka + ' aria-label="Shuffle ' + label + '">' + ico('shuffle') + '</button></div>' +
     '<ul class="ings">' + lst + '</ul>' +
     (how.length ? '<details class="how"><summary>How to make it</summary><ol>' + how.map(function (h) { return '<li>' + esc(h) + '</li>'; }).join('') + '</ol></details>' : '') +
-    '<div class="row"><span class="xmeta grow">C ' + ml.c + ' g · F ' + ml.f + ' g</span>' + (isToday ? '<button class="btn small ' + (logged ? 'ghost' : 'primary') + '" data-act="eatLog" data-i="' + i + '"' + (logged ? ' disabled' : '') + '>' + (logged ? 'Logged ✓' : 'I ate this') + '</button>' : '') + '</div></div>';
+    '<div class="row"><span class="xmeta grow">C ' + ml.c + ' g · F ' + ml.f + ' g</span>' + (isToday ? '<button class="btn small ' + (logged ? 'ghost' : 'primary') + '" data-act="eatLog" data-i="' + i + '"' + dka + (logged ? ' disabled' : '') + '>' + (logged ? 'Logged ✓' : 'I ate this') + '</button>' : '') + '</div></div>';
 }
 function shoppingList(pl) {
   var F = FS(); if (!F.have.length) return '';
   var need = {}; pl.meals.forEach(function (s) { if (s.meal) s.meal.it.forEach(function (x) { if (F.have.indexOf(x.id) < 0) need[x.id] = 1; }); });
   var ids = Object.keys(need); if (!ids.length) return '';
-  return '<div class="card section" style="gap:8px"><div class="xname">Shopping list</div><div class="note">Today\'s ideas use these and you have not ticked them.</div><div class="chips">' + ids.map(function (id) { var f = FOOD_BY[id]; return '<button class="chip" data-act="eatHave" data-id="' + id + '">' + f.e + ' ' + esc(f.n) + ' <span class="faint">+ got it</span></button>'; }).join('') + '</div></div>';
+  return '<div class="card section" style="gap:8px"><div class="xname">Shopping list</div><div class="note">Today\'s ideas use these and you have not ticked them.</div><div class="chips">' + ids.map(function (id) { var f = FOOD_BY[id]; return '<button class="chip" data-act="eatHave" data-id="' + id + '">' + esc(f.e) + ' ' + esc(f.n) + ' <span class="faint">+ got it</span></button>'; }).join('') + '</div></div>';
 }
 function eatSetupCard() {
   var F = FS(), B = profB();
@@ -395,7 +416,9 @@ function goalsSheet() {
   var F = FS(), T = foodTargets();
   U.eatSheet = goalsSheet;
   openSheet('Goals', eatGoalFields() +
-    '<div class="card section" style="gap:6px"><div class="lrow"><span>Daily calories</span><span class="num" style="font-size:20px">' + T.kcal + '</span></div><div class="lrow"><span>Protein</span><span class="num" style="font-size:20px">' + T.p + ' g</span></div><div class="lrow"><span>Carbs · Fat</span><span class="num" style="font-size:20px">' + T.c + ' g · ' + T.f + ' g</span></div>' + (T.tdee ? '<div class="note">Maintenance is about ' + T.tdee + ' calories a day.</div>' : '') + '</div>' +
+    '<div class="card section" style="gap:6px"><div class="lrow"><span>Daily calories</span><span class="num" style="font-size:20px">' + T.kcal + '</span></div><div class="lrow"><span>Protein</span><span class="num" style="font-size:20px">' + T.p + ' g</span></div><div class="lrow"><span>Carbs · Fat</span><span class="num" style="font-size:20px">' + T.c + ' g · ' + T.f + ' g</span></div>' + (T.tdee ? '<div class="note">Maintenance is about ' + T.tdee + ' calories a day.</div>' : '<div class="note">Add your height, weight and sex (Settings → Your body) for numbers worked out for you. These are general defaults.</div>') +
+    (T.floored ? '<div class="note">Raised to a safe minimum of ' + T.kcal + ' calories' + (T.tdee && T.kcal >= T.tdee ? ', which is about your maintenance, so this works as a recomp rather than a cut' : '') + '.</div>' : '') +
+    (T.pcapped ? '<div class="note">Protein is capped at 40% of calories (' + T.p + ' g).</div>' : '') + '</div>' +
     '<div><span class="field-label">Set your own numbers (optional)</span><div class="row" style="gap:10px"><input class="input grow" id="eat-kcal" inputmode="numeric" placeholder="Calories" value="' + (F.kcal || '') + '" aria-label="Custom calories"><input class="input grow" id="eat-prot" inputmode="numeric" placeholder="Protein g" value="' + (F.prot || '') + '" aria-label="Custom protein"></div><div class="note">Leave blank to use the estimate.</div></div>' +
     '<button class="btn primary block" data-act="eatGoalsDone">Save and rebuild today\'s meals</button>');
 }
@@ -420,7 +443,7 @@ function foodsSheet() {
       var list = FOODS.filter(function (f) { return f.cat === c[0] && !f.custom; });
       return '<div class="section" style="gap:8px"><h3 style="font-size:18px">' + c[1] + '</h3><div class="fgrid">' + list.map(function (f) {
         var on = mode === 'have' ? F.have.indexOf(f.id) >= 0 : F.never.indexOf(f.id) >= 0, dis = mode === 'have' && !foodOK(f);
-        return '<button class="ftile' + (on ? ' on' : '') + (mode === 'never' ? ' nv' : '') + (dis ? ' dis' : '') + '" data-act="eatToggle" data-id="' + f.id + '" aria-pressed="' + on + '"><span class="fe">' + f.e + '</span><span class="fn">' + esc(f.n) + '</span></button>';
+        return '<button class="ftile' + (on ? ' on' : '') + (mode === 'never' ? ' nv' : '') + (dis ? ' dis' : '') + '" data-act="eatToggle" data-id="' + f.id + '" aria-pressed="' + on + '"><span class="fe">' + esc(f.e) + '</span><span class="fn">' + esc(f.n) + '</span></button>';
       }).join('') + '</div></div>';
     }).join('') + customSection() + '<button class="btn primary block" data-act="eatFoodsDone">Done</button>';
   openSheet('My foods', body);
@@ -436,7 +459,7 @@ function quickList() {
   var list = FOODS.filter(function (f) { return !q || f.n.toLowerCase().indexOf(q) >= 0; }).slice(0, q ? 30 : 12);
   return '<div class="card" style="padding:0 14px">' + list.map(function (f) {
     var q1 = f.u === 'g' ? (f.cat === 'protein' ? 150 : f.cat === 'carb' ? 150 : 100) : 1;
-    return '<button class="lrow" style="width:100%;text-align:left" data-act="eatAddFood" data-id="' + f.id + '" data-q="' + q1 + '"><span class="grow">' + f.e + ' ' + esc(f.n) + ' <span class="faint">· ' + qtyText(f.id, q1) + '</span></span><span class="num" style="font-size:16px">' + Math.round(f.k * q1) + ' kcal</span></button>';
+    return '<button class="lrow" style="width:100%;text-align:left" data-act="eatAddFood" data-id="' + f.id + '" data-q="' + q1 + '"><span class="grow">' + esc(f.e) + ' ' + esc(f.n) + ' <span class="faint">· ' + qtyText(f.id, q1) + '</span></span><span class="num" style="font-size:16px">' + Math.round(f.k * q1) + ' kcal</span></button>';
   }).join('') + '</div>';
 }
 function eatRefreshSheet() { if (U.eatSheet && sheetOpen()) { var b = $('#sheet-body'), y = b ? b.scrollTop : 0; U.eatSheet(); var b2 = $('#sheet-body'); if (b2) b2.scrollTop = y; } }
@@ -461,14 +484,14 @@ function eatClick(a, d, el) {
     case 'eatCfSave': { customRead(); var c = U.cf, er = $('#cf-err');
       if (!c.n.trim()) { if (er) er.textContent = 'Give it a name.'; return true; }
       if (!(+c.k >= 0) || c.k === '') { if (er) er.textContent = 'Enter the calories per serving.'; return true; }
-      c.n = c.n.trim().slice(0, 40); c.u = (c.u || '1 serving').trim().slice(0, 24); c.k = Math.round(+c.k); c.p = Math.round(+c.p || 0); c.c = Math.round(+c.c || 0); c.f = Math.round(+c.f || 0);
+      c.n = c.n.trim().slice(0, 40); c.u = (c.u || '1 serving').trim().slice(0, 24); c.k = Math.max(0, Math.round(+c.k)); c.p = Math.max(0, Math.round(+c.p || 0)); c.c = Math.max(0, Math.round(+c.c || 0)); c.f = Math.max(0, Math.round(+c.f || 0)); c.e = (c.e || '').slice(0, 4);
       if (!c.id) { c.id = 'c_' + Date.now().toString(36); F.custom.push(c); if (F.have.indexOf(c.id) < 0) F.have.push(c.id); }
       else F.custom = F.custom.map(function (x) { return x.id === c.id ? c : x; });
       F.days = {}; persist({ settings: true }); syncCustom(F); U.cf = null; foodsSheet(); toast('Saved ' + c.n); return true; }
     case 'eatCfDel': { var id = U.cf && U.cf.id; F.custom = F.custom.filter(function (x) { return x.id !== id; }); F.have = F.have.filter(function (x) { return x !== id; }); F.days = {}; persist({ settings: true }); syncCustom(F); U.cf = null; foodsSheet(); toast('Deleted'); return true; }
     case 'eatCfBack': U.cf = null; foodsSheet(); return true;
     case 'eatStart': F.setup = true; F.days = {}; persist({ settings: true }); render(); window.scrollTo(0, 0); toast('Your plan is ready. Tick your foods to tailor the ideas.'); return true;
-    case 'eatGoal': F.goal = d.k; persist({ settings: true }); if (sheetOpen()) eatRefreshSheet(); else render(); return true;
+    case 'eatGoal': F.goal = d.k; F.days = {}; persist({ settings: true }); if (sheetOpen()) eatRefreshSheet(); else render(); return true;
     case 'eatDiet': F.diet = d.k; F.days = {}; persist({ settings: true }); if (sheetOpen()) eatRefreshSheet(); else render(); return true;
     case 'eatAvoid': tog(F.avoid, d.k); F.days = {}; persist({ settings: true }); eatRefreshSheet(); return true;
     case 'eatCu': tog(F.cuisines, d.k); F.days = {}; persist({ settings: true }); eatRefreshSheet(); return true;
@@ -483,17 +506,17 @@ function eatClick(a, d, el) {
     case 'eatToggle': {
       var arr = (U.eatMode || 'have') === 'have' ? F.have : F.never; tog(arr, d.id);
       if (arr === F.never) { var hi = F.have.indexOf(d.id); if (hi >= 0 && F.never.indexOf(d.id) >= 0) F.have.splice(hi, 1); }
-      persist({ settings: true });
+      F.days = {}; persist({ settings: true });
       var on = arr.indexOf(d.id) >= 0; el.classList.toggle('on', on); el.setAttribute('aria-pressed', on);
       return true;
     }
-    case 'eatStaples': STAPLES.forEach(function (id) { if (F.have.indexOf(id) < 0 && F.never.indexOf(id) < 0 && foodOK(FOOD_BY[id])) F.have.push(id); }); persist({ settings: true }); eatRefreshSheet(); return true;
-    case 'eatClear': if ((U.eatMode || 'have') === 'have') F.have = []; else F.never = []; persist({ settings: true }); eatRefreshSheet(); return true;
+    case 'eatStaples': STAPLES.forEach(function (id) { if (F.have.indexOf(id) < 0 && F.never.indexOf(id) < 0 && foodOK(FOOD_BY[id])) F.have.push(id); }); F.days = {}; persist({ settings: true }); eatRefreshSheet(); return true;
+    case 'eatClear': if ((U.eatMode || 'have') === 'have') F.have = []; else F.never = []; F.days = {}; persist({ settings: true }); eatRefreshSheet(); return true;
     case 'eatHave': if (F.have.indexOf(d.id) < 0) F.have.push(d.id); persist({ settings: true }); render(); return true;
     case 'eatShuffle': reshuffle(+d.i, d.dk); if (U.eatSheet && sheetOpen()) eatRefreshSheet(); render(); return true;
     case 'eatShuffleAll': planToday(true); render(); toast('New ideas for today'); return true;
-    case 'eatLog': { var s = planToday().meals[+d.i]; if (!s || !s.meal) return true; logAdd({ n: MEALN[s.m] + ': ' + s.meal.n, k: s.meal.k, p: s.meal.p, c: s.meal.c, f: s.meal.f, mi: +d.i, t: s.meal.t }); render(); toast('Logged ' + s.meal.k + ' kcal'); return true; }
-    case 'eatUnlog': { var L = todayLog(); L.splice(+d.i, 1); persist({ settings: true }); render(); return true; }
+    case 'eatLog': { if (d.dk && d.dk !== dayKey()) { render(); toast('It is a new day, so here are today\'s meals.'); return true; } var s = planToday().meals[+d.i]; if (!s || !s.meal) return true; logAdd({ n: MEALN[s.m] + ': ' + s.meal.n, k: s.meal.k, p: s.meal.p, c: s.meal.c, f: s.meal.f, mi: +d.i, t: s.meal.t }); render(); toast('Logged ' + s.meal.k + ' kcal'); return true; }
+    case 'eatUnlog': { if (d.dk && d.dk !== dayKey()) { render(); return true; } var L = todayLog(); L.splice(+d.i, 1); persist({ settings: true }); render(); return true; }
     case 'eatQuick': U.eatSheet = null; quickSheet(); return true;
     case 'eatAddFood': { var f = FOOD_BY[d.id], q = +d.q; logAdd({ n: f.n + ' (' + qtyText(f.id, q) + ')', k: Math.round(f.k * q), p: Math.round(f.p * q), c: Math.round(f.c * q), f: Math.round(f.f * q) }); closeSheet(); render(); toast('Added ' + f.n); return true; }
     case 'eatQuickAdd': {
@@ -506,15 +529,15 @@ function eatClick(a, d, el) {
 }
 function eatInput(t) {
   var F = FS();
-  if (t.id === 'eat-age') { var v = parseInt(t.value, 10); if (v >= 13 && v <= 100) { F.age = v; persist({ settings: true }); } return true; }
-  if (t.id === 'eat-kcal') { var k = parseInt(t.value, 10); F.kcal = k > 800 ? k : null; persist({ settings: true }); return true; }
-  if (t.id === 'eat-prot') { var p = parseInt(t.value, 10); F.prot = p > 30 ? p : null; persist({ settings: true }); return true; }
+  if (t.id === 'eat-age') { var v = parseInt(t.value, 10); if (v >= 13 && v <= 100) { F.age = v; F.days = {}; persist({ settings: true }); } return true; }
+  if (t.id === 'eat-kcal') { var k = parseInt(t.value, 10); F.kcal = k > 800 ? k : null; F.days = {}; persist({ settings: true }); return true; }
+  if (t.id === 'eat-prot') { var p = parseInt(t.value, 10); F.prot = p > 30 ? p : null; F.days = {}; persist({ settings: true }); return true; }
   if (t.id === 'eatq') { U.eatQ2 = t.value; var l = $('#eatqlist'); if (l) l.innerHTML = quickList(); return true; }
   return false;
 }
 function eatChange(t) {
   var F = FS();
-  if (t.id === 'eat-act') { F.act = +t.value; persist({ settings: true }); return true; }
+  if (t.id === 'eat-act') { F.act = +t.value; F.days = {}; persist({ settings: true }); return true; }
   if (t.id === 'eat-meals') { F.meals = +t.value; F.days = {}; persist({ settings: true }); return true; }
   return false;
 }
@@ -543,7 +566,12 @@ function groceryItems() {
     .sort(function (a, b) { var ca = FOOD_CATS.map(function (c) { return c[0]; }); return ca.indexOf(a.f.cat) - ca.indexOf(b.f.cat) || a.f.n.localeCompare(b.f.n); });
 }
 function groceryQty(it) {
-  var f = it.f, q = it.q;
+  var f = it.f, q = it.q, cf = COOKED[f.id], tag = cf && cf !== 1 ? (cf < 1 ? ' dry' : ' raw') : '';
+  if (cf) q = q * cf;
+  if (f.u === 'g') { var g = groceryG(q, f); return g + tag; }
+  return qtyText(f.id, Math.ceil(q * 2) / 2);
+}
+function groceryG(q, f) {
   if (f.u === 'g') { if (unit() === 'lb') { var lb = q / 453.6; return lb >= 1 ? (Math.round(lb * 10) / 10) + ' lb' : Math.round(q / 28.35) + ' oz'; } return q >= 1000 ? (Math.round(q / 100) / 10) + ' kg' : Math.round(q) + ' g'; }
   return qtyText(f.id, Math.ceil(q * 2) / 2);
 }
@@ -553,7 +581,7 @@ function groceryText() {
 }
 function grocerySheet() {
   var F = FS(), its = groceryItems(), need = its.filter(function (it) { return F.have.indexOf(it.id) < 0; }), have = its.filter(function (it) { return F.have.indexOf(it.id) >= 0; }), haveIds = have.map(function (it) { return it.id; });
-  function row(it) { var on = F.have.indexOf(it.id) >= 0; return '<button class="gro' + (on ? ' got' : '') + (haveIds.indexOf(it.id) >= 0 ? ' have' : '') + '" data-act="eatGot" data-id="' + it.id + '" aria-pressed="' + on + '"><span class="gbox">' + ico('check') + '</span><span class="grow">' + it.f.e + ' ' + esc(it.f.n) + '</span><span class="faint">' + groceryQty(it) + '</span></button>'; }
+  function row(it) { var on = F.have.indexOf(it.id) >= 0; return '<button class="gro' + (on ? ' got' : '') + (haveIds.indexOf(it.id) >= 0 ? ' have' : '') + '" data-act="eatGot" data-id="' + it.id + '" aria-pressed="' + on + '"><span class="gbox">' + ico('check') + '</span><span class="grow">' + esc(it.f.e) + ' ' + esc(it.f.n) + '</span><span class="faint">' + groceryQty(it) + '</span></button>'; }
   U.eatSheet = grocerySheet;
   openSheet('Grocery list', '<div class="note">Totals for the next 7 days of meal ideas. Tick items as you buy them, and they are added to My foods.</div>' +
     (need.length ? '<div class="section" style="gap:4px"><h3 style="font-size:18px">To buy</h3>' + need.map(row).join('') + '</div>' : '<div class="note"><b>You have everything.</b></div>') +

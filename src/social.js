@@ -6,7 +6,7 @@
    Friends are a private list kept in your own settings. */
 var SOC = { db: null, uid: null, canWrite: null, state: 'pending', people: {}, ch: {}, cp: {}, tg: {}, cat: 'Overall', q: '', lastPub: '', lastProg: '', pubT: null, progT: null, renderT: null, err: null, chTab: 'active', busy: false };
 var CHAL = {
-  workouts: { n: 'Most workouts', d: 'Whoever trains the most days wins.', u: 'workouts' },
+  workouts: { n: 'Most workouts', d: 'Whoever logs the most workouts wins.', u: 'workouts' },
   sets: { n: 'Most sets', d: 'Total sets logged. Pick a muscle or count everything.', u: 'sets' },
   climb: { n: 'Rank climb', d: 'Biggest gain in strength score. Fair for any size or level, because you only race your own start.', u: 'pts' },
   lift: { n: 'Lift duel', d: 'Best relative score on one lift. Size-adjusted, so a lighter lifter can beat a heavier one.', u: 'pts' }
@@ -32,13 +32,51 @@ function socChanged() {
   socProgressSoon();
 }
 
+/* Everything other people write is untrusted: shape it into plain numbers and known values before any screen uses it. */
+function socNum(x, lo, hi, d) { x = +x; return isFinite(x) ? Math.min(hi, Math.max(lo, x)) : (d === undefined ? null : d); }
+function socStr(x, n) { return typeof x === 'string' ? x.slice(0, n) : ''; }
+function socScores(o, n) { var r = {}; if (o && typeof o === 'object') Object.keys(o).slice(0, n).forEach(function (k) { var v = socNum(o[k], 0, 100); if (v != null) r[String(k).slice(0, 60)] = v; }); return r; }
+function socClean(col, x) {
+  if (!x || typeof x !== 'object') return null;
+  var now = Date.now();
+  if (col === 'people') {
+    var u = socStr(x.u, 16); if (!/^[A-Za-z0-9_]{3,16}$/.test(u)) u = '';
+    var o = { v: 1, u: u, un: u.toLowerCase(), ov: socNum(x.ov, 0, 100), g: socScores(x.g, 20), ex: socScores(x.ex, 12), w30: socNum(x.w30, 0, 999, 0), s30: socNum(x.s30, 0, 99999, 0), n: socNum(x.n, 0, 99999, 0), last: socNum(x.last, 0, now + DAY, 0), at: socNum(x.at, 0, now + DAY, 0) };
+    if (x.b && typeof x.b === 'object') o.b = { c: socNum(x.b.c, 0, now + DAY, 0), ov: socNum(x.b.ov, 0, 100), g: socScores(x.b.g, 20) };
+    return u ? o : null;
+  }
+  if (col === 'ch') {
+    var list = (Array.isArray(x.list) ? x.list : []).slice(0, 50).map(function (c) {
+      if (!c || typeof c !== 'object' || !CHAL[c.ty]) return null;
+      var st = socNum(c.st, 0, 9e15), en = socNum(c.en, 0, 9e15); if (st == null || en == null || en < st) return null;
+      return { id: socStr(c.id, 40).replace(/[^\w-]/g, ''), ty: c.ty, g: GROUPS.indexOf(c.g) >= 0 ? c.g : '', ex: BYNAME[c.ex] ? c.ex : '', st: st, en: en, n: socStr(c.n, 40), t: socNum(c.t, 0, 9e15, 0), by: socStr(c.by, 40), inv: Array.isArray(c.inv) ? c.inv.slice(0, 50).map(function (v) { return socStr(v, 40); }) : [] };
+    }).filter(function (c) { return c && c.id && (c.ty !== 'lift' || c.ex); });
+    return { v: 1, list: list, at: socNum(x.at, 0, 9e15, 0) };
+  }
+  if (col === 'cp') {
+    var c = {}; if (x.c && typeof x.c === 'object') Object.keys(x.c).slice(0, 100).forEach(function (k) { var e = x.c[k]; if (e && typeof e === 'object') c[String(k).slice(0, 40)] = { v: socNum(e.v, -1000, 100000, 0), at: socNum(e.at, 0, 9e15, 0) }; });
+    return { v: 1, c: c, at: socNum(x.at, 0, 9e15, 0) };
+  }
+  if (col === 'tg') {
+    var code = socStr(x.code, 6).toUpperCase(); if (!/^[A-Z0-9]{3,6}$/.test(code)) return null;
+    var at = socNum(x.at, 0, now + 60000, 0);
+    var xs = (Array.isArray(x.x) ? x.x : []).slice(0, 15).map(function (r) {
+      if (!Array.isArray(r) || !BYNAME[r[0]]) return null;
+      var lo = Math.round(socNum(r[2], 1, 50, 8)); return [r[0], Math.round(socNum(r[1], 1, 8, 3)), lo, Math.round(socNum(r[3], lo, 60, Math.max(lo, 12))), Math.round(socNum(r[4], 15, 600, 90))];
+    }).filter(Boolean);
+    var log = (Array.isArray(x.log) ? x.log : []).slice(0, 15).map(function (l) { return (Array.isArray(l) ? l : []).slice(0, 12).map(function (st) { return Array.isArray(st) ? [socNum(st[0], 0, 2000, 0), Math.round(socNum(st[1], 0, 500, 0))] : [0, 0]; }); });
+    return { v: 1, code: code, u: socStr(x.u, 16).replace(/[^A-Za-z0-9_]/g, '') || 'Friend', host: !!x.host, t: socStr(x.t, 60), st: socNum(x.st, 0, now + 60000, 0), at: at,
+      pv: socNum(x.pv, 0, now + 60000, 0), x: xs, log: log, cur: Math.round(socNum(x.cur, 0, 14, 0)), fin: socNum(x.fin, 0, now + 60000, 0) };
+  }
+  return x;
+}
 async function socInit(db, user, id) {
   SOC.db = db; SOC.uid = id;
   try { SOC.canWrite = user && user.can ? await user.can('data.write') : null; } catch (e) { SOC.canWrite = null; }
   function sub(col, key) {
     try {
       db.collection(col).onSnapshot(function (snap) {
-        var m = {}; snap.docs.forEach(function (d) { var x = d.data(); if (x) m[d.id] = x; });
+        var m = {}; snap.docs.forEach(function (d) { var x = d.id === id && key !== 'people' ? d.data() : socClean(key, d.data()); if (x) m[d.id] = x; });
         SOC[key] = m; SOC.state = 'ready'; SOC.err = null;
         if (key === 'tg') { if (typeof tgChanged === 'function') tgChanged(); } else socChanged();
       }, function (e) { SOC.err = e && e.code; if (SOC.state !== 'ready') SOC.state = 'error'; socChanged(); });
@@ -82,7 +120,7 @@ async function socClaim(handle) {
   if (SOC.canWrite === false) return 'Your access to this app is view-only, so you cannot create a profile. Ask the owner to share it with edit or contributor access.';
   var B = profB(); if (!B) return 'Add your height, weight and sex first (Settings → Your body). Scores are compared by size.';
   if (srvOn()) {
-    try { S.settings.handle = SRV.name; persist({ settings: true }); var sd = socDoc(); sd.at = Date.now(); await SOC.db.doc('people/' + SOC.uid).set(sd); SOC.people[SOC.uid] = sd; SOC.lastPub = JSON.stringify(socDoc()); return null; }
+    try { S.settings.handle = SRV.name; S.settings.socHidden = false; persist({ settings: true }); var sd = socDoc(); sd.at = Date.now(); await SOC.db.doc('people/' + SOC.uid).set(sd); SOC.people[SOC.uid] = sd; SOC.lastPub = JSON.stringify(socDoc()); return null; }
     catch (e) { return e && e.message || 'Could not reach the server. Try again.'; }
   }
   if (!validHandle(handle)) return 'Use 3 to 16 letters, numbers or underscores.';
@@ -93,7 +131,7 @@ async function socClaim(handle) {
     var q = await SOC.db.collection('people').where('un', '==', un).get(), taken = false;
     q.docs.forEach(function (d) { if (d.id !== SOC.uid) taken = true; });
     if (taken) return 'That username is taken. Try another.';
-    S.settings.handle = handle; persist({ settings: true });
+    S.settings.handle = handle; S.settings.socHidden = false; persist({ settings: true });
     var doc = socDoc(); doc.at = Date.now();
     await SOC.db.doc('people/' + SOC.uid).set(doc);
     SOC.people[SOC.uid] = doc; SOC.lastPub = JSON.stringify(socDoc());
@@ -101,8 +139,8 @@ async function socClaim(handle) {
   } catch (e) { return e && e.code === 'invalid_argument' ? 'Your access to this app does not allow saving a profile. Ask the owner for contributor access.' : 'Could not reach the server. Try again.'; }
 }
 async function socLeave() {
-  try { await SOC.db.doc('people/' + SOC.uid).delete(); await SOC.db.doc('cp/' + SOC.uid).delete(); } catch (e) { }
-  delete SOC.people[SOC.uid]; S.settings.handle = ''; SOC.lastPub = ''; persist({ settings: true });
+  for (var c of ['people', 'cp', 'ch', 'tg']) { try { await SOC.db.doc(c + '/' + SOC.uid).delete(); } catch (e) { } }
+  delete SOC.people[SOC.uid]; S.settings.handle = ''; S.settings.socHidden = true; SOC.lastPub = ''; persist({ settings: true });
 }
 
 /* ----- challenges ----- */
@@ -231,7 +269,7 @@ function viewFriends() {
     var inner = '<span class="lbr">' + (r.s != null ? rk : '–') + '</span><div class="grow"><div class="xname">' + esc(r.p.u) + (r.me ? ' <span class="tag p">You</span>' : '') + '</div><div class="xmeta">' + (r.s != null ? tierOf(r.s) + ' · ' : '') + socAgo(r.p.last) + '</div></div>' + scoreChip(r.s);
     return r.me ? '<div class="lb me">' + inner + '</div>' : '<button class="lb" data-act="socCompare" data-id="' + esc(r.id) + '">' + inner + '</button>';
   }).join('');
-  var lb = '<div class="section"><h2>Leaderboard</h2>' + chips + '<div class="seg" role="group" aria-label="Leaderboard updates" style="margin-bottom:6px"><button aria-pressed="' + (S.settings.boardMode !== 'nightly') + '" data-act="boardMode" data-k="live">Live</button><button aria-pressed="' + (S.settings.boardMode === 'nightly') + '" data-act="boardMode" data-k="nightly">Nightly at 10 pm</button></div><div class="note">' + (S.settings.boardMode === 'nightly' ? '🕙 Scores lock in every night at 10 pm (Eastern). Last update ' + boardWhen(boardCutoff(Date.now())) + ', next ' + boardWhen(boardCutoff(Date.now()) + DAY, 1) + '.' : '🟢 Live: scores update within seconds of anyone finishing a workout.') + '</div><div class="card" style="padding:4px 14px">' + board + '</div>' +
+  var lb = '<div class="section"><h2>Leaderboard</h2>' + chips + '<div class="seg" role="group" aria-label="Leaderboard updates" style="margin-bottom:6px"><button aria-pressed="' + (S.settings.boardMode !== 'nightly') + '" data-act="boardMode" data-k="live">Live</button><button aria-pressed="' + (S.settings.boardMode === 'nightly') + '" data-act="boardMode" data-k="nightly">Nightly at 10 pm</button></div><div class="note">' + (S.settings.boardMode === 'nightly' ? '🕙 Scores lock in every night at 10 pm (Eastern). Last update ' + boardWhen(boardCutoff(Date.now())) + ', next ' + boardWhen(boardCutoff(boardCutoff(Date.now()) + 25.5 * 3600e3), 1) + '.' : '🟢 Live: scores update within seconds of anyone finishing a workout.') + '</div><div class="card" style="padding:4px 14px">' + board + '</div>' +
     (fr.length ? '' : '<div class="note">Add a friend below to see how you stack up. Scores compare people of similar size, so it is a fair race.</div>') + '</div>';
   var all = peopleAll();
   var add = '<div class="section"><h2>Add friends</h2><input class="input" id="fq" type="search" autocapitalize="none" autocomplete="off" placeholder="Search username" aria-label="Search username" value="' + esc(SOC.q) + '">' +
@@ -306,7 +344,7 @@ function socNewSheet(pre) {
   openSheet('Start a challenge', '<div><span class="field-label">Type</span><div class="chips">' + types + '</div><div class="note" style="margin-top:6px">' + CHAL[st.ty].d + '</div></div>' + extra +
     '<div><span class="field-label">Length</span>' + days + '</div><div><span class="field-label">Invite</span>' + who + '</div>' +
     '<div><span class="field-label">Name (optional)</span><input class="input" id="nc-name" maxlength="40" placeholder="e.g. Summer showdown" value="' + esc(st.name) + '"></div>' +
-    '<button class="btn primary block" data-act="ncGo"' + (st.ty === 'lift' && !st.ex ? ' disabled' : '') + '>Start now</button><div class="note">Starts today, so only workouts from now on count. Friends see it on their Friends tab and can join.</div>');
+    '<button class="btn primary block" data-act="ncGo"' + (st.ty === 'lift' && !st.ex ? ' disabled' : '') + '>Start now</button><div class="note">Starts today, so workouts from today on count. Friends see it on their Friends tab and can join.</div>');
 }
 function chalSheet(id, by) {
   var c = chalList().filter(function (x) { return x.id === id; })[0]; if (!c) return;

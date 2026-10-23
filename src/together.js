@@ -46,18 +46,20 @@ function tgDoc() {
   TG.lastLog = log;
   return { v: 1, code: tg.code, u: S.settings.handle, host: !!tg.host, t: tg.t || tgTitle(), st: S.draft.t, pv: tg.pv || 0, x: tgPlan(), log: log, cur: tg.cur || 0, fin: 0 };
 }
+/* newest plan version anyone in the session has (so a phone with a slow clock still wins with its own edits) */
+function tgNewestPv() { var v = 0; tgMates().forEach(function (m) { v = Math.max(v, +m.d.pv || 0); }); return v; }
 function tgSoon(ms) { if (!tgOn() || !tgReady()) return; clearTimeout(TG.pubT); TG.pubT = setTimeout(tgPublish, ms == null ? 1200 : ms); }
 async function tgPublish(extra) {
   if (!tgReady() || (!tgOn() && !extra)) return;
   var doc = extra || tgDoc();
   if (!extra) {
     var sig = tgSig(doc.x);
-    if (S.draft.tg.sig !== sig) { S.draft.tg.sig = sig; S.draft.tg.pv = doc.pv = Date.now(); saveLocal(); }
+    if (S.draft.tg.sig !== sig) { S.draft.tg.sig = sig; S.draft.tg.pv = doc.pv = Math.max(Date.now(), (S.draft.tg.pv || 0) + 1, tgNewestPv() + 1); saveLocal(); }
   }
   var key = JSON.stringify(doc); if (key === TG.last) return;
   doc.at = Date.now();
   try { await SOC.db.doc('tg/' + SOC.uid).set(doc); TG.last = key; SOC.tg = SOC.tg || {}; SOC.tg[SOC.uid] = doc; }
-  catch (e) { if (!TG.warned) { TG.warned = 1; toast(e && /404|not found/i.test(String(e.message)) ? 'Your friends server needs an update for live workouts.' : 'Could not reach your friends right now. Still trying.'); } clearTimeout(TG.pubT); TG.pubT = setTimeout(tgPublish, 15000); }
+  catch (e) { if (!TG.warned) { TG.warned = 1; toast(e && /404|not found/i.test(String(e.message)) ? 'Your friends server needs an update for live workouts.' : 'Could not reach your friends right now. Still trying.'); } clearTimeout(TG.pubT); TG.pubT = setTimeout(function () { tgPublish(extra); }, 15000); }   // keeps retrying the finish note too
 }
 /* called before a workout is finished or discarded, so partners see you are done */
 function tgEnd() {
@@ -178,12 +180,16 @@ function tgNews() {
     if (s && nm) toast(d.u + ': ' + nm + ' · ' + tgSet(s, BYNAME[nm]));
   });
 }
-function tgSet(s, ex) { return (ex && isBW(ex) && !s[0]) ? s[1] + ' reps' : fmtW(s[0], unit()) + ' ' + uLabel() + ' × ' + s[1]; }
+function tgSet(s, ex) { var w = +s[0] || 0, r = Math.round(+s[1] || 0); return (ex && isBW(ex) && !w) ? r + ' reps' : fmtW(w, unit()) + ' ' + uLabel() + ' × ' + r; }
 
 /* new data from the server or the shared store */
 function tgChanged() {
   SOC.tgLoaded = true;
-  if (U.tgPend) { var p = U.tgPend; if (tgFind(p)) { U.tgPend = null; tgJoin(p); return; } }
+  if (U.tgPend) {
+    var p = U.tgPend;
+    if (tgFind(p)) { U.tgPend = null; tgJoin(p); return; }
+    U.tgPend = null; toast('No live workout with code ' + p + '. Check the code with your friend.');   // give up after the first fresh copy, never auto-join later
+  }
   if (tgOn()) {
     var moved = tgSync(); tgNews();
     if (moved && U.tab === 'train') render();
@@ -298,7 +304,7 @@ function tgTick() {
   if (!tgOn() || document.hidden) return;
   if (typeof srvOn === 'function' && srvOn() && SRV.uid) srvPoll();
 }
-setInterval(tgTick, 4000);
+setInterval(tgTick, 8000);
 
 /* links: #tg=CODE (waits for the friends connection to come up first) */
 setTimeout(function () {
