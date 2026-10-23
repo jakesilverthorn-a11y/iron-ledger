@@ -554,11 +554,12 @@ function liftRankCard(name, H) {
     var hit = r && r.eq * k.m >= v;
     return '<div class="lrow"><span>' + (hit ? '✓ ' : '') + l + '</span><span class="num" style="font-size:18px">' + right + '</span></div>';
   }).join('');
-  var head = r ? '<div class="row" style="gap:14px"><div class="num" style="font-size:52px;line-height:.9">' + (r.est ? '≈' : '') + r.score + '</div><div class="grow"><div class="xname">' + tierOf(r.score) + ' for your size</div><div class="note">Stronger than about ' + Math.round(r.pct) + '% of ' + esc(bodyText(B)) + (r.est ? '. Estimated from the ' + stdName(r.cls).toLowerCase() + ' standard.' : '.') + '</div></div></div>'
+  var head = r ? '<div class="row" style="gap:14px"><div class="num" style="font-size:52px;line-height:.9">' + (r.est ? '≈' : '') + r.score + '</div><div class="grow"><div class="xname">' + tierOf(r.score) + ' for your size</div><div class="note">Stronger than about ' + Math.round(r.pct) + '% of ' + esc(bodyText(B)) + '.' + '</div></div></div>'
     : '<div class="xname">Targets for your size</div><div class="note">For ' + esc(bodyText(B)) + '. Log this lift once to get your own rank.</div>';
   var bwNote = rep && isBW(ex) ? '<div class="note">Added weight counts. A vest, belt or plate turns into extra bodyweight reps, e.g. ' + (function () { var w = unit() === 'kg' ? 10 * LB : 25, r0 = 10, eq = Math.round(bwEqReps(ex, w, r0)); return '+' + toDisp(w, unit()) + ' ' + u + ' × ' + r0 + ' counts as about ' + eq + ' reps'; })() + ' for you.</div>' : '';
+  var srcNote = '<div class="note">' + (ex.ke ? '≈ No published standard for this exact exercise, so it is estimated from Strength Level\'s ' + esc(stdName(k.cls)) + ' standard' + (k.m !== 1 ? ' (× ' + k.m + ')' : '') + ' and counts for less in your muscle ranks.' : 'Strength Level\'s published ' + esc(stdName(k.cls)) + ' standard, for your bodyweight and sex.') + '</div>';
   return '<div class="card section" style="gap:10px">' + head +
-    '<div><span class="field-label" style="margin-bottom:2px">' + (r ? 'Targets for your size' : 'Levels') + (rep ? ' (reps in one set)' : ' (est. 1-rep max, and what that means for 8 reps)') + '</span>' + tbl + '</div>' + bwNote + '</div>';
+    '<div><span class="field-label" style="margin-bottom:2px">' + (r ? 'Targets for your size' : 'Levels') + (rep ? ' (reps in one set)' : ' (est. 1-rep max, and what that means for 8 reps)') + '</span>' + tbl + '</div>' + bwNote + srcNote + '</div>';
 }
 function groupSheet(g) {
   var B = profB();

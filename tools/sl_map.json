@@ -418,9 +418,6 @@
  "Dumbbell Push Press": [
   "Dumbbell Push Press"
  ],
- "Dumbbell Clean": [
-  "Dumbbell Clean"
- ],
  "Dumbbell Walking Lunge": [
   "Dumbbell Walking Lunge"
  ],
@@ -565,5 +562,8 @@
  ],
  "Back Extension": [
   "Hyperextensions (Back Extensions)"
+ ],
+ "Dumbbell Hang Clean": [
+  "Dumbbell Clean"
  ]
 }

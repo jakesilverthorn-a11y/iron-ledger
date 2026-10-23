@@ -23,6 +23,55 @@ BF = {'Pull Ups': 1, 'Chin Ups': 1, 'Neutral Grip Pull Ups': 1, 'Muscle Ups': 1.
       'Sit Ups': 0.35, 'Crunches': 0.3, 'Hanging Leg Raise': 0.35, 'Hanging Knee Raise': 0.3, 'Bodyweight Squat': 0.8, 'Lunge': 0.8,
       'Back Extension': 0.5, 'Glute Bridge': 0.5}
 
+# close variants of a published lift: follow that lift's table with a ratio (still shown as estimates)
+LINK = {
+  'Smith Machine Upright Row': ('Upright Row', 1), 'Smith Machine One-Arm Upright Row': ('Upright Row', 0.47),
+  'Calf Raise On A Dumbbell': ('Dumbbell Calf Raise', 1), 'Reverse Cable Curl': ('Reverse Barbell Curl', 1),
+  'Reverse Barbell Preacher Curls': ('Reverse Barbell Curl', 0.95), 'Cable Rope Rear-Delt Rows': ('Face Pull', 1),
+  'Cable Incline Triceps Extension': ('Cable Overhead Tricep Extension', 1), 'Cable Lying Triceps Extension': ('Cable Overhead Tricep Extension', 1),
+  'Kneeling Cable Triceps Extension': ('Cable Overhead Tricep Extension', 1), 'Low Cable Triceps Extension': ('Cable Overhead Tricep Extension', 1),
+  'Machine Triceps Extension': ('Cable Overhead Tricep Extension', 1), 'Cable One Arm Tricep Extension': ('Cable Overhead Tricep Extension', 0.45),
+  'Standing Low-Pulley One-Arm Triceps Extension': ('Cable Overhead Tricep Extension', 0.45),
+  'Cable Triceps Kickback': ('Dumbbell Tricep Kickback', 1), 'Seated Bent-Over One-Arm Dumbbell Triceps Extension': ('Dumbbell Tricep Kickback', 1),
+  'Seated Bent-Over Two-Arm Dumbbell Triceps Extension': ('Dumbbell Tricep Kickback', 1), 'Standing Bent-Over One-Arm Dumbbell Triceps Extension': ('Dumbbell Tricep Kickback', 1),
+  'Standing Bent-Over Two-Arm Dumbbell Triceps Extension': ('Dumbbell Tricep Kickback', 1),
+  'Wide-Grip Decline Barbell Pullover': ('Barbell Pullover', 1), 'Rack Pull with Bands': ('Rack Pull', 1),
+  'Box Squat with Bands': ('Box Squat', 1), 'Box Squat with Chains': ('Box Squat', 1), 'Reverse Band Box Squat': ('Box Squat', 1), 'Speed Box Squat': ('Box Squat', 0.6),
+  'Split Jerk': ('Clean and Jerk', 1.05), 'Power Jerk': ('Clean and Jerk', 1), 'Squat Jerk': ('Clean and Jerk', 0.95), 'Jerk Balance': ('Clean and Jerk', 0.9),
+  'Clean and Press': ('Clean and Jerk', 0.85), 'Cable Hip Adduction': ('Hip Adduction', 0.35),
+  'Knee/Hip Raise On Parallel Bars': ('Hanging Knee Raise', 1), 'Close-Grip Push-Up off of a Dumbbell': ('Diamond Push Ups', 1),
+  'Dumbbell Squat To A Bench': ('Dumbbell Squat', 1), 'Plie Dumbbell Squat': ('Goblet Squat', 1), 'Dumbbell Walking Lunge': ('Dumbbell Lunge', 1),
+  'Dumbbell Step Ups': ('Dumbbell Lunge', 1), 'Dumbbell Lateral Lunge': ('Dumbbell Lunge', 0.8), 'Single-Leg Dumbbell Romanian Deadlift': ('Dumbbell Romanian Deadlift', 0.53),
+  'Hammer Grip Incline DB Bench Press': ('Incline Dumbbell Bench Press', 1), 'Incline Dumbbell Bench With Palms Facing In': ('Incline Dumbbell Bench Press', 1),
+  'Incline Dumbbell Flyes - With A Twist': ('Incline Dumbbell Fly', 1), 'Zottman Preacher Curl': ('Zottman Curl', 0.9),
+  'Bent Over Dumbbell Rear Delt Raise With Head On Bench': ('Dumbbell Reverse Fly', 1), 'Lying Rear Delt Raise': ('Dumbbell Reverse Fly', 1),
+  'Reverse Flyes With External Rotation': ('Dumbbell Reverse Fly', 1), 'Dumbbell One-Arm Upright Row': ('Dumbbell Upright Row', 0.95),
+  'Palms-Down Dumbbell Wrist Curl Over A Bench': ('Dumbbell Reverse Wrist Curl', 1), 'Seated One-Arm Dumbbell Palms-Down Wrist Curl': ('Dumbbell Reverse Wrist Curl', 1),
+  'Seated One-Arm Dumbbell Palms-Up Wrist Curl': ('Dumbbell Wrist Curl', 1),
+  'Leverage Incline Chest Press': ('Chest Press', 0.9), 'Leverage Decline Chest Press': ('Chest Press', 1.05), 'Cable Chest Press': ('Chest Press', 1),
+  'Incline Cable Chest Press': ('Chest Press', 0.9), 'Standing Cable Chest Press': ('Chest Press', 0.9),
+  'Single-Arm Cable Crossover': ('Cable Fly', 1), 'Flat Bench Cable Flyes': ('Cable Fly', 1), 'Incline Cable Flye': ('Cable Fly', 1), 'Cable Iron Cross': ('Cable Fly', 1),
+  'Cable Shoulder Press': ('Machine Shoulder Press', 1), 'Seated Cable Shoulder Press': ('Machine Shoulder Press', 1),
+  'Smith Machine Overhead Shoulder Press': ('Machine Shoulder Press', 1), 'Alternating Cable Shoulder Press': ('Machine Shoulder Press', 0.46),
+  'Cable Preacher Curl': ('Cable Bicep Curl', 1), 'High Cable Curls': ('Cable Bicep Curl', 1), 'Lying Cable Curl': ('Cable Bicep Curl', 1),
+  'Overhead Cable Curl': ('Cable Bicep Curl', 1), 'Lying Close-Grip Bar Curl On High Pulley': ('Cable Bicep Curl', 1),
+  'Standing One-Arm Cable Curl': ('Cable Bicep Curl', 0.45), 'Bayesian Cable Curl': ('Cable Bicep Curl', 0.42),
+  'Sumo Deadlift with Bands': ('Sumo Deadlift', 1), 'Sumo Deadlift with Chains': ('Sumo Deadlift', 1), 'Reverse Band Sumo Deadlift': ('Sumo Deadlift', 1),
+  'Smith Machine Close-Grip Bench Press': ('Smith Machine Bench Press', 0.95), 'Smith Machine Decline Press': ('Smith Machine Bench Press', 1.05),
+  'Smith Machine Incline Bench Press': ('Smith Machine Bench Press', 0.85), 'Decline Smith Press': ('Smith Machine Bench Press', 1.05),
+  'Barbell Side Split Squat': ('Barbell Lunge', 1), 'Barbell Step Ups': ('Barbell Lunge', 1), 'Elevated Back Lunge': ('Barbell Lunge', 1),
+  'Decline EZ Bar Triceps Extension': ('Lying Tricep Extension (skull crusher)', 1), 'Incline Barbell Triceps Extension': ('Lying Tricep Extension (skull crusher)', 1),
+  'Lying Close-Grip Barbell Triceps Extension Behind The Head': ('Lying Tricep Extension (skull crusher)', 1),
+  'Lying Close-Grip Barbell Triceps Press To Chin': ('Lying Tricep Extension (skull crusher)', 1),
+  'Standing Overhead Barbell Triceps Extension': ('Lying Tricep Extension (skull crusher)', 1),
+  'Floor Press with Chains': ('Floor Press', 1), 'Board Press': ('Floor Press', 1.05), 'Pin Presses': ('Floor Press', 1.05),
+  'Lying T-Bar Row': ('T-Bar Row', 1), 'Good Morning off Pins': ('Good Morning', 1), 'Hanging Bar Good Morning': ('Good Morning', 1), 'Seated Good Mornings': ('Good Morning', 1),
+  'Push Press - Behind the Neck': ('Push Press', 1), 'Power Clean from Blocks': ('Power Clean', 1), 'Clean from Blocks': ('Clean', 1),
+  'Hang Clean - Below the Knees': ('Hang Clean', 1.03), 'Split Clean': ('Clean', 1), 'Snatch from Blocks': ('Snatch', 1), 'Power Snatch from Blocks': ('Power Snatch', 1),
+  'Smith Machine Stiff-Legged Deadlift': ('Stiff Leg Deadlift', 1), 'Wide Stance Stiff Legs': ('Stiff Leg Deadlift', 1), 'Romanian Deadlift from Deficit': ('Romanian Deadlift', 1),
+  'Machine Preacher Curls': ('Machine Bicep Curl', 1),
+}
+
 def num(v):
     if isinstance(v, str): return 0.5 if '<' in v else float(re.sub(r'[^0-9.\-]', '', v) or 0)
     return float(v)
@@ -54,6 +103,7 @@ def main():
     exec(open(os.path.join(T, 'std_math.py')).read(), globals())   # stdAt() mirroring logic.js
     for k in [k for k in std if k.startswith('sl_')]: del std[k]
     direct, refit, skipped, log = set(), {}, [], []
+    slug_of, exk = {}, {}
     for sl, names in MAP.items():
         s = SL.get(sl)
         if not s or not names: continue
@@ -64,6 +114,7 @@ def main():
             std[slug] = {'u': 'reps' if reps else 'lb', 'pd': 1 if 'per' in s and re.search(r'dumbbell|kettlebell', s['per'] or '') else 0,
                          'name': s.get('sl_name') or sl, 'src': s.get('url'), 'M': tb['M'], 'F': tb['F']}
             if reps: std[slug]['bf'] = BF.get(sl, 0.6)
+            slug_of[sl] = slug
             for n in names:
                 if n in by: by[n]['k'] = slug; direct.add(n)
             log.append('direct  %-34s %s' % (sl, ', '.join(names)))
@@ -92,6 +143,15 @@ def main():
             g = math.exp(lg / c); nm = round(m / g, 3)
             e['k'] = cls + ('*' + str(nm) if abs(nm - 1) > 1e-9 else ''); refit[n] = (k, e['k'])
             log.append('refit   %-34s %s: %s -> %s  (%s)' % (sl, n, k, e['k'], '; '.join(why)))
+        if sl not in slug_of and names and names[0] in by and by[names[0]].get('k'): exk[sl] = by[names[0]]['k']
+    for n, (sl, m) in LINK.items():
+        e = by.get(n); assert e, ('LINK: no exercise', n)
+        if n in direct: continue
+        if sl in slug_of: base, bm = slug_of[sl], 1.0
+        elif sl in exk: c, mm = (exk[sl].split('*') + ['1'])[:2]; base, bm = c, float(mm)
+        else: skipped.append(n + ' (link target ' + sl + ' unpublished)'); continue
+        nm = round(bm * m, 3); old = e.get('k'); e['k'] = base + ('*' + str(nm) if abs(nm - 1) > 1e-9 else '')
+        log.append('link    %-34s %s: %s -> %s' % (sl, n, old, e['k']))
     # honesty: anything not on a published table of its own is an estimate
     for e in d['ex']:
         if e.get('k'):
