@@ -1,0 +1,263 @@
+direct  Bench Press                        Barbell Bench Press - Medium Grip, Bench Press - Powerlifting
+direct  Squat                              Barbell Squat, Barbell Full Squat
+direct  Deadlift                           Barbell Deadlift
+direct  Shoulder Press                     Barbell Shoulder Press, Seated Barbell Military Press
+direct  Military Press                     Standing Military Press
+direct  Incline Bench Press                Barbell Incline Bench Press - Medium Grip
+direct  Decline Bench Press                Decline Barbell Bench Press
+direct  Close Grip Bench Press             Close-Grip Barbell Bench Press
+direct  Front Squat                        Front Barbell Squat, Front Squat (Clean Grip)
+direct  Romanian Deadlift                  Romanian Deadlift
+direct  Sumo Deadlift                      Sumo Deadlift
+direct  Hip Thrust                         Barbell Hip Thrust
+direct  Bent Over Row                      Bent Over Barbell Row
+direct  Pendlay Row                        Pendlay Row
+direct  Barbell Curl                       Barbell Curl
+direct  EZ Bar Curl                        EZ-Bar Curl
+direct  Barbell Shrug                      Barbell Shrug
+direct  Push Press                         Push Press
+direct  Power Clean                        Power Clean
+direct  Clean                              Clean
+direct  Hang Clean                         Hang Clean
+direct  Snatch                             Snatch
+direct  Power Snatch                       Power Snatch
+direct  Clean and Jerk                     Clean and Jerk
+direct  Hex Bar Deadlift (trap bar deadlift) Trap Bar Deadlift
+direct  Rack Pull                          Rack Pulls
+direct  Good Morning                       Good Morning
+direct  Box Squat                          Box Squat
+direct  Zercher Squat                      Zercher Squats
+direct  Overhead Squat                     Overhead Squat
+direct  Upright Row                        Upright Barbell Row
+direct  T-Bar Row                          T-Bar Row with Handle
+direct  Preacher Curl                      Preacher Curl
+direct  Reverse Barbell Curl               Reverse Barbell Curl
+direct  Lying Tricep Extension (skull crusher) EZ-Bar Skullcrusher, Lying Triceps Press
+direct  Floor Press                        Floor Press
+direct  Barbell Lunge                      Barbell Lunge, Barbell Walking Lunge
+direct  Barbell Calf Raise                 Standing Barbell Calf Raise, Rocking Standing Calf Raise
+refit   Wrist Curl                         Seated Palm-Up Barbell Wrist Curl: wristcurl -> wristcurl  (F120 elite 3.3x intermediate; F150 elite 2.9x intermediate)
+refit   Wrist Curl                         Palms-Up Barbell Wrist Curl Over A Bench: wristcurl -> wristcurl  (F120 elite 3.3x intermediate; F150 elite 2.9x intermediate)
+refit   Reverse Wrist Curl                 Seated Palms-Down Barbell Wrist Curl: wristcurl*0.55 -> wristcurl*0.877  (M150 elite 3.2x intermediate; M180 elite 2.9x intermediate; F120 elite 3.1x intermediate; F150 elite 3.1x intermediate; F180 elite 3.0x intermediate)
+refit   Reverse Wrist Curl                 Palms-Down Wrist Curl Over A Bench: wristcurl*0.55 -> wristcurl*0.877  (M150 elite 3.2x intermediate; M180 elite 2.9x intermediate; F120 elite 3.1x intermediate; F150 elite 3.1x intermediate; F180 elite 3.0x intermediate)
+direct  Smith Machine Squat                Smith Machine Squat
+direct  Smith Machine Bench Press          Smith Machine Bench Press
+direct  Barbell Glute Bridge               Barbell Glute Bridge
+direct  Seated Shoulder Press              Seated Barbell Military Press
+direct  Behind The Neck Press              Standing Barbell Press Behind Neck
+direct  Barbell Front Raise                Standing Front Barbell Raise Over Head
+direct  Deficit Deadlift                   Deficit Deadlift
+direct  Stiff Leg Deadlift                 Stiff-Legged Barbell Deadlift
+direct  Barbell Hack Squat                 Barbell Hack Squat
+direct  Barbell Pullover                   Bent-Arm Barbell Pullover
+direct  Leg Press                          Leg Press, Narrow Stance Leg Press
+direct  Hack Squat                         Hack Squat
+direct  Leg Extension                      Leg Extensions
+direct  Seated Leg Curl                    Seated Leg Curl
+direct  Lying Leg Curl                     Lying Leg Curls
+direct  Lat Pulldown                       Wide-Grip Lat Pulldown, Full Range-Of-Motion Lat Pulldown
+direct  Close Grip Lat Pulldown            Close-Grip Front Lat Pulldown, V-Bar Pulldown
+direct  Reverse Grip Lat Pulldown          Underhand Cable Pulldowns
+direct  Seated Cable Row                   Seated Cable Rows
+direct  Machine Row                        Seated Machine Row, Leverage Iso Row, Leverage High Row
+direct  Machine Shoulder Press             Machine Shoulder (Military) Press, Leverage Shoulder Press
+direct  Tricep Pushdown                    Triceps Pushdown, Triceps Pushdown - V-Bar Attachment
+direct  Tricep Rope Pushdown               Triceps Pushdown - Rope Attachment
+direct  Cable Bicep Curl                   Standing Biceps Cable Curl
+direct  Cable Hammer Curl                  Cable Hammer Curls - Rope Attachment
+direct  Cable Overhead Tricep Extension    Cable Rope Overhead Triceps Extension, Triceps Overhead Extension with Rope
+direct  Cable Crunch                       Cable Crunch, Rope Crunch
+direct  Face Pull                          Face Pull
+direct  Cable Lateral Raise                Cable Lateral Raise, Cable Seated Lateral Raise
+direct  Hip Abduction                      Thigh Abductor
+direct  Hip Adduction                      Thigh Adductor
+direct  Machine Calf Raise                 Standing Calf Raises, Smith Machine Calf Raise, Calf Press On The Leg Press Machine, Calf Press
+direct  Seated Calf Raise                  Seated Calf Raise
+direct  Machine Reverse Fly                Reverse Machine Flyes
+direct  Straight Arm Pulldown              Straight-Arm Pulldown, Rope Straight-Arm Pulldown
+direct  Single Arm Lat Pulldown            One Arm Lat Pulldown
+refit   Machine Bicep Curl                 Machine Bicep Curl: bbcurl*0.95 -> bbcurl*1.107  (no bodyweight table)
+refit   Machine Lateral Raise              Machine Lateral Raise: dblat*1.8 -> dblat*3.222  (no bodyweight table)
+refit   Single Arm Cable Row               Seated One-arm Cable Pulley Rows: cablerow*0.5 -> cablerow*0.641  (no bodyweight table)
+refit   Cable Pull Through                 Pull Through: hipthrust*0.3 -> hipthrust*0.372  (no bodyweight table)
+direct  Dumbbell Bench Press               Dumbbell Bench Press
+direct  Incline Dumbbell Bench Press       Incline Dumbbell Press
+refit   Decline Dumbbell Bench Press       Decline Dumbbell Bench Press: dbbench -> dbbench*0.944  (no bodyweight table)
+refit   Dumbbell Shoulder Press            Dumbbell Shoulder Press: dbpress -> dbpress*0.932  (no bodyweight table)
+refit   Dumbbell Shoulder Press            Standing Dumbbell Press: dbpress*0.9 -> dbpress*0.932  (no bodyweight table)
+direct  Seated Dumbbell Shoulder Press     Seated Dumbbell Press
+direct  Arnold Press                       Arnold Dumbbell Press
+direct  Dumbbell Curl                      Dumbbell Bicep Curl, Dumbbell Alternate Bicep Curl
+direct  Dumbbell Hammer Curl               Hammer Curls, Alternate Hammer Curl
+direct  Incline Dumbbell Curl              Incline Dumbbell Curl
+direct  Dumbbell Concentration Curl        Concentration Curls
+direct  Dumbbell Preacher Curl             One Arm Dumbbell Preacher Curl, Two-Arm Dumbbell Preacher Curl
+direct  Dumbbell Reverse Curl              Standing Dumbbell Reverse Curl
+direct  Zottman Curl                       Zottman Curl
+direct  Dumbbell Tricep Extension          Standing Dumbbell Triceps Extension, Seated Triceps Press
+direct  Dumbbell Tricep Kickback           Tricep Dumbbell Kickback
+direct  Dumbbell Fly                       Dumbbell Flyes
+direct  Incline Dumbbell Fly               Incline Dumbbell Flyes
+direct  Dumbbell Lateral Raise             Side Lateral Raise
+direct  Dumbbell Front Raise               Front Dumbbell Raise, Front Two-Dumbbell Raise
+direct  Dumbbell Reverse Fly               Reverse Flyes, Seated Bent-Over Rear Delt Raise
+direct  Dumbbell Row                       One-Arm Dumbbell Row
+direct  Chest Supported Dumbbell Row       Dumbbell Incline Row
+direct  Dumbbell Shrug                     Dumbbell Shrug
+direct  Dumbbell Upright Row               Standing Dumbbell Upright Row
+direct  Dumbbell Pullover                  Straight-Arm Dumbbell Pullover, Bent-Arm Dumbbell Pullover
+direct  Dumbbell Floor Press               Dumbbell Floor Press
+direct  Close Grip Dumbbell Bench Press    Close-Grip Dumbbell Press
+direct  Dumbbell Spider Curl               Spider Curl
+refit   Dumbbell Y Raise                   Dumbbell Y-Raise: dblat*0.6 -> dblat*1.033  (M150 elite 2.9x intermediate; M180 elite 2.9x intermediate)
+direct  Dumbbell Lunge                     Dumbbell Lunges, Dumbbell Rear Lunge
+direct  Dumbbell Bulgarian Split Squat     Dumbbell Bulgarian Split Squat
+direct  Goblet Squat                       Goblet Squat, Dumbbell Goblet Squat
+direct  Dumbbell Squat                     Dumbbell Squat
+direct  Dumbbell Front Squat               Dumbbell Front Squat
+direct  Dumbbell Romanian Deadlift         Dumbbell Romanian Deadlift, Stiff-Legged Dumbbell Deadlift
+direct  Dumbbell Deadlift                  Dumbbell Deadlift
+direct  Dumbbell Calf Raise                Standing Dumbbell Calf Raise
+direct  Dumbbell Wrist Curl                Seated Dumbbell Palms-Up Wrist Curl, Palms-Up Dumbbell Wrist Curl Over A Bench
+direct  Dumbbell Reverse Wrist Curl        Seated Dumbbell Palms-Down Wrist Curl
+direct  Dumbbell Thruster                  Dumbbell Thruster
+direct  Dumbbell Snatch                    Dumbbell Snatch
+direct  Dumbbell Push Press                Dumbbell Push Press
+direct  Dumbbell Split Squat               Split Squat with Dumbbells
+direct  Kettlebell Goblet Squat            Goblet Squat
+direct  Pull Ups                           Pullups
+direct  Chin Ups                           Chin-Up
+direct  Neutral Grip Pull Ups              Neutral-Grip Pull-Up
+direct  Push Ups                           Pushups
+direct  Dips                               Dips - Triceps Version, Parallel Bar Dip
+direct  Bench Dips                         Bench Dips
+direct  Sit Ups                            Sit-Up
+direct  Crunches                           Crunches
+direct  Hanging Leg Raise                  Hanging Leg Raise
+direct  Hanging Knee Raise                 Hanging Knee Raise
+direct  Inverted Row                       Inverted Row
+direct  Handstand Push Ups                 Handstand Push-Ups
+direct  One Arm Push Ups                   Single-Arm Push-Up
+direct  Diamond Push Ups                   Push-Ups - Close Triceps Position
+direct  Decline Push Up                    Decline Push-Up, Push-Ups With Feet Elevated
+direct  Incline Push Up                    Incline Push-Up, Incline Push-Up Medium, Incline Push-Up Wide, Incline Push-Up Close-Grip, Incline Push-Up Reverse Grip
+direct  Glute Bridge                       Butt Lift (Bridge)
+direct  Muscle Ups                         Muscle Up, Kipping Muscle Up
+direct  Chest Press                        Machine Bench Press, Leverage Chest Press
+direct  Machine Chest Fly                  Butterfly
+direct  Cable Fly                          Cable Crossover, Low Cable Crossover
+direct  Machine Crunch                     Ab Crunch Machine
+direct  Lying Dumbbell Tricep Extension    Lying Dumbbell Tricep Extension
+direct  Landmine Press                     Landmine Press
+direct  Bodyweight Squat                   Bodyweight Squat
+direct  Lunge                              Bodyweight Walking Lunge
+direct  Back Extension                     Hyperextensions (Back Extensions)
+direct  Dumbbell Hang Clean                Dumbbell Clean
+link    Upright Row                        Smith Machine Upright Row: ohp*0.75 -> sl_upright_row
+link    Upright Row                        Smith Machine One-Arm Upright Row: ohp*0.35 -> sl_upright_row*0.47
+link    Dumbbell Calf Raise                Calf Raise On A Dumbbell: calfmach*0.3 -> sl_dumbbell_calf_raise
+link    Reverse Barbell Curl               Reverse Cable Curl: bbcurl*0.7 -> sl_reverse_barbell_curl
+link    Reverse Barbell Curl               Reverse Barbell Preacher Curls: bbcurl*0.95 -> sl_reverse_barbell_curl*0.95
+link    Face Pull                          Cable Rope Rear-Delt Rows: dblat*1.8 -> sl_face_pull
+link    Cable Overhead Tricep Extension    Cable Incline Triceps Extension: dbtri*1.1 -> sl_cable_overhead_tricep_extension
+link    Cable Overhead Tricep Extension    Cable Lying Triceps Extension: dbtri*1.1 -> sl_cable_overhead_tricep_extension
+link    Cable Overhead Tricep Extension    Kneeling Cable Triceps Extension: dbtri*1.1 -> sl_cable_overhead_tricep_extension
+link    Cable Overhead Tricep Extension    Low Cable Triceps Extension: dbtri*1.1 -> sl_cable_overhead_tricep_extension
+link    Cable Overhead Tricep Extension    Machine Triceps Extension: dbtri*1.1 -> sl_cable_overhead_tricep_extension
+link    Cable Overhead Tricep Extension    Cable One Arm Tricep Extension: dbtri*0.5 -> sl_cable_overhead_tricep_extension*0.45
+link    Cable Overhead Tricep Extension    Standing Low-Pulley One-Arm Triceps Extension: dbtri*0.5 -> sl_cable_overhead_tricep_extension*0.45
+link    Dumbbell Tricep Kickback           Cable Triceps Kickback: dbtri*0.4 -> sl_dumbbell_tricep_kickback
+link    Dumbbell Tricep Kickback           Seated Bent-Over One-Arm Dumbbell Triceps Extension: dbtri*0.5 -> sl_dumbbell_tricep_kickback
+link    Dumbbell Tricep Kickback           Seated Bent-Over Two-Arm Dumbbell Triceps Extension: dbtri*0.5 -> sl_dumbbell_tricep_kickback
+link    Dumbbell Tricep Kickback           Standing Bent-Over One-Arm Dumbbell Triceps Extension: dbtri*0.5 -> sl_dumbbell_tricep_kickback
+link    Dumbbell Tricep Kickback           Standing Bent-Over Two-Arm Dumbbell Triceps Extension: dbtri*0.5 -> sl_dumbbell_tricep_kickback
+link    Barbell Pullover                   Wide-Grip Decline Barbell Pullover: bbrow*0.4 -> sl_barbell_pullover
+link    Rack Pull                          Rack Pull with Bands: deadlift -> sl_rack_pull
+link    Box Squat                          Box Squat with Bands: squat -> sl_box_squat
+link    Box Squat                          Box Squat with Chains: squat -> sl_box_squat
+link    Box Squat                          Reverse Band Box Squat: squat -> sl_box_squat
+link    Box Squat                          Speed Box Squat: squat*0.6 -> sl_box_squat*0.6
+link    Clean and Jerk                     Split Jerk: ohp*1.2 -> sl_clean_and_jerk*1.05
+link    Clean and Jerk                     Power Jerk: ohp*1.15 -> sl_clean_and_jerk
+link    Clean and Jerk                     Squat Jerk: ohp*1.1 -> sl_clean_and_jerk*0.95
+link    Clean and Jerk                     Jerk Balance: ohp*1.1 -> sl_clean_and_jerk*0.9
+link    Clean and Jerk                     Clean and Press: ohp*1.2 -> sl_clean_and_jerk*0.85
+link    Hip Adduction                      Cable Hip Adduction: legext*0.3 -> sl_hip_adduction*0.35
+link    Hanging Knee Raise                 Knee/Hip Raise On Parallel Bars: hangleg*1.3 -> sl_hanging_knee_raise
+link    Diamond Push Ups                   Close-Grip Push-Up off of a Dumbbell: pushup*0.85 -> sl_diamond_push_ups
+link    Dumbbell Squat                     Dumbbell Squat To A Bench: dblunge*1.05 -> sl_dumbbell_squat
+link    Goblet Squat                       Plie Dumbbell Squat: dblunge*1.3 -> sl_goblet_squat
+link    Dumbbell Lunge                     Dumbbell Walking Lunge: dblunge*1 -> sl_dumbbell_lunge
+link    Dumbbell Lunge                     Dumbbell Step Ups: dblunge -> sl_dumbbell_lunge
+link    Dumbbell Lunge                     Dumbbell Lateral Lunge: dblunge*0.8 -> sl_dumbbell_lunge*0.8
+link    Dumbbell Romanian Deadlift         Single-Leg Dumbbell Romanian Deadlift: rdl*0.18 -> sl_dumbbell_romanian_deadlift*0.53
+link    Incline Dumbbell Bench Press       Hammer Grip Incline DB Bench Press: dbbench*0.85 -> sl_incline_dumbbell_bench_press
+link    Incline Dumbbell Bench Press       Incline Dumbbell Bench With Palms Facing In: dbbench*0.85 -> sl_incline_dumbbell_bench_press
+link    Incline Dumbbell Fly               Incline Dumbbell Flyes - With A Twist: dbfly*1 -> sl_incline_dumbbell_fly
+link    Zottman Curl                       Zottman Preacher Curl: hammer -> sl_zottman_curl*0.9
+link    Dumbbell Reverse Fly               Bent Over Dumbbell Rear Delt Raise With Head On Bench: dblat*0.9 -> sl_dumbbell_reverse_fly
+link    Dumbbell Reverse Fly               Lying Rear Delt Raise: dblat*0.9 -> sl_dumbbell_reverse_fly
+link    Dumbbell Reverse Fly               Reverse Flyes With External Rotation: dblat*0.9 -> sl_dumbbell_reverse_fly
+link    Dumbbell Upright Row               Dumbbell One-Arm Upright Row: dblat*1.3 -> sl_dumbbell_upright_row*0.95
+link    Dumbbell Reverse Wrist Curl        Palms-Down Dumbbell Wrist Curl Over A Bench: wristcurl*0.25 -> sl_dumbbell_reverse_wrist_curl
+link    Dumbbell Reverse Wrist Curl        Seated One-Arm Dumbbell Palms-Down Wrist Curl: wristcurl*0.28 -> sl_dumbbell_reverse_wrist_curl
+link    Dumbbell Wrist Curl                Seated One-Arm Dumbbell Palms-Up Wrist Curl: wristcurl*0.5 -> sl_dumbbell_wrist_curl
+link    Chest Press                        Leverage Incline Chest Press: chestpress -> sl_chest_press*0.9
+link    Chest Press                        Leverage Decline Chest Press: chestpress -> sl_chest_press*1.05
+link    Chest Press                        Cable Chest Press: chestpress -> sl_chest_press
+link    Chest Press                        Incline Cable Chest Press: chestpress -> sl_chest_press*0.9
+link    Chest Press                        Standing Cable Chest Press: chestpress -> sl_chest_press*0.9
+link    Cable Fly                          Single-Arm Cable Crossover: dbfly -> sl_cable_fly
+link    Cable Fly                          Flat Bench Cable Flyes: dbfly -> sl_cable_fly
+link    Cable Fly                          Incline Cable Flye: dbfly -> sl_cable_fly
+link    Cable Fly                          Cable Iron Cross: dbfly -> sl_cable_fly
+link    Machine Shoulder Press             Cable Shoulder Press: ohp*1.3 -> sl_machine_shoulder_press
+link    Machine Shoulder Press             Seated Cable Shoulder Press: ohp*1.3 -> sl_machine_shoulder_press
+link    Machine Shoulder Press             Smith Machine Overhead Shoulder Press: ohp*1.3 -> sl_machine_shoulder_press
+link    Machine Shoulder Press             Alternating Cable Shoulder Press: ohp*0.6 -> sl_machine_shoulder_press*0.46
+link    Cable Bicep Curl                   Cable Preacher Curl: bbcurl*0.95 -> sl_cable_curl
+link    Cable Bicep Curl                   High Cable Curls: bbcurl*0.95 -> sl_cable_curl
+link    Cable Bicep Curl                   Lying Cable Curl: bbcurl*0.95 -> sl_cable_curl
+link    Cable Bicep Curl                   Overhead Cable Curl: bbcurl*0.95 -> sl_cable_curl
+link    Cable Bicep Curl                   Lying Close-Grip Bar Curl On High Pulley: bbcurl*0.95 -> sl_cable_curl
+link    Cable Bicep Curl                   Standing One-Arm Cable Curl: bbcurl*0.45 -> sl_cable_curl*0.45
+link    Cable Bicep Curl                   Bayesian Cable Curl: bbcurl*0.42 -> sl_cable_curl*0.42
+link    Sumo Deadlift                      Sumo Deadlift with Bands: deadlift -> sl_sumo_deadlift
+link    Sumo Deadlift                      Sumo Deadlift with Chains: deadlift -> sl_sumo_deadlift
+link    Sumo Deadlift                      Reverse Band Sumo Deadlift: deadlift -> sl_sumo_deadlift
+link    Smith Machine Bench Press          Smith Machine Close-Grip Bench Press: bench*0.95 -> sl_smith_machine_bench_press*0.95
+link    Smith Machine Bench Press          Smith Machine Decline Press: bench*0.95 -> sl_smith_machine_bench_press*1.05
+link    Smith Machine Bench Press          Smith Machine Incline Bench Press: bench*0.95 -> sl_smith_machine_bench_press*0.85
+link    Smith Machine Bench Press          Decline Smith Press: bench*0.95 -> sl_smith_machine_bench_press*1.05
+link    Barbell Lunge                      Barbell Side Split Squat: squat*0.6 -> sl_barbell_lunge
+link    Barbell Lunge                      Barbell Step Ups: squat*0.6 -> sl_barbell_lunge
+link    Barbell Lunge                      Elevated Back Lunge: squat*0.6 -> sl_barbell_lunge
+link    Lying Tricep Extension (skull crusher) Decline EZ Bar Triceps Extension: bbcurl*0.85 -> sl_lying_tricep_extension
+link    Lying Tricep Extension (skull crusher) Incline Barbell Triceps Extension: bbcurl*0.85 -> sl_lying_tricep_extension
+link    Lying Tricep Extension (skull crusher) Lying Close-Grip Barbell Triceps Extension Behind The Head: bbcurl*0.85 -> sl_lying_tricep_extension
+link    Lying Tricep Extension (skull crusher) Lying Close-Grip Barbell Triceps Press To Chin: bbcurl*0.85 -> sl_lying_tricep_extension
+link    Lying Tricep Extension (skull crusher) Standing Overhead Barbell Triceps Extension: bbcurl*0.85 -> sl_lying_tricep_extension
+link    Floor Press                        Floor Press with Chains: bench*0.9 -> sl_floor_press
+link    Floor Press                        Board Press: bench*0.95 -> sl_floor_press*1.05
+link    Floor Press                        Pin Presses: bench*0.95 -> sl_floor_press*1.05
+link    T-Bar Row                          Lying T-Bar Row: bbrow -> sl_t_bar_row
+link    Good Morning                       Good Morning off Pins: rdl*0.6 -> sl_good_morning
+link    Good Morning                       Hanging Bar Good Morning: rdl*0.6 -> sl_good_morning
+link    Good Morning                       Seated Good Mornings: rdl*0.6 -> sl_good_morning
+link    Push Press                         Push Press - Behind the Neck: ohp*1.2 -> sl_push_press
+link    Power Clean                        Power Clean from Blocks: rdl*0.75 -> sl_power_clean
+link    Clean                              Clean from Blocks: squat*0.7 -> sl_clean
+link    Hang Clean                         Hang Clean - Below the Knees: squat*0.66 -> sl_hang_clean*1.03
+link    Clean                              Split Clean: squat*0.68 -> sl_clean
+link    Snatch                             Snatch from Blocks: squat*0.55 -> sl_snatch
+link    Power Snatch                       Power Snatch from Blocks: squat*0.5 -> sl_power_snatch
+link    Stiff Leg Deadlift                 Smith Machine Stiff-Legged Deadlift: rdl -> sl_stiff_leg_deadlift
+link    Stiff Leg Deadlift                 Wide Stance Stiff Legs: rdl -> sl_stiff_leg_deadlift
+link    Romanian Deadlift                  Romanian Deadlift from Deficit: rdl -> sl_romanian_deadlift
+link    Machine Bicep Curl                 Machine Preacher Curls: bbcurl*0.95 -> bbcurl*1.107
+
+skipped:
+Toes To Bar (published only as weight)
+Ab Roller (published only as weight)
+Barbell Ab Rollout - On Knees (published only as weight)
+Russian Twist (published only as weight)

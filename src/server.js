@@ -93,7 +93,7 @@ function srvBoot() { srvLoad(); if (srvOn()) srvStart(); document.addEventListen
 function viewFriendsAuth() {
   var head = '<div class="screen-head"><div><div class="sub">Compare strength, start challenges</div><h1>Friends</h1></div></div>', host = SRV.url.replace(/^https?:\/\//, '');
   return '<div class="screen">' + head + '<div class="card section"><h2>Race your friends</h2>' +
-    '<div class="note">Make a username and password to join the leaderboard and live challenges. Friends see your strength scores, which are adjusted for height, weight and sex. Your height, weight and workouts stay on your phone.</div>' +
+    '<div class="note">Make a username and password to join the leaderboard and live challenges. Friends see your strength scores, which are adjusted for bodyweight and sex. Your height, weight and workouts stay on your phone.</div>' +
     '<input class="input" id="su" maxlength="16" autocapitalize="none" autocomplete="username" autocorrect="off" spellcheck="false" placeholder="Username" aria-label="Username">' +
     '<input class="input" id="sp" type="password" autocomplete="current-password" placeholder="Password (6+ characters)" aria-label="Password">' +
     '<div class="note" id="s-err" style="color:var(--down);min-height:0"></div>' +

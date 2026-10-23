@@ -1,0 +1,8434 @@
+{
+ "Bench Press": {
+  "sl_name": "Bench Press",
+  "url": "https://strengthlevel.com/strength-standards/bench-press/lb",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    99,
+    137,
+    183,
+    236,
+    292
+   ],
+   "180": [
+    127,
+    169,
+    220,
+    277,
+    339
+   ],
+   "220": [
+    161,
+    208,
+    265,
+    327,
+    394
+   ]
+  },
+  "F": {
+   "120": [
+    36,
+    61,
+    95,
+    137,
+    183
+   ],
+   "150": [
+    48,
+    77,
+    114,
+    159,
+    209
+   ],
+   "180": [
+    59,
+    91,
+    131,
+    179,
+    232
+   ]
+  },
+  "note": "Barbell weight includes bar (44 lb)"
+ },
+ "Squat": {
+  "sl_name": "Squat",
+  "url": "https://strengthlevel.com/strength-standards/squat/lb",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    132,
+    184,
+    247,
+    320,
+    399
+   ],
+   "180": [
+    169,
+    228,
+    298,
+    377,
+    462
+   ],
+   "220": [
+    216,
+    281,
+    359,
+    446,
+    538
+   ]
+  },
+  "F": {
+   "120": [
+    63,
+    100,
+    148,
+    206,
+    269
+   ],
+   "150": [
+    80,
+    121,
+    174,
+    235,
+    303
+   ],
+   "180": [
+    95,
+    140,
+    196,
+    261,
+    332
+   ]
+  },
+  "note": "Barbell weight includes bar (44 lb)"
+ },
+ "Deadlift": {
+  "sl_name": "Deadlift",
+  "url": "https://strengthlevel.com/strength-standards/deadlift/lb",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    160,
+    220,
+    293,
+    377,
+    466
+   ],
+   "180": [
+    201,
+    268,
+    348,
+    438,
+    535
+   ],
+   "220": [
+    252,
+    326,
+    413,
+    512,
+    615
+   ]
+  },
+  "F": {
+   "120": [
+    80,
+    123,
+    178,
+    242,
+    313
+   ],
+   "150": [
+    99,
+    146,
+    205,
+    274,
+    349
+   ],
+   "180": [
+    115,
+    166,
+    228,
+    301,
+    379
+   ]
+  },
+  "note": "Barbell weight includes bar (44 lb)"
+ },
+ "Shoulder Press": {
+  "sl_name": "Shoulder Press",
+  "url": "https://strengthlevel.com/strength-standards/overhead-press",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    57,
+    83,
+    116,
+    154,
+    195
+   ],
+   "180": [
+    75,
+    104,
+    140,
+    181,
+    226
+   ],
+   "220": [
+    97,
+    130,
+    170,
+    215,
+    263
+   ]
+  },
+  "F": {
+   "120": [
+    24,
+    41,
+    63,
+    89,
+    118
+   ],
+   "150": [
+    32,
+    50,
+    74,
+    102,
+    134
+   ],
+   "180": [
+    38,
+    58,
+    84,
+    114,
+    147
+   ]
+  },
+  "note": "Page slug is overhead-press but titled Shoulder Press; plain (non-/lb) URL fetched, values shown in lb. Distinct from Military Press page."
+ },
+ "Military Press": {
+  "sl_name": "Military Press",
+  "url": "https://strengthlevel.com/strength-standards/military-press",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    61,
+    86,
+    116,
+    151,
+    189
+   ],
+   "180": [
+    79,
+    107,
+    141,
+    179,
+    220
+   ],
+   "220": [
+    102,
+    133,
+    171,
+    213,
+    257
+   ]
+  },
+  "F": {
+   "120": [
+    29,
+    45,
+    64,
+    88,
+    113
+   ],
+   "150": [
+    37,
+    54,
+    76,
+    101,
+    128
+   ],
+   "180": [
+    44,
+    62,
+    86,
+    112,
+    141
+   ]
+  },
+  "note": "Plain (non-/lb) URL fetched, values shown in lb"
+ },
+ "Incline Bench Press": {
+  "sl_name": "Incline Bench Press",
+  "url": "https://strengthlevel.com/strength-standards/incline-bench-press/lb",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    86,
+    119,
+    160,
+    206,
+    255
+   ],
+   "180": [
+    113,
+    150,
+    195,
+    246,
+    300
+   ],
+   "220": [
+    146,
+    188,
+    238,
+    294,
+    353
+   ]
+  },
+  "F": {
+   "120": [
+    27,
+    49,
+    78,
+    115,
+    157
+   ],
+   "150": [
+    38,
+    63,
+    96,
+    136,
+    181
+   ],
+   "180": [
+    48,
+    76,
+    112,
+    155,
+    203
+   ]
+  },
+  "note": ""
+ },
+ "Decline Bench Press": {
+  "sl_name": "Decline Bench Press",
+  "url": "https://strengthlevel.com/strength-standards/decline-bench-press/lb",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    99,
+    140,
+    191,
+    250,
+    314
+   ],
+   "180": [
+    131,
+    177,
+    234,
+    299,
+    368
+   ],
+   "220": [
+    170,
+    223,
+    286,
+    357,
+    433
+   ]
+  },
+  "F": {
+   "120": [
+    36,
+    63,
+    100,
+    146,
+    198
+   ],
+   "150": [
+    48,
+    80,
+    121,
+    171,
+    226
+   ],
+   "180": [
+    60,
+    94,
+    139,
+    192,
+    251
+   ]
+  },
+  "note": "Higher than flat Bench Press at every male level except beginner@150"
+ },
+ "Close Grip Bench Press": {
+  "sl_name": "Close Grip Bench Press",
+  "url": "https://strengthlevel.com/strength-standards/close-grip-bench-press/lb",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    95,
+    129,
+    170,
+    217,
+    267
+   ],
+   "180": [
+    124,
+    163,
+    208,
+    260,
+    314
+   ],
+   "220": [
+    161,
+    204,
+    255,
+    312,
+    371
+   ]
+  },
+  "F": {
+   "120": [
+    39,
+    62,
+    93,
+    129,
+    169
+   ],
+   "150": [
+    52,
+    78,
+    112,
+    151,
+    195
+   ],
+   "180": [
+    64,
+    93,
+    129,
+    171,
+    217
+   ]
+  },
+  "note": ""
+ },
+ "Front Squat": {
+  "sl_name": "Front Squat",
+  "url": "https://strengthlevel.com/strength-standards/front-squat/lb",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    106,
+    147,
+    197,
+    255,
+    318
+   ],
+   "180": [
+    133,
+    179,
+    234,
+    297,
+    364
+   ],
+   "220": [
+    167,
+    218,
+    279,
+    347,
+    419
+   ]
+  },
+  "F": {
+   "120": [
+    62,
+    90,
+    125,
+    165,
+    209
+   ],
+   "150": [
+    74,
+    105,
+    142,
+    184,
+    230
+   ],
+   "180": [
+    85,
+    117,
+    156,
+    201,
+    249
+   ]
+  },
+  "note": ""
+ },
+ "Romanian Deadlift": {
+  "sl_name": "Romanian Deadlift",
+  "url": "https://strengthlevel.com/strength-standards/romanian-deadlift/lb",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    115,
+    168,
+    235,
+    313,
+    397
+   ],
+   "180": [
+    147,
+    207,
+    280,
+    364,
+    455
+   ],
+   "220": [
+    187,
+    254,
+    334,
+    426,
+    524
+   ]
+  },
+  "F": {
+   "120": [
+    64,
+    98,
+    141,
+    192,
+    247
+   ],
+   "150": [
+    74,
+    110,
+    155,
+    209,
+    267
+   ],
+   "180": [
+    82,
+    120,
+    168,
+    223,
+    283
+   ]
+  },
+  "note": ""
+ },
+ "Sumo Deadlift": {
+  "sl_name": "Sumo Deadlift",
+  "url": "https://strengthlevel.com/strength-standards/sumo-deadlift/lb",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    187,
+    253,
+    333,
+    424,
+    522
+   ],
+   "180": [
+    230,
+    303,
+    390,
+    488,
+    592
+   ],
+   "220": [
+    283,
+    363,
+    458,
+    564,
+    675
+   ]
+  },
+  "F": {
+   "120": [
+    99,
+    143,
+    197,
+    261,
+    330
+   ],
+   "150": [
+    112,
+    158,
+    215,
+    281,
+    352
+   ],
+   "180": [
+    123,
+    171,
+    230,
+    298,
+    372
+   ]
+  },
+  "note": "Notably higher than conventional Deadlift (e.g. M180 elite 592 vs 535)"
+ },
+ "Hip Thrust": {
+  "sl_name": "Hip Thrust",
+  "url": "https://strengthlevel.com/strength-standards/hip-thrust/lb",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    93,
+    170,
+    275,
+    406,
+    554
+   ],
+   "180": [
+    129,
+    218,
+    335,
+    478,
+    639
+   ],
+   "220": [
+    176,
+    277,
+    409,
+    565,
+    738
+   ]
+  },
+  "F": {
+   "120": [
+    72,
+    131,
+    211,
+    312,
+    425
+   ],
+   "150": [
+    85,
+    149,
+    234,
+    339,
+    457
+   ],
+   "180": [
+    97,
+    164,
+    254,
+    362,
+    484
+   ]
+  },
+  "note": "Very wide beginner-to-elite spread"
+ },
+ "Bent Over Row": {
+  "sl_name": "Bent Over Row",
+  "url": "https://strengthlevel.com/strength-standards/bent-over-row",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    84,
+    120,
+    165,
+    217,
+    273
+   ],
+   "180": [
+    108,
+    149,
+    198,
+    255,
+    315
+   ],
+   "220": [
+    139,
+    184,
+    239,
+    300,
+    366
+   ]
+  },
+  "F": {
+   "120": [
+    36,
+    59,
+    89,
+    125,
+    165
+   ],
+   "150": [
+    44,
+    69,
+    101,
+    139,
+    180
+   ],
+   "180": [
+    51,
+    77,
+    111,
+    150,
+    194
+   ]
+  },
+  "note": "Plain (non-/lb) URL fetched, values shown in lb"
+ },
+ "Pendlay Row": {
+  "sl_name": "Pendlay Row",
+  "url": "https://strengthlevel.com/strength-standards/pendlay-row",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    94,
+    128,
+    170,
+    217,
+    268
+   ],
+   "180": [
+    120,
+    158,
+    204,
+    255,
+    310
+   ],
+   "220": [
+    152,
+    194,
+    245,
+    301,
+    360
+   ]
+  },
+  "F": {
+   "120": [
+    49,
+    72,
+    101,
+    135,
+    171
+   ],
+   "150": [
+    62,
+    87,
+    119,
+    155,
+    193
+   ],
+   "180": [
+    73,
+    100,
+    134,
+    172,
+    213
+   ]
+  },
+  "note": "Plain (non-/lb) URL fetched, values shown in lb"
+ },
+ "Barbell Curl": {
+  "sl_name": "Barbell Curl",
+  "url": "https://strengthlevel.com/strength-standards/barbell-curl/lb",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    39,
+    61,
+    89,
+    123,
+    160
+   ],
+   "180": [
+    49,
+    73,
+    104,
+    140,
+    180
+   ],
+   "220": [
+    61,
+    88,
+    122,
+    161,
+    203
+   ]
+  },
+  "F": {
+   "120": [
+    15,
+    29,
+    48,
+    72,
+    99
+   ],
+   "150": [
+    20,
+    35,
+    56,
+    81,
+    110
+   ],
+   "180": [
+    24,
+    40,
+    63,
+    89,
+    120
+   ]
+  },
+  "note": "Several beginner values are below a 44 lb bar"
+ },
+ "EZ Bar Curl": {
+  "sl_name": "EZ Bar Curl",
+  "url": "https://strengthlevel.com/strength-standards/ez-bar-curl/lb",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    46,
+    65,
+    90,
+    118,
+    149
+   ],
+   "180": [
+    56,
+    78,
+    104,
+    135,
+    167
+   ],
+   "220": [
+    68,
+    92,
+    121,
+    153,
+    188
+   ]
+  },
+  "F": {
+   "120": [
+    22,
+    35,
+    51,
+    71,
+    94
+   ],
+   "150": [
+    28,
+    43,
+    61,
+    82,
+    106
+   ],
+   "180": [
+    34,
+    50,
+    69,
+    92,
+    117
+   ]
+  },
+  "note": "Beginner/novice above Barbell Curl but advanced/elite below it"
+ },
+ "Barbell Shrug": {
+  "sl_name": "Barbell Shrug",
+  "url": "https://strengthlevel.com/strength-standards/barbell-shrug",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    87,
+    148,
+    229,
+    329,
+    440
+   ],
+   "180": [
+    121,
+    192,
+    284,
+    394,
+    515
+   ],
+   "220": [
+    166,
+    248,
+    351,
+    472,
+    603
+   ]
+  },
+  "F": {
+   "120": [
+    31,
+    68,
+    123,
+    194,
+    277
+   ],
+   "150": [
+    46,
+    90,
+    152,
+    230,
+    319
+   ],
+   "180": [
+    60,
+    110,
+    177,
+    261,
+    355
+   ]
+  },
+  "note": "Plain (non-/lb) URL fetched, values shown in lb"
+ },
+ "Push Press": {
+  "sl_name": "Push Press",
+  "url": "https://strengthlevel.com/strength-standards/push-press/lb",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    75,
+    108,
+    148,
+    195,
+    246
+   ],
+   "180": [
+    96,
+    133,
+    177,
+    229,
+    283
+   ],
+   "220": [
+    122,
+    163,
+    213,
+    268,
+    328
+   ]
+  },
+  "F": {
+   "120": [
+    46,
+    66,
+    91,
+    120,
+    152
+   ],
+   "150": [
+    54,
+    75,
+    102,
+    133,
+    166
+   ],
+   "180": [
+    60,
+    83,
+    111,
+    144,
+    178
+   ]
+  },
+  "note": ""
+ },
+ "Power Clean": {
+  "sl_name": "Power Clean",
+  "url": "https://strengthlevel.com/strength-standards/power-clean/lb",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    95,
+    129,
+    170,
+    216,
+    266
+   ],
+   "180": [
+    117,
+    154,
+    198,
+    248,
+    301
+   ],
+   "220": [
+    143,
+    184,
+    232,
+    286,
+    343
+   ]
+  },
+  "F": {
+   "120": [
+    55,
+    78,
+    106,
+    138,
+    172
+   ],
+   "150": [
+    66,
+    90,
+    120,
+    154,
+    190
+   ],
+   "180": [
+    75,
+    101,
+    132,
+    168,
+    206
+   ]
+  },
+  "note": ""
+ },
+ "Clean": {
+  "sl_name": "Clean",
+  "url": "https://strengthlevel.com/strength-standards/clean",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    103,
+    137,
+    178,
+    225,
+    275
+   ],
+   "180": [
+    126,
+    164,
+    209,
+    259,
+    312
+   ],
+   "220": [
+    155,
+    197,
+    246,
+    300,
+    357
+   ]
+  },
+  "F": {
+   "120": [
+    65,
+    87,
+    115,
+    146,
+    180
+   ],
+   "150": [
+    75,
+    99,
+    129,
+    162,
+    196
+   ],
+   "180": [
+    84,
+    110,
+    140,
+    175,
+    211
+   ]
+  },
+  "note": "Plain (non-/lb) URL fetched, values shown in lb"
+ },
+ "Hang Clean": {
+  "sl_name": "Hang Clean",
+  "url": "https://strengthlevel.com/strength-standards/hang-clean/lb",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    99,
+    130,
+    167,
+    209,
+    253
+   ],
+   "180": [
+    123,
+    157,
+    197,
+    242,
+    289
+   ],
+   "220": [
+    151,
+    189,
+    233,
+    281,
+    332
+   ]
+  },
+  "F": {
+   "120": [
+    57,
+    78,
+    104,
+    133,
+    165
+   ],
+   "150": [
+    69,
+    93,
+    121,
+    153,
+    186
+   ],
+   "180": [
+    81,
+    106,
+    136,
+    169,
+    205
+   ]
+  },
+  "note": ""
+ },
+ "Snatch": {
+  "sl_name": "Snatch",
+  "url": "https://strengthlevel.com/strength-standards/snatch/lb",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    66,
+    99,
+    142,
+    192,
+    246
+   ],
+   "180": [
+    83,
+    120,
+    166,
+    220,
+    278
+   ],
+   "220": [
+    104,
+    145,
+    195,
+    253,
+    315
+   ]
+  },
+  "F": {
+   "120": [
+    42,
+    62,
+    87,
+    117,
+    149
+   ],
+   "150": [
+    49,
+    71,
+    97,
+    128,
+    161
+   ],
+   "180": [
+    55,
+    78,
+    105,
+    137,
+    172
+   ]
+  },
+  "note": ""
+ },
+ "Power Snatch": {
+  "sl_name": "Power Snatch",
+  "url": "https://strengthlevel.com/strength-standards/power-snatch/lb",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    64,
+    94,
+    131,
+    175,
+    222
+   ],
+   "180": [
+    81,
+    114,
+    154,
+    201,
+    251
+   ],
+   "220": [
+    101,
+    137,
+    182,
+    232,
+    286
+   ]
+  },
+  "F": {
+   "120": [
+    44,
+    61,
+    80,
+    103,
+    127
+   ],
+   "150": [
+    51,
+    69,
+    89,
+    113,
+    138
+   ],
+   "180": [
+    57,
+    75,
+    97,
+    122,
+    148
+   ]
+  },
+  "note": "Female beginner values slightly above full Snatch, but higher levels well below"
+ },
+ "Clean and Jerk": {
+  "sl_name": "Clean and Jerk",
+  "url": "https://strengthlevel.com/strength-standards/clean-and-jerk/lb",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    84,
+    124,
+    173,
+    230,
+    292
+   ],
+   "180": [
+    106,
+    150,
+    203,
+    265,
+    332
+   ],
+   "220": [
+    133,
+    182,
+    240,
+    307,
+    378
+   ]
+  },
+  "F": {
+   "120": [
+    57,
+    82,
+    112,
+    147,
+    185
+   ],
+   "150": [
+    66,
+    92,
+    124,
+    161,
+    200
+   ],
+   "180": [
+    73,
+    100,
+    134,
+    172,
+    213
+   ]
+  },
+  "note": "Male advanced/elite exceed the standalone Clean standards"
+ },
+ "Hex Bar Deadlift (trap bar deadlift)": {
+  "sl_name": "Hex Bar Deadlift",
+  "url": "https://strengthlevel.com/strength-standards/trap-bar-deadlift/lb",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    183,
+    246,
+    321,
+    406,
+    497
+   ],
+   "180": [
+    223,
+    291,
+    372,
+    464,
+    560
+   ],
+   "220": [
+    270,
+    345,
+    434,
+    532,
+    635
+   ]
+  },
+  "F": {
+   "120": [
+    98,
+    141,
+    193,
+    255,
+    321
+   ],
+   "150": [
+    116,
+    162,
+    219,
+    284,
+    353
+   ],
+   "180": [
+    132,
+    181,
+    240,
+    308,
+    381
+   ]
+  },
+  "note": "trap-bar-deadlift URL resolves to page titled Hex Bar Deadlift; weights include hex bar, normally 30 kg / 66 lb"
+ },
+ "Rack Pull": {
+  "sl_name": "Rack Pull",
+  "url": "https://strengthlevel.com/strength-standards/rack-pull/lb",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    180,
+    258,
+    355,
+    466,
+    587
+   ],
+   "180": [
+    224,
+    310,
+    415,
+    535,
+    664
+   ],
+   "220": [
+    278,
+    372,
+    487,
+    616,
+    754
+   ]
+  },
+  "F": {
+   "120": [
+    106,
+    159,
+    225,
+    304,
+    389
+   ],
+   "150": [
+    127,
+    185,
+    256,
+    339,
+    429
+   ],
+   "180": [
+    146,
+    207,
+    282,
+    369,
+    463
+   ]
+  },
+  "note": ""
+ },
+ "Good Morning": {
+  "sl_name": "Good Morning",
+  "url": "https://strengthlevel.com/strength-standards/good-morning/lb",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    47,
+    91,
+    152,
+    230,
+    318
+   ],
+   "180": [
+    68,
+    119,
+    189,
+    274,
+    370
+   ],
+   "220": [
+    96,
+    156,
+    234,
+    328,
+    432
+   ]
+  },
+  "F": {
+   "120": [
+    32,
+    59,
+    94,
+    139,
+    189
+   ],
+   "150": [
+    38,
+    67,
+    105,
+    151,
+    204
+   ],
+   "180": [
+    44,
+    74,
+    114,
+    162,
+    216
+   ]
+  },
+  "note": "Female beginner values below a 44 lb bar"
+ },
+ "Box Squat": {
+  "sl_name": "Box Squat",
+  "url": "https://strengthlevel.com/strength-standards/box-squat/lb",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    148,
+    214,
+    295,
+    390,
+    493
+   ],
+   "180": [
+    185,
+    258,
+    347,
+    449,
+    559
+   ],
+   "220": [
+    231,
+    311,
+    409,
+    519,
+    636
+   ]
+  },
+  "F": {
+   "120": [
+    78,
+    121,
+    177,
+    243,
+    315
+   ],
+   "150": [
+    90,
+    136,
+    194,
+    263,
+    339
+   ],
+   "180": [
+    100,
+    148,
+    209,
+    280,
+    358
+   ]
+  },
+  "note": "Higher than regular Squat at every level"
+ },
+ "Zercher Squat": {
+  "sl_name": "Zercher Squat",
+  "url": "https://strengthlevel.com/strength-standards/zercher-squat/lb",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    100,
+    150,
+    213,
+    287,
+    368
+   ],
+   "180": [
+    128,
+    184,
+    253,
+    334,
+    421
+   ],
+   "220": [
+    163,
+    225,
+    301,
+    389,
+    482
+   ]
+  },
+  "F": {
+   "120": [
+    50,
+    81,
+    121,
+    169,
+    222
+   ],
+   "150": [
+    63,
+    97,
+    140,
+    192,
+    248
+   ],
+   "180": [
+    75,
+    111,
+    157,
+    212,
+    271
+   ]
+  },
+  "note": ""
+ },
+ "Overhead Squat": {
+  "sl_name": "Overhead Squat",
+  "url": "https://strengthlevel.com/strength-standards/overhead-squat/lb",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    50,
+    89,
+    142,
+    207,
+    280
+   ],
+   "180": [
+    67,
+    111,
+    169,
+    240,
+    318
+   ],
+   "220": [
+    88,
+    138,
+    202,
+    279,
+    363
+   ]
+  },
+  "F": {
+   "120": [
+    38,
+    60,
+    89,
+    124,
+    162
+   ],
+   "150": [
+    45,
+    69,
+    100,
+    137,
+    177
+   ],
+   "180": [
+    51,
+    77,
+    110,
+    148,
+    190
+   ]
+  },
+  "note": ""
+ },
+ "Upright Row": {
+  "sl_name": "Upright Row",
+  "url": "https://strengthlevel.com/strength-standards/upright-row/lb",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    40,
+    70,
+    112,
+    162,
+    219
+   ],
+   "180": [
+    53,
+    87,
+    132,
+    187,
+    248
+   ],
+   "220": [
+    69,
+    107,
+    157,
+    216,
+    282
+   ]
+  },
+  "F": {
+   "120": [
+    22,
+    39,
+    61,
+    88,
+    119
+   ],
+   "150": [
+    28,
+    46,
+    70,
+    99,
+    132
+   ],
+   "180": [
+    33,
+    53,
+    78,
+    109,
+    143
+   ]
+  },
+  "note": "Barbell; weights include the bar (44 lb)."
+ },
+ "T-Bar Row": {
+  "sl_name": "T Bar Row",
+  "url": "https://strengthlevel.com/strength-standards/t-bar-row/lb",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    65,
+    103,
+    153,
+    212,
+    278
+   ],
+   "180": [
+    86,
+    130,
+    185,
+    250,
+    321
+   ],
+   "220": [
+    113,
+    163,
+    224,
+    295,
+    371
+   ]
+  },
+  "F": {
+   "120": [
+    29,
+    54,
+    87,
+    129,
+    176
+   ],
+   "150": [
+    37,
+    64,
+    100,
+    145,
+    195
+   ],
+   "180": [
+    44,
+    73,
+    111,
+    158,
+    210
+   ]
+  },
+  "note": "Page gives the generic note that barbell weights include the bar."
+ },
+ "Preacher Curl": {
+  "sl_name": "Preacher Curl",
+  "url": "https://strengthlevel.com/strength-standards/preacher-curl/lb",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    37,
+    59,
+    87,
+    120,
+    157
+   ],
+   "180": [
+    46,
+    70,
+    100,
+    136,
+    175
+   ],
+   "220": [
+    57,
+    83,
+    116,
+    154,
+    196
+   ]
+  },
+  "F": {
+   "120": [
+    16,
+    30,
+    48,
+    70,
+    96
+   ],
+   "150": [
+    22,
+    37,
+    57,
+    81,
+    108
+   ],
+   "180": [
+    27,
+    43,
+    65,
+    91,
+    119
+   ]
+  },
+  "note": "Barbell version; weights include the bar."
+ },
+ "Reverse Barbell Curl": {
+  "sl_name": "Reverse Barbell Curl",
+  "url": "https://strengthlevel.com/strength-standards/reverse-barbell-curl/lb",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    26,
+    46,
+    75,
+    110,
+    149
+   ],
+   "180": [
+    35,
+    59,
+    90,
+    128,
+    171
+   ],
+   "220": [
+    47,
+    74,
+    109,
+    150,
+    196
+   ]
+  },
+  "F": {
+   "120": [
+    14,
+    27,
+    44,
+    66,
+    90
+   ],
+   "150": [
+    17,
+    30,
+    49,
+    71,
+    97
+   ],
+   "180": [
+    19,
+    33,
+    52,
+    76,
+    102
+   ]
+  },
+  "note": "A separate /reverse-curl page also appeared in search results (titled Reverse Barbell Curl); not fetched."
+ },
+ "Lying Tricep Extension (skull crusher)": {
+  "sl_name": "Lying Tricep Extension",
+  "url": "https://strengthlevel.com/strength-standards/lying-tricep-extension",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    34,
+    54,
+    80,
+    112,
+    147
+   ],
+   "180": [
+    45,
+    69,
+    98,
+    132,
+    170
+   ],
+   "220": [
+    60,
+    87,
+    119,
+    157,
+    198
+   ]
+  },
+  "F": {
+   "120": [
+    13,
+    25,
+    41,
+    61,
+    84
+   ],
+   "150": [
+    17,
+    30,
+    48,
+    69,
+    93
+   ],
+   "180": [
+    20,
+    34,
+    53,
+    75,
+    101
+   ]
+  },
+  "note": "Barbell version (separate Lying Dumbbell Tricep Extension page exists). Plain URL fetched; values came back in lb."
+ },
+ "Floor Press": {
+  "sl_name": "Floor Press",
+  "url": "https://strengthlevel.com/strength-standards/floor-press",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    70,
+    112,
+    167,
+    233,
+    306
+   ],
+   "180": [
+    96,
+    145,
+    206,
+    279,
+    358
+   ],
+   "220": [
+    129,
+    185,
+    254,
+    333,
+    420
+   ]
+  },
+  "F": {
+   "120": [
+    30,
+    56,
+    91,
+    134,
+    184
+   ],
+   "150": [
+    39,
+    67,
+    106,
+    152,
+    205
+   ],
+   "180": [
+    47,
+    78,
+    119,
+    168,
+    223
+   ]
+  },
+  "note": "Barbell version (separate Dumbbell Floor Press page exists). Plain URL fetched; values came back in lb."
+ },
+ "Barbell Lunge": {
+  "sl_name": "Barbell Lunge",
+  "url": "https://strengthlevel.com/strength-standards/barbell-lunge/lb",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    57,
+    98,
+    154,
+    221,
+    298
+   ],
+   "180": [
+    77,
+    124,
+    186,
+    259,
+    341
+   ],
+   "220": [
+    102,
+    156,
+    224,
+    305,
+    393
+   ]
+  },
+  "F": {
+   "120": [
+    39,
+    67,
+    103,
+    146,
+    195
+   ],
+   "150": [
+    48,
+    77,
+    116,
+    162,
+    213
+   ],
+   "180": [
+    55,
+    87,
+    127,
+    175,
+    229
+   ]
+  }
+ },
+ "Barbell Bulgarian Split Squat": {
+  "sl_name": "Bulgarian Split Squat",
+  "url": "https://strengthlevel.com/strength-standards/bulgarian-split-squat",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    32,
+    69,
+    123,
+    194,
+    276
+   ],
+   "180": [
+    48,
+    92,
+    154,
+    232,
+    320
+   ],
+   "220": [
+    70,
+    122,
+    191,
+    277,
+    374
+   ]
+  },
+  "F": {
+   "120": [
+    19,
+    42,
+    74,
+    116,
+    164
+   ],
+   "150": [
+    25,
+    50,
+    84,
+    129,
+    179
+   ],
+   "180": [
+    30,
+    56,
+    93,
+    140,
+    192
+   ]
+  },
+  "note": "No page named 'Barbell Bulgarian Split Squat'; used 'Bulgarian Split Squat'. Page did not state equipment explicitly (only the generic bar-weight note); 'total' assumed from that note. Plain URL fetched; values came back in lb."
+ },
+ "Barbell Calf Raise": {
+  "sl_name": "Barbell Calf Raise",
+  "url": "https://strengthlevel.com/strength-standards/barbell-calf-raise/lb",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    88,
+    154,
+    242,
+    351,
+    474
+   ],
+   "180": [
+    117,
+    192,
+    290,
+    407,
+    539
+   ],
+   "220": [
+    154,
+    238,
+    346,
+    474,
+    615
+   ]
+  },
+  "F": {
+   "120": [
+    48,
+    92,
+    155,
+    233,
+    323
+   ],
+   "150": [
+    62,
+    113,
+    181,
+    265,
+    361
+   ],
+   "180": [
+    76,
+    131,
+    204,
+    293,
+    392
+   ]
+  }
+ },
+ "Wrist Curl": {
+  "sl_name": "Wrist Curl",
+  "url": "https://strengthlevel.com/strength-standards/wrist-curl/lb",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    11,
+    38,
+    83,
+    145,
+    221
+   ],
+   "180": [
+    17,
+    48,
+    98,
+    166,
+    246
+   ],
+   "220": [
+    25,
+    62,
+    117,
+    190,
+    275
+   ]
+  },
+  "F": {
+   "120": [
+    2,
+    15,
+    43,
+    86,
+    141
+   ],
+   "150": [
+    5,
+    23,
+    56,
+    104,
+    163
+   ],
+   "180": [
+    8,
+    30,
+    67,
+    119,
+    182
+   ]
+  },
+  "note": "Barbell version presumed (separate Dumbbell Wrist Curl page exists); page didn't state equipment. Very wide spread: Beginner values are below an empty bar, and Elite (221-275 lb male) looks implausibly high."
+ },
+ "Reverse Wrist Curl": {
+  "sl_name": "Reverse Wrist Curl",
+  "url": "https://strengthlevel.com/strength-standards/reverse-wrist-curl/lb",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    3,
+    26,
+    71,
+    139,
+    226
+   ],
+   "180": [
+    8,
+    37,
+    90,
+    165,
+    258
+   ],
+   "220": [
+    16,
+    52,
+    113,
+    196,
+    297
+   ]
+  },
+  "F": {
+   "120": [
+    2,
+    17,
+    46,
+    90,
+    144
+   ],
+   "150": [
+    3,
+    18,
+    48,
+    92,
+    148
+   ],
+   "180": [
+    3,
+    19,
+    50,
+    95,
+    151
+   ]
+  },
+  "note": "Barbell version presumed (separate Dumbbell Reverse Wrist Curl page exists). The values look like noisy user data: Elite reverse wrist curl is higher than Elite wrist curl, and Beginner values are only 2-16 lb."
+ },
+ "Smith Machine Squat": {
+  "sl_name": "Smith Machine Squat",
+  "url": "https://strengthlevel.com/strength-standards/smith-machine-squat/lb",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    100,
+    154,
+    224,
+    306,
+    396
+   ],
+   "180": [
+    129,
+    190,
+    266,
+    354,
+    451
+   ],
+   "220": [
+    165,
+    232,
+    316,
+    412,
+    516
+   ]
+  },
+  "F": {
+   "120": [
+    44,
+    79,
+    127,
+    186,
+    252
+   ],
+   "150": [
+    53,
+    92,
+    143,
+    205,
+    274
+   ],
+   "180": [
+    62,
+    103,
+    156,
+    221,
+    293
+   ]
+  },
+  "note": "Values include the bar (page says normally 44 lb)."
+ },
+ "Smith Machine Bench Press": {
+  "sl_name": "Smith Machine Bench Press",
+  "url": "https://strengthlevel.com/strength-standards/smith-machine-bench-press/lb",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    95,
+    133,
+    179,
+    232,
+    289
+   ],
+   "180": [
+    120,
+    162,
+    212,
+    270,
+    331
+   ],
+   "220": [
+    150,
+    197,
+    252,
+    315,
+    380
+   ]
+  },
+  "F": {
+   "120": [
+    31,
+    56,
+    88,
+    129,
+    174
+   ],
+   "150": [
+    42,
+    69,
+    105,
+    149,
+    197
+   ],
+   "180": [
+    51,
+    81,
+    120,
+    166,
+    217
+   ]
+  },
+  "note": "Values include the bar (page says normally 44 lb)."
+ },
+ "Barbell Glute Bridge": {
+  "sl_name": "Barbell Glute Bridge",
+  "url": "https://strengthlevel.com/strength-standards/barbell-glute-bridge",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    65,
+    138,
+    244,
+    379,
+    537
+   ],
+   "180": [
+    98,
+    184,
+    304,
+    453,
+    624
+   ],
+   "220": [
+    141,
+    242,
+    377,
+    543,
+    728
+   ]
+  },
+  "F": {
+   "120": [
+    51,
+    108,
+    191,
+    298,
+    422
+   ],
+   "150": [
+    62,
+    124,
+    212,
+    324,
+    453
+   ],
+   "180": [
+    71,
+    138,
+    230,
+    346,
+    479
+   ]
+  },
+  "note": "Plain URL fetched; values came back in lb."
+ },
+ "Seated Shoulder Press": {
+  "sl_name": "Seated Shoulder Press",
+  "url": "https://strengthlevel.com/strength-standards/seated-shoulder-press/lb",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    60,
+    90,
+    129,
+    174,
+    223
+   ],
+   "180": [
+    82,
+    117,
+    160,
+    210,
+    264
+   ],
+   "220": [
+    110,
+    150,
+    198,
+    253,
+    312
+   ]
+  },
+  "F": {
+   "120": [
+    17,
+    35,
+    60,
+    92,
+    129
+   ],
+   "150": [
+    25,
+    46,
+    74,
+    109,
+    149
+   ],
+   "180": [
+    33,
+    56,
+    87,
+    125,
+    167
+   ]
+  },
+  "note": "Barbell (separate Seated Dumbbell Shoulder Press exists)."
+ },
+ "Behind The Neck Press": {
+  "sl_name": "Behind The Neck Press",
+  "url": "https://strengthlevel.com/strength-standards/behind-the-neck-press/lb",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    49,
+    75,
+    109,
+    150,
+    194
+   ],
+   "180": [
+    67,
+    98,
+    136,
+    181,
+    230
+   ],
+   "220": [
+    90,
+    126,
+    169,
+    218,
+    272
+   ]
+  },
+  "F": {
+   "120": [
+    25,
+    42,
+    64,
+    91,
+    120
+   ],
+   "150": [
+    35,
+    54,
+    79,
+    108,
+    140
+   ],
+   "180": [
+    44,
+    65,
+    92,
+    123,
+    157
+   ]
+  }
+ },
+ "Barbell Front Raise": {
+  "sl_name": "Barbell Front Raise",
+  "url": "https://strengthlevel.com/strength-standards/barbell-front-raise",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    10,
+    31,
+    66,
+    114,
+    172
+   ],
+   "180": [
+    18,
+    44,
+    84,
+    137,
+    199
+   ],
+   "220": [
+    28,
+    60,
+    105,
+    164,
+    232
+   ]
+  },
+  "F": {
+   "120": [
+    8,
+    19,
+    37,
+    60,
+    87
+   ],
+   "150": [
+    11,
+    25,
+    44,
+    70,
+    99
+   ],
+   "180": [
+    15,
+    30,
+    51,
+    78,
+    109
+   ]
+  },
+  "note": "Beginner values are below an empty 44 lb bar, and Elite (172-232 lb male) looks very high for a front raise. Plain URL fetched; values came back in lb."
+ },
+ "Landmine Press": {
+  "sl_name": "Landmine Press",
+  "url": "https://strengthlevel.com/strength-standards/landmine-press/lb",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    34,
+    65,
+    108,
+    162,
+    223
+   ],
+   "180": [
+    45,
+    79,
+    126,
+    184,
+    249
+   ],
+   "220": [
+    58,
+    96,
+    148,
+    209,
+    278
+   ]
+  },
+  "F": {
+   "120": [
+    16,
+    33,
+    57,
+    88,
+    122
+   ],
+   "150": [
+    20,
+    39,
+    64,
+    96,
+    133
+   ],
+   "180": [
+    24,
+    44,
+    71,
+    104,
+    142
+   ]
+  },
+  "note": "Page doesn't say one-arm or two-arm (a separate One Arm Landmine Press page exists, so this is presumably two-arm). Weight convention for a landmine is ambiguous."
+ },
+ "Deficit Deadlift": {
+  "sl_name": "Deficit Deadlift",
+  "url": "https://strengthlevel.com/strength-standards/deficit-deadlift/lb",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    173,
+    231,
+    301,
+    381,
+    465
+   ],
+   "180": [
+    216,
+    281,
+    358,
+    444,
+    535
+   ],
+   "220": [
+    269,
+    341,
+    425,
+    519,
+    617
+   ]
+  },
+  "F": {
+   "120": [
+    98,
+    136,
+    183,
+    237,
+    294
+   ],
+   "150": [
+    124,
+    167,
+    218,
+    276,
+    338
+   ],
+   "180": [
+    148,
+    194,
+    249,
+    311,
+    376
+   ]
+  }
+ },
+ "Stiff Leg Deadlift": {
+  "sl_name": "Stiff Leg Deadlift",
+  "url": "https://strengthlevel.com/strength-standards/stiff-leg-deadlift",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    118,
+    175,
+    246,
+    331,
+    422
+   ],
+   "180": [
+    149,
+    212,
+    291,
+    381,
+    480
+   ],
+   "220": [
+    187,
+    258,
+    343,
+    442,
+    547
+   ]
+  },
+  "F": {
+   "120": [
+    57,
+    92,
+    138,
+    193,
+    254
+   ],
+   "150": [
+    71,
+    110,
+    159,
+    218,
+    283
+   ],
+   "180": [
+    84,
+    125,
+    178,
+    240,
+    307
+   ]
+  },
+  "note": "Plain URL fetched; values came back in lb."
+ },
+ "Barbell Hack Squat": {
+  "sl_name": "Barbell Hack Squat",
+  "url": "https://strengthlevel.com/strength-standards/barbell-hack-squat/lb",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    94,
+    157,
+    239,
+    338,
+    449
+   ],
+   "180": [
+    127,
+    197,
+    288,
+    396,
+    516
+   ],
+   "220": [
+    167,
+    248,
+    348,
+    466,
+    595
+   ]
+  },
+  "F": {
+   "120": [
+    42,
+    79,
+    131,
+    197,
+    271
+   ],
+   "150": [
+    53,
+    94,
+    150,
+    220,
+    298
+   ],
+   "180": [
+    62,
+    107,
+    167,
+    239,
+    321
+   ]
+  }
+ },
+ "Split Squat": {
+  "sl_name": "Split Squat",
+  "url": "https://strengthlevel.com/strength-standards/split-squat/lb",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    52,
+    99,
+    165,
+    248,
+    343
+   ],
+   "180": [
+    73,
+    127,
+    201,
+    292,
+    394
+   ],
+   "220": [
+    100,
+    163,
+    245,
+    345,
+    455
+   ]
+  },
+  "F": {
+   "120": [
+    30,
+    58,
+    99,
+    150,
+    208
+   ],
+   "150": [
+    37,
+    68,
+    111,
+    165,
+    226
+   ],
+   "180": [
+    43,
+    77,
+    122,
+    178,
+    242
+   ]
+  },
+  "note": "Barbell (separate Dumbbell Split Squat exists). The standards are higher than Bulgarian Split Squat at every level."
+ },
+ "Pause Squat": {
+  "sl_name": "Pause Squat",
+  "url": "https://strengthlevel.com/strength-standards/pause-squat/lb",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    133,
+    182,
+    243,
+    313,
+    387
+   ],
+   "180": [
+    171,
+    228,
+    295,
+    371,
+    452
+   ],
+   "220": [
+    220,
+    283,
+    358,
+    441,
+    529
+   ]
+  },
+  "F": {
+   "120": [
+    69,
+    103,
+    145,
+    195,
+    249
+   ],
+   "150": [
+    88,
+    126,
+    172,
+    226,
+    284
+   ],
+   "180": [
+    106,
+    146,
+    196,
+    254,
+    315
+   ]
+  }
+ },
+ "Strict Curl": {
+  "sl_name": "Strict Curl",
+  "url": "https://strengthlevel.com/strength-standards/strict-curl/lb",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    48,
+    70,
+    98,
+    131,
+    166
+   ],
+   "180": [
+    60,
+    85,
+    115,
+    151,
+    188
+   ],
+   "220": [
+    75,
+    103,
+    136,
+    174,
+    214
+   ]
+  },
+  "F": {
+   "120": [
+    14,
+    32,
+    59,
+    94,
+    135
+   ],
+   "150": [
+    22,
+    44,
+    75,
+    114,
+    159
+   ],
+   "180": [
+    30,
+    55,
+    89,
+    131,
+    179
+   ]
+  }
+ },
+ "Barbell Pullover": {
+  "sl_name": "Barbell Pullover",
+  "url": "https://strengthlevel.com/strength-standards/barbell-pullover/lb",
+  "unit": "lb",
+  "per": "total",
+  "M": {
+   "150": [
+    24,
+    51,
+    90,
+    139,
+    196
+   ],
+   "180": [
+    34,
+    65,
+    108,
+    162,
+    223
+   ],
+   "220": [
+    47,
+    83,
+    130,
+    189,
+    254
+   ]
+  },
+  "F": {
+   "120": [
+    11,
+    26,
+    47,
+    75,
+    108
+   ],
+   "150": [
+    15,
+    31,
+    54,
+    84,
+    118
+   ],
+   "180": [
+    18,
+    36,
+    61,
+    92,
+    128
+   ]
+  }
+ },
+ "Leg Press": {
+  "sl_name": "Sled Leg Press",
+  "url": "https://strengthlevel.com/strength-standards/sled-leg-press/lb",
+  "unit": "lb",
+  "per": "n/a",
+  "M": {
+   "150": [
+    190,
+    297,
+    433,
+    596,
+    774
+   ],
+   "180": [
+    246,
+    366,
+    516,
+    692,
+    884
+   ],
+   "220": [
+    316,
+    450,
+    615,
+    806,
+    1012
+   ]
+  },
+  "F": {
+   "120": [
+    95,
+    176,
+    287,
+    424,
+    581
+   ],
+   "150": [
+    124,
+    215,
+    336,
+    484,
+    650
+   ],
+   "180": [
+    151,
+    250,
+    379,
+    535,
+    710
+   ]
+  },
+  "note": "No plain 'leg-press' page surfaced in two searches; used alternative name Sled Leg Press. Page does not state stack/plates/total; values are 1RM. Horizontal Leg Press overall (no BW table, from vertical-leg-press-vs-horizontal-leg-press): M [146,243,370,525,697], F [90,158,248,358,482]."
+ },
+ "Hack Squat": {
+  "sl_name": "Hack Squat",
+  "url": "https://strengthlevel.com/strength-standards/hack-squat/lb",
+  "unit": "lb",
+  "per": "n/a",
+  "M": {
+   "150": [
+    111,
+    188,
+    291,
+    416,
+    556
+   ],
+   "180": [
+    143,
+    230,
+    342,
+    477,
+    626
+   ],
+   "220": [
+    184,
+    280,
+    403,
+    548,
+    708
+   ]
+  },
+  "F": {
+   "120": [
+    48,
+    102,
+    182,
+    284,
+    403
+   ],
+   "150": [
+    61,
+    121,
+    207,
+    315,
+    439
+   ],
+   "180": [
+    73,
+    138,
+    228,
+    342,
+    471
+   ]
+  },
+  "note": "Page does not state stack/plates/total; 1RM."
+ },
+ "Leg Extension": {
+  "sl_name": "Leg Extension",
+  "url": "https://strengthlevel.com/strength-standards/leg-extension/lb",
+  "unit": "lb",
+  "per": "n/a",
+  "M": {
+   "150": [
+    90,
+    140,
+    205,
+    282,
+    367
+   ],
+   "180": [
+    107,
+    162,
+    231,
+    313,
+    402
+   ],
+   "220": [
+    128,
+    188,
+    262,
+    348,
+    442
+   ]
+  },
+  "F": {
+   "120": [
+    45,
+    79,
+    125,
+    182,
+    246
+   ],
+   "150": [
+    53,
+    90,
+    138,
+    198,
+    264
+   ],
+   "180": [
+    60,
+    99,
+    149,
+    211,
+    280
+   ]
+  },
+  "note": "Page does not state stack/plates/total; 1RM."
+ },
+ "Seated Leg Curl": {
+  "sl_name": "Seated Leg Curl",
+  "url": "https://strengthlevel.com/strength-standards/seated-leg-curl/lb",
+  "unit": "lb",
+  "per": "n/a",
+  "M": {
+   "150": [
+    72,
+    112,
+    163,
+    224,
+    290
+   ],
+   "180": [
+    87,
+    131,
+    185,
+    250,
+    320
+   ],
+   "220": [
+    106,
+    153,
+    211,
+    280,
+    354
+   ]
+  },
+  "F": {
+   "120": [
+    39,
+    65,
+    100,
+    141,
+    188
+   ],
+   "150": [
+    46,
+    74,
+    110,
+    154,
+    202
+   ],
+   "180": [
+    51,
+    81,
+    119,
+    164,
+    214
+   ]
+  },
+  "note": "Page does not state stack/plates/total; 1RM."
+ },
+ "Lying Leg Curl": {
+  "sl_name": "Lying Leg Curl",
+  "url": "https://strengthlevel.com/strength-standards/lying-leg-curl/lb",
+  "unit": "lb",
+  "per": "n/a",
+  "M": {
+   "150": [
+    54,
+    86,
+    127,
+    177,
+    231
+   ],
+   "180": [
+    68,
+    103,
+    148,
+    201,
+    259
+   ],
+   "220": [
+    85,
+    125,
+    174,
+    230,
+    292
+   ]
+  },
+  "F": {
+   "120": [
+    30,
+    50,
+    75,
+    107,
+    141
+   ],
+   "150": [
+    37,
+    58,
+    86,
+    119,
+    156
+   ],
+   "180": [
+    43,
+    66,
+    95,
+    130,
+    168
+   ]
+  },
+  "note": "Page does not state stack/plates/total; 1RM."
+ },
+ "Lat Pulldown": {
+  "sl_name": "Lat Pulldown",
+  "url": "https://strengthlevel.com/strength-standards/lat-pulldown/lb",
+  "unit": "lb",
+  "per": "n/a",
+  "M": {
+   "150": [
+    89,
+    124,
+    166,
+    215,
+    268
+   ],
+   "180": [
+    106,
+    143,
+    189,
+    241,
+    296
+   ],
+   "220": [
+    126,
+    167,
+    216,
+    271,
+    330
+   ]
+  },
+  "F": {
+   "120": [
+    47,
+    69,
+    96,
+    128,
+    163
+   ],
+   "150": [
+    55,
+    78,
+    107,
+    140,
+    176
+   ],
+   "180": [
+    61,
+    86,
+    116,
+    150,
+    188
+   ]
+  },
+  "note": "Page does not state stack/plates/total; 1RM."
+ },
+ "Close Grip Lat Pulldown": {
+  "sl_name": "Close Grip Lat Pulldown",
+  "url": "https://strengthlevel.com/strength-standards/close-grip-lat-pulldown/lb",
+  "unit": "lb",
+  "per": "n/a",
+  "M": {
+   "150": [
+    103,
+    138,
+    181,
+    230,
+    281
+   ],
+   "180": [
+    121,
+    160,
+    205,
+    257,
+    311
+   ],
+   "220": [
+    143,
+    184,
+    233,
+    288,
+    345
+   ]
+  },
+  "F": {
+   "120": [
+    56,
+    79,
+    107,
+    140,
+    175
+   ],
+   "150": [
+    63,
+    88,
+    118,
+    152,
+    189
+   ],
+   "180": [
+    70,
+    96,
+    127,
+    162,
+    200
+   ]
+  },
+  "note": "Page does not state stack/plates/total; 1RM. Higher than regular Lat Pulldown at every level."
+ },
+ "Reverse Grip Lat Pulldown": {
+  "sl_name": "Reverse Grip Lat Pulldown",
+  "url": "https://strengthlevel.com/strength-standards/reverse-grip-lat-pulldown/lb",
+  "unit": "lb",
+  "per": "n/a",
+  "M": {
+   "150": [
+    98,
+    136,
+    183,
+    236,
+    293
+   ],
+   "180": [
+    116,
+    157,
+    206,
+    262,
+    322
+   ],
+   "220": [
+    137,
+    181,
+    233,
+    293,
+    356
+   ]
+  },
+  "F": {
+   "120": [
+    53,
+    76,
+    104,
+    138,
+    174
+   ],
+   "150": [
+    64,
+    89,
+    120,
+    156,
+    194
+   ],
+   "180": [
+    74,
+    101,
+    133,
+    171,
+    211
+   ]
+  },
+  "note": "Page does not state stack/plates/total; 1RM."
+ },
+ "Seated Cable Row": {
+  "sl_name": "Seated Cable Row",
+  "url": "https://strengthlevel.com/strength-standards/seated-cable-row/lb",
+  "unit": "lb",
+  "per": "n/a",
+  "M": {
+   "150": [
+    86,
+    123,
+    168,
+    220,
+    276
+   ],
+   "180": [
+    106,
+    146,
+    195,
+    251,
+    312
+   ],
+   "220": [
+    131,
+    175,
+    228,
+    289,
+    353
+   ]
+  },
+  "F": {
+   "120": [
+    43,
+    65,
+    95,
+    129,
+    167
+   ],
+   "150": [
+    51,
+    76,
+    108,
+    144,
+    184
+   ],
+   "180": [
+    59,
+    86,
+    119,
+    157,
+    199
+   ]
+  },
+  "note": "Page does not state stack/plates/total; 1RM."
+ },
+ "Machine Row": {
+  "sl_name": "Machine Row",
+  "url": "https://strengthlevel.com/strength-standards/machine-row/lb",
+  "unit": "lb",
+  "per": "n/a",
+  "M": {
+   "150": [
+    83,
+    133,
+    198,
+    276,
+    363
+   ],
+   "180": [
+    106,
+    162,
+    234,
+    318,
+    410
+   ],
+   "220": [
+    135,
+    198,
+    276,
+    367,
+    465
+   ]
+  },
+  "F": {
+   "120": [
+    42,
+    71,
+    108,
+    154,
+    204
+   ],
+   "150": [
+    50,
+    80,
+    120,
+    167,
+    220
+   ],
+   "180": [
+    56,
+    88,
+    129,
+    179,
+    233
+   ]
+  },
+  "note": "Page does not state stack/plates/total; 1RM."
+ },
+ "Chest Press": {
+  "sl_name": "Chest Press",
+  "url": "https://strengthlevel.com/strength-standards/chest-press/lb",
+  "unit": "lb",
+  "per": "n/a",
+  "M": {
+   "150": [
+    70,
+    114,
+    172,
+    242,
+    319
+   ],
+   "180": [
+    88,
+    137,
+    200,
+    274,
+    356
+   ],
+   "220": [
+    110,
+    164,
+    232,
+    312,
+    399
+   ]
+  },
+  "F": {
+   "120": [
+    22,
+    44,
+    75,
+    115,
+    161
+   ],
+   "150": [
+    26,
+    50,
+    83,
+    125,
+    173
+   ],
+   "180": [
+    30,
+    56,
+    90,
+    134,
+    183
+   ]
+  },
+  "note": "Page does not state stack/plates/total; 1RM."
+ },
+ "Machine Shoulder Press": {
+  "sl_name": "Machine Shoulder Press",
+  "url": "https://strengthlevel.com/strength-standards/machine-shoulder-press/lb",
+  "unit": "lb",
+  "per": "n/a",
+  "M": {
+   "150": [
+    49,
+    88,
+    142,
+    208,
+    283
+   ],
+   "180": [
+    67,
+    112,
+    172,
+    244,
+    325
+   ],
+   "220": [
+    90,
+    142,
+    208,
+    287,
+    374
+   ]
+  },
+  "F": {
+   "120": [
+    15,
+    34,
+    62,
+    98,
+    141
+   ],
+   "150": [
+    19,
+    40,
+    70,
+    109,
+    154
+   ],
+   "180": [
+    23,
+    46,
+    78,
+    119,
+    165
+   ]
+  },
+  "note": "Page does not state stack/plates/total; 1RM."
+ },
+ "Machine Chest Fly": {
+  "sl_name": "Machine Chest Fly",
+  "url": "https://strengthlevel.com/strength-standards/machine-chest-fly/lb",
+  "unit": "lb",
+  "per": "n/a",
+  "M": {
+   "150": [
+    76,
+    117,
+    169,
+    231,
+    300
+   ],
+   "180": [
+    96,
+    142,
+    199,
+    266,
+    339
+   ],
+   "220": [
+    121,
+    172,
+    235,
+    307,
+    385
+   ]
+  },
+  "F": {
+   "120": [
+    24,
+    46,
+    75,
+    112,
+    154
+   ],
+   "150": [
+    32,
+    57,
+    89,
+    129,
+    173
+   ],
+   "180": [
+    40,
+    66,
+    101,
+    143,
+    190
+   ]
+  },
+  "note": "Page does not state stack/plates/total; 1RM. A separate 'machine-fly/lb' page also exists in search results (not fetched)."
+ },
+ "Cable Fly": {
+  "sl_name": "Cable Fly",
+  "url": "https://strengthlevel.com/strength-standards/cable-fly/lb",
+  "unit": "lb",
+  "per": "n/a",
+  "M": {
+   "150": [
+    12,
+    34,
+    67,
+    112,
+    167
+   ],
+   "180": [
+    19,
+    44,
+    82,
+    131,
+    189
+   ],
+   "220": [
+    28,
+    57,
+    99,
+    153,
+    215
+   ]
+  },
+  "F": {
+   "120": [
+    6,
+    18,
+    36,
+    61,
+    90
+   ],
+   "150": [
+    9,
+    22,
+    42,
+    68,
+    99
+   ],
+   "180": [
+    12,
+    26,
+    47,
+    75,
+    107
+   ]
+  },
+  "note": "Page does not say per handle vs both handles; 1RM. Female sample small (2,390 results)."
+ },
+ "Tricep Pushdown": {
+  "sl_name": "Tricep Pushdown",
+  "url": "https://strengthlevel.com/strength-standards/tricep-pushdown/lb",
+  "unit": "lb",
+  "per": "n/a",
+  "M": {
+   "150": [
+    38,
+    67,
+    107,
+    157,
+    212
+   ],
+   "180": [
+    49,
+    82,
+    126,
+    179,
+    238
+   ],
+   "220": [
+    63,
+    100,
+    148,
+    205,
+    268
+   ]
+  },
+  "F": {
+   "120": [
+    17,
+    34,
+    58,
+    88,
+    123
+   ],
+   "150": [
+    23,
+    42,
+    68,
+    100,
+    137
+   ],
+   "180": [
+    28,
+    49,
+    77,
+    111,
+    150
+   ]
+  },
+  "note": "Page does not state stack/plates/total; 1RM."
+ },
+ "Tricep Rope Pushdown": {
+  "sl_name": "Tricep Rope Pushdown",
+  "url": "https://strengthlevel.com/strength-standards/tricep-rope-pushdown",
+  "unit": "lb",
+  "per": "n/a",
+  "M": {
+   "150": [
+    30,
+    55,
+    88,
+    130,
+    176
+   ],
+   "180": [
+    40,
+    67,
+    104,
+    148,
+    198
+   ],
+   "220": [
+    51,
+    82,
+    123,
+    171,
+    224
+   ]
+  },
+  "F": {
+   "120": [
+    16,
+    30,
+    49,
+    74,
+    102
+   ],
+   "150": [
+    20,
+    36,
+    57,
+    83,
+    113
+   ],
+   "180": [
+    24,
+    41,
+    64,
+    92,
+    123
+   ]
+  },
+  "note": "Plain URL (no /lb in results) but fetch reported the lb view. Page does not state stack/plates/total; 1RM."
+ },
+ "Cable Bicep Curl": {
+  "sl_name": "Cable Bicep Curl",
+  "url": "https://strengthlevel.com/strength-standards/cable-curl/lb",
+  "unit": "lb",
+  "per": "n/a",
+  "M": {
+   "150": [
+    35,
+    63,
+    100,
+    145,
+    197
+   ],
+   "180": [
+    44,
+    75,
+    115,
+    164,
+    218
+   ],
+   "220": [
+    56,
+    89,
+    133,
+    185,
+    243
+   ]
+  },
+  "F": {
+   "120": [
+    15,
+    30,
+    51,
+    78,
+    109
+   ],
+   "150": [
+    19,
+    35,
+    58,
+    87,
+    119
+   ],
+   "180": [
+    22,
+    40,
+    64,
+    94,
+    128
+   ]
+  },
+  "note": "Slug is 'cable-curl' but page title is Cable Bicep Curl. Page does not state stack/plates/total; 1RM."
+ },
+ "Cable Hammer Curl": {
+  "sl_name": "Cable Hammer Curl",
+  "url": "https://strengthlevel.com/strength-standards/cable-hammer-curl/lb",
+  "unit": "lb",
+  "per": "n/a",
+  "M": {
+   "150": [
+    29,
+    53,
+    86,
+    127,
+    174
+   ],
+   "180": [
+    35,
+    62,
+    97,
+    141,
+    190
+   ],
+   "220": [
+    44,
+    73,
+    111,
+    157,
+    208
+   ]
+  },
+  "F": {
+   "120": [
+    18,
+    32,
+    52,
+    77,
+    104
+   ],
+   "150": [
+    22,
+    37,
+    59,
+    85,
+    114
+   ],
+   "180": [
+    25,
+    42,
+    65,
+    92,
+    122
+   ]
+  },
+  "note": "Page does not state stack/plates/total; 1RM. Smaller sample (6,717 results)."
+ },
+ "Cable Overhead Tricep Extension": {
+  "sl_name": "Cable Overhead Tricep Extension",
+  "url": "https://strengthlevel.com/strength-standards/cable-overhead-tricep-extension/lb",
+  "unit": "lb",
+  "per": "n/a",
+  "M": {
+   "150": [
+    23,
+    47,
+    80,
+    122,
+    170
+   ],
+   "180": [
+    33,
+    60,
+    97,
+    142,
+    194
+   ],
+   "220": [
+    45,
+    76,
+    117,
+    167,
+    223
+   ]
+  },
+  "F": {
+   "120": [
+    11,
+    24,
+    42,
+    66,
+    94
+   ],
+   "150": [
+    14,
+    29,
+    49,
+    75,
+    104
+   ],
+   "180": [
+    18,
+    33,
+    55,
+    82,
+    113
+   ]
+  },
+  "note": "Page does not state stack/plates/total; 1RM."
+ },
+ "Cable Crunch": {
+  "sl_name": "Cable Crunch",
+  "url": "https://strengthlevel.com/strength-standards/cable-crunch/lb",
+  "unit": "lb",
+  "per": "n/a",
+  "M": {
+   "150": [
+    48,
+    85,
+    134,
+    196,
+    265
+   ],
+   "180": [
+    58,
+    98,
+    151,
+    216,
+    288
+   ],
+   "220": [
+    70,
+    113,
+    170,
+    238,
+    314
+   ]
+  },
+  "F": {
+   "120": [
+    31,
+    59,
+    98,
+    147,
+    203
+   ],
+   "150": [
+    38,
+    68,
+    110,
+    161,
+    220
+   ],
+   "180": [
+    43,
+    76,
+    120,
+    173,
+    233
+   ]
+  },
+  "note": "Page does not state stack/plates/total; 1RM."
+ },
+ "Machine Crunch": {
+  "sl_name": "Machine Seated Crunch",
+  "url": "https://strengthlevel.com/strength-standards/machine-seated-crunch/lb",
+  "unit": "lb",
+  "per": "n/a",
+  "M": {
+   "150": [
+    54,
+    96,
+    152,
+    222,
+    300
+   ],
+   "180": [
+    65,
+    110,
+    170,
+    243,
+    325
+   ],
+   "220": [
+    78,
+    126,
+    191,
+    268,
+    353
+   ]
+  },
+  "F": {
+   "120": [
+    27,
+    52,
+    87,
+    132,
+    183
+   ],
+   "150": [
+    32,
+    59,
+    96,
+    143,
+    196
+   ],
+   "180": [
+    36,
+    65,
+    104,
+    152,
+    207
+   ]
+  },
+  "note": "Strength Level names it Machine Seated Crunch. Page does not state stack/plates/total; 1RM."
+ },
+ "Face Pull": {
+  "sl_name": "Face Pull",
+  "url": "https://strengthlevel.com/strength-standards/face-pull/lb",
+  "unit": "lb",
+  "per": "n/a",
+  "M": {
+   "150": [
+    27,
+    53,
+    90,
+    137,
+    191
+   ],
+   "180": [
+    35,
+    64,
+    105,
+    155,
+    211
+   ],
+   "220": [
+    45,
+    78,
+    122,
+    175,
+    236
+   ]
+  },
+  "F": {
+   "120": [
+    21,
+    40,
+    66,
+    99,
+    137
+   ],
+   "150": [
+    26,
+    47,
+    76,
+    111,
+    151
+   ],
+   "180": [
+    31,
+    54,
+    84,
+    121,
+    162
+   ]
+  },
+  "note": "Page does not state stack/plates/total; 1RM."
+ },
+ "Cable Lateral Raise": {
+  "sl_name": "Cable Lateral Raise",
+  "url": "https://strengthlevel.com/strength-standards/cable-lateral-raise/lb",
+  "unit": "lb",
+  "per": "n/a",
+  "M": {
+   "150": [
+    5,
+    15,
+    31,
+    53,
+    80
+   ],
+   "180": [
+    7,
+    18,
+    36,
+    59,
+    87
+   ],
+   "220": [
+    10,
+    23,
+    42,
+    67,
+    96
+   ]
+  },
+  "F": {
+   "120": [
+    4,
+    11,
+    21,
+    36,
+    52
+   ],
+   "150": [
+    5,
+    13,
+    24,
+    39,
+    57
+   ],
+   "180": [
+    6,
+    14,
+    27,
+    42,
+    60
+   ]
+  },
+  "note": "Page does not say per arm vs total; 1RM. Very low beginner values."
+ },
+ "Hip Abduction": {
+  "sl_name": "Hip Abduction",
+  "url": "https://strengthlevel.com/strength-standards/hip-abduction/lb",
+  "unit": "lb",
+  "per": "n/a",
+  "M": {
+   "150": [
+    71,
+    122,
+    190,
+    273,
+    366
+   ],
+   "180": [
+    86,
+    141,
+    213,
+    300,
+    398
+   ],
+   "220": [
+    103,
+    163,
+    240,
+    332,
+    434
+   ]
+  },
+  "F": {
+   "120": [
+    54,
+    94,
+    147,
+    211,
+    284
+   ],
+   "150": [
+    62,
+    104,
+    159,
+    226,
+    301
+   ],
+   "180": [
+    68,
+    112,
+    169,
+    238,
+    315
+   ]
+  },
+  "note": "Page does not state stack/plates/total; 1RM."
+ },
+ "Hip Adduction": {
+  "sl_name": "Hip Adduction",
+  "url": "https://strengthlevel.com/strength-standards/hip-adduction/lb",
+  "unit": "lb",
+  "per": "n/a",
+  "M": {
+   "150": [
+    78,
+    133,
+    207,
+    296,
+    396
+   ],
+   "180": [
+    92,
+    151,
+    228,
+    322,
+    426
+   ],
+   "220": [
+    108,
+    171,
+    253,
+    351,
+    460
+   ]
+  },
+  "F": {
+   "120": [
+    45,
+    83,
+    135,
+    199,
+    272
+   ],
+   "150": [
+    54,
+    94,
+    149,
+    216,
+    292
+   ],
+   "180": [
+    61,
+    104,
+    161,
+    231,
+    309
+   ]
+  },
+  "note": "Page does not state stack/plates/total; 1RM."
+ },
+ "Machine Calf Raise": {
+  "sl_name": "Machine Calf Raise",
+  "url": "https://strengthlevel.com/strength-standards/machine-calf-raise/lb",
+  "unit": "lb",
+  "per": "n/a",
+  "M": {
+   "150": [
+    84,
+    162,
+    271,
+    408,
+    564
+   ],
+   "180": [
+    110,
+    198,
+    317,
+    463,
+    629
+   ],
+   "220": [
+    143,
+    241,
+    371,
+    528,
+    705
+   ]
+  },
+  "F": {
+   "120": [
+    41,
+    94,
+    175,
+    280,
+    403
+   ],
+   "150": [
+    54,
+    114,
+    202,
+    313,
+    443
+   ],
+   "180": [
+    67,
+    132,
+    225,
+    342,
+    477
+   ]
+  },
+  "note": "Page does not state stack/plates/total; 1RM. A 'calf-raise/lb' URL also titled Machine Calf Raise appeared in results (not fetched)."
+ },
+ "Seated Calf Raise": {
+  "sl_name": "Seated Calf Raise",
+  "url": "https://strengthlevel.com/strength-standards/seated-calf-raise",
+  "unit": "lb",
+  "per": "n/a",
+  "M": {
+   "150": [
+    54,
+    106,
+    179,
+    271,
+    377
+   ],
+   "180": [
+    71,
+    129,
+    209,
+    308,
+    420
+   ],
+   "220": [
+    92,
+    157,
+    244,
+    350,
+    469
+   ]
+  },
+  "F": {
+   "120": [
+    27,
+    68,
+    131,
+    214,
+    312
+   ],
+   "150": [
+    36,
+    82,
+    150,
+    238,
+    341
+   ],
+   "180": [
+    44,
+    94,
+    166,
+    258,
+    365
+   ]
+  },
+  "note": "Plain URL; fetch reported 'Seated Calf Raise Standards (lb)'. Seated calf raise machines are usually plate-loaded, but page does not state stack/plates/total; 1RM."
+ },
+ "Machine Reverse Fly": {
+  "sl_name": "Machine Reverse Fly",
+  "url": "https://strengthlevel.com/strength-standards/machine-reverse-fly/lb",
+  "unit": "lb",
+  "per": "n/a",
+  "M": {
+   "150": [
+    51,
+    84,
+    126,
+    178,
+    235
+   ],
+   "180": [
+    66,
+    103,
+    150,
+    205,
+    267
+   ],
+   "220": [
+    86,
+    127,
+    178,
+    238,
+    304
+   ]
+  },
+  "F": {
+   "120": [
+    21,
+    37,
+    60,
+    88,
+    119
+   ],
+   "150": [
+    26,
+    44,
+    68,
+    98,
+    131
+   ],
+   "180": [
+    30,
+    50,
+    75,
+    106,
+    141
+   ]
+  },
+  "note": "Page does not state stack/plates/total; 1RM."
+ },
+ "Straight Arm Pulldown": {
+  "sl_name": "Straight Arm Pulldown",
+  "url": "https://strengthlevel.com/strength-standards/straight-arm-pulldown/lb",
+  "unit": "lb",
+  "per": "n/a",
+  "M": {
+   "150": [
+    35,
+    64,
+    103,
+    153,
+    209
+   ],
+   "180": [
+    44,
+    77,
+    120,
+    173,
+    232
+   ],
+   "220": [
+    57,
+    93,
+    140,
+    196,
+    259
+   ]
+  },
+  "F": {
+   "120": [
+    22,
+    40,
+    63,
+    92,
+    125
+   ],
+   "150": [
+    26,
+    44,
+    69,
+    99,
+    133
+   ],
+   "180": [
+    29,
+    48,
+    74,
+    105,
+    140
+   ]
+  },
+  "note": "Page does not state stack/plates/total; 1RM."
+ },
+ "Single Arm Lat Pulldown": {
+  "sl_name": "One Arm Lat Pulldown",
+  "url": "https://strengthlevel.com/strength-standards/one-arm-lat-pulldown/lb",
+  "unit": "lb",
+  "per": "n/a",
+  "M": {
+   "150": [
+    43,
+    72,
+    109,
+    155,
+    205
+   ],
+   "180": [
+    55,
+    87,
+    128,
+    177,
+    231
+   ],
+   "220": [
+    70,
+    106,
+    150,
+    203,
+    260
+   ]
+  },
+  "F": {
+   "120": [
+    24,
+    41,
+    63,
+    91,
+    121
+   ],
+   "150": [
+    30,
+    48,
+    73,
+    102,
+    134
+   ],
+   "180": [
+    35,
+    55,
+    81,
+    112,
+    146
+   ]
+  },
+  "note": "Strength Level name: One Arm Lat Pulldown. Page does not say per arm (presumably single-arm load); 1RM."
+ },
+ "Machine Bicep Curl": {
+  "sl_name": "Machine Bicep Curl",
+  "url": "https://strengthlevel.com/strength-standards/machine-bicep-curl-vs-machine-row/lb",
+  "unit": "lb",
+  "per": "n/a",
+  "all": {
+   "M": [
+    49,
+    81,
+    122,
+    172,
+    227
+   ],
+   "F": [
+    20,
+    37,
+    60,
+    88,
+    121
+   ]
+  },
+  "note": "Only comparison (vs) pages appeared before the search budget ran out; overall values, no bodyweight table."
+ },
+ "Vertical Leg Press": {
+  "sl_name": "Vertical Leg Press",
+  "url": "https://strengthlevel.com/strength-standards/vertical-leg-press-vs-horizontal-leg-press",
+  "unit": "lb",
+  "per": "n/a",
+  "all": {
+   "M": [
+    178,
+    299,
+    458,
+    651,
+    866
+   ],
+   "F": [
+    104,
+    191,
+    310,
+    458,
+    625
+   ]
+  },
+  "note": "Only comparison (vs) pages appeared in search results; overall values, no bodyweight table."
+ },
+ "Machine Lateral Raise": {
+  "sl_name": "Machine Lateral Raise",
+  "url": "https://strengthlevel.com/strength-standards/machine-lateral-raise-vs-dumbbell-lateral-raise",
+  "unit": "lb",
+  "per": "n/a",
+  "all": {
+   "M": [
+    48,
+    82,
+    129,
+    185,
+    249
+   ],
+   "F": [
+    19,
+    37,
+    62,
+    93,
+    128
+   ]
+  },
+  "note": "Only comparison (vs) pages appeared before the search budget ran out; overall values, no bodyweight table."
+ },
+ "Single Arm Cable Row": {
+  "sl_name": "One Arm Seated Cable Row",
+  "url": "https://strengthlevel.com/strength-standards/one-arm-seated-cable-row-vs-cable-overhead-tricep-extension/lb",
+  "unit": "lb",
+  "per": "n/a",
+  "all": {
+   "M": [
+    47,
+    82,
+    128,
+    186,
+    250
+   ],
+   "F": [
+    25,
+    44,
+    71,
+    103,
+    140
+   ]
+  },
+  "note": "Only comparison (vs) pages appeared in search results; overall values, no bodyweight table."
+ },
+ "Cable Pull Through": {
+  "sl_name": "Cable Pull Through",
+  "url": "https://strengthlevel.com/strength-standards/lat-pulldown-vs-cable-pull-through",
+  "unit": "lb",
+  "per": "n/a",
+  "all": {
+   "M": [
+    29,
+    69,
+    131,
+    213,
+    309
+   ],
+   "F": [
+    22,
+    49,
+    89,
+    141,
+    203
+   ]
+  },
+  "note": "Only comparison (vs) pages appeared before the search budget ran out; overall values, no bodyweight table."
+ },
+ "Dumbbell Bench Press": {
+  "sl_name": "Dumbbell Bench Press",
+  "url": "https://strengthlevel.com/strength-standards/dumbbell-bench-press/lb",
+  "unit": "lb",
+  "per": "per dumbbell",
+  "M": {
+   "150": [
+    34,
+    52,
+    75,
+    103,
+    133
+   ],
+   "180": [
+    43,
+    64,
+    89,
+    119,
+    152
+   ],
+   "220": [
+    55,
+    78,
+    106,
+    139,
+    174
+   ]
+  },
+  "F": {
+   "120": [
+    13,
+    24,
+    39,
+    57,
+    79
+   ],
+   "150": [
+    17,
+    29,
+    46,
+    66,
+    88
+   ],
+   "180": [
+    21,
+    34,
+    52,
+    73,
+    97
+   ]
+  }
+ },
+ "Incline Dumbbell Bench Press": {
+  "sl_name": "Incline Dumbbell Bench Press",
+  "url": "https://strengthlevel.com/strength-standards/incline-dumbbell-bench-press/lb",
+  "unit": "lb",
+  "per": "per dumbbell",
+  "M": {
+   "150": [
+    38,
+    54,
+    74,
+    96,
+    121
+   ],
+   "180": [
+    49,
+    66,
+    88,
+    113,
+    139
+   ],
+   "220": [
+    62,
+    82,
+    106,
+    133,
+    161
+   ]
+  },
+  "F": {
+   "120": [
+    14,
+    24,
+    38,
+    54,
+    72
+   ],
+   "150": [
+    19,
+    30,
+    45,
+    63,
+    82
+   ],
+   "180": [
+    23,
+    36,
+    51,
+    70,
+    91
+   ]
+  }
+ },
+ "Decline Dumbbell Bench Press": {
+  "sl_name": "Decline Dumbbell Bench Press",
+  "url": "https://strengthlevel.com/strength-standards/decline-dumbbell-bench-press-vs-dumbbell-bench-press/lb",
+  "unit": "lb",
+  "per": "unknown",
+  "all": {
+   "M": [
+    31,
+    52,
+    80,
+    115,
+    153
+   ],
+   "F": [
+    14,
+    28,
+    47,
+    72,
+    100
+   ]
+  },
+  "note": "No standalone page surfaced in search; values from the x-vs-y comparison page (no bodyweight table). Page did not state per-dumbbell vs total, though site convention elsewhere is per dumbbell."
+ },
+ "Dumbbell Shoulder Press": {
+  "sl_name": "Dumbbell Shoulder Press",
+  "url": "https://strengthlevel.com/strength-standards/dumbbell-shoulder-press-vs-seated-dumbbell-shoulder-press/lb",
+  "unit": "lb",
+  "per": "unknown",
+  "all": {
+   "M": [
+    29,
+    45,
+    67,
+    93,
+    121
+   ],
+   "F": [
+    13,
+    22,
+    33,
+    47,
+    62
+   ]
+  },
+  "note": "No standalone page surfaced in search; values from the x-vs-y comparison page (no bodyweight table). Page did not state per-dumbbell vs total, though site convention elsewhere is per dumbbell."
+ },
+ "Seated Dumbbell Shoulder Press": {
+  "sl_name": "Seated Dumbbell Shoulder Press",
+  "url": "https://strengthlevel.com/strength-standards/seated-dumbbell-shoulder-press/lb",
+  "unit": "lb",
+  "per": "per dumbbell",
+  "M": {
+   "150": [
+    31,
+    45,
+    63,
+    83,
+    105
+   ],
+   "180": [
+    40,
+    56,
+    76,
+    98,
+    122
+   ],
+   "220": [
+    52,
+    70,
+    91,
+    115,
+    141
+   ]
+  },
+  "F": {
+   "120": [
+    15,
+    23,
+    33,
+    45,
+    59
+   ],
+   "150": [
+    18,
+    27,
+    39,
+    52,
+    66
+   ],
+   "180": [
+    22,
+    31,
+    43,
+    57,
+    72
+   ]
+  }
+ },
+ "Arnold Press": {
+  "sl_name": "Arnold Press",
+  "url": "https://strengthlevel.com/strength-standards/arnold-press/lb",
+  "unit": "lb",
+  "per": "per dumbbell",
+  "M": {
+   "150": [
+    18,
+    31,
+    47,
+    66,
+    88
+   ],
+   "180": [
+    23,
+    37,
+    54,
+    75,
+    98
+   ],
+   "220": [
+    29,
+    44,
+    63,
+    86,
+    110
+   ]
+  },
+  "F": {
+   "120": [
+    11,
+    17,
+    25,
+    34,
+    45
+   ],
+   "150": [
+    13,
+    20,
+    28,
+    38,
+    49
+   ],
+   "180": [
+    15,
+    22,
+    31,
+    41,
+    52
+   ]
+  }
+ },
+ "Dumbbell Curl": {
+  "sl_name": "Dumbbell Curl",
+  "url": "https://strengthlevel.com/strength-standards/dumbbell-curl/lb",
+  "unit": "lb",
+  "per": "per dumbbell",
+  "M": {
+   "150": [
+    15,
+    27,
+    43,
+    63,
+    86
+   ],
+   "180": [
+    19,
+    32,
+    49,
+    71,
+    95
+   ],
+   "220": [
+    23,
+    38,
+    57,
+    80,
+    105
+   ]
+  },
+  "F": {
+   "120": [
+    8,
+    15,
+    25,
+    37,
+    51
+   ],
+   "150": [
+    10,
+    17,
+    28,
+    41,
+    57
+   ],
+   "180": [
+    12,
+    20,
+    31,
+    45,
+    61
+   ]
+  }
+ },
+ "Dumbbell Hammer Curl": {
+  "sl_name": "Hammer Curl",
+  "url": "https://strengthlevel.com/strength-standards/hammer-curl/lb",
+  "unit": "lb",
+  "per": "per dumbbell",
+  "M": {
+   "150": [
+    18,
+    30,
+    45,
+    63,
+    83
+   ],
+   "180": [
+    24,
+    37,
+    54,
+    73,
+    95
+   ],
+   "220": [
+    31,
+    46,
+    64,
+    85,
+    109
+   ]
+  },
+  "F": {
+   "120": [
+    10,
+    16,
+    25,
+    35,
+    47
+   ],
+   "150": [
+    12,
+    19,
+    28,
+    39,
+    52
+   ],
+   "180": [
+    14,
+    22,
+    31,
+    43,
+    56
+   ]
+  },
+  "note": "Site lists it as 'Hammer Curl' (no 'Dumbbell' prefix); page states dumbbell weights are for one dumbbell."
+ },
+ "Incline Dumbbell Curl": {
+  "sl_name": "Incline Dumbbell Curl",
+  "url": "https://strengthlevel.com/strength-standards/incline-dumbbell-curl/lb",
+  "unit": "lb",
+  "per": "per dumbbell",
+  "M": {
+   "150": [
+    17,
+    26,
+    38,
+    51,
+    66
+   ],
+   "180": [
+    22,
+    32,
+    44,
+    58,
+    74
+   ],
+   "220": [
+    27,
+    38,
+    51,
+    67,
+    84
+   ]
+  },
+  "F": {
+   "120": [
+    10,
+    16,
+    23,
+    31,
+    41
+   ],
+   "150": [
+    12,
+    18,
+    26,
+    35,
+    45
+   ],
+   "180": [
+    14,
+    20,
+    28,
+    38,
+    48
+   ]
+  }
+ },
+ "Dumbbell Concentration Curl": {
+  "sl_name": "Dumbbell Concentration Curl",
+  "url": "https://strengthlevel.com/strength-standards/dumbbell-concentration-curl/lb",
+  "unit": "lb",
+  "per": "per dumbbell",
+  "M": {
+   "150": [
+    16,
+    27,
+    42,
+    60,
+    80
+   ],
+   "180": [
+    20,
+    33,
+    48,
+    67,
+    88
+   ],
+   "220": [
+    25,
+    39,
+    56,
+    76,
+    98
+   ]
+  },
+  "F": {
+   "120": [
+    10,
+    16,
+    25,
+    36,
+    48
+   ],
+   "150": [
+    12,
+    19,
+    28,
+    40,
+    52
+   ],
+   "180": [
+    14,
+    21,
+    31,
+    43,
+    56
+   ]
+  }
+ },
+ "Dumbbell Preacher Curl": {
+  "sl_name": "One Arm Dumbbell Preacher Curl",
+  "url": "https://strengthlevel.com/strength-standards/one-arm-dumbbell-preacher-curl/lb",
+  "unit": "lb",
+  "per": "per dumbbell",
+  "M": {
+   "150": [
+    17,
+    27,
+    41,
+    58,
+    76
+   ],
+   "180": [
+    21,
+    33,
+    48,
+    66,
+    86
+   ],
+   "220": [
+    27,
+    40,
+    57,
+    76,
+    97
+   ]
+  },
+  "F": {
+   "120": [
+    8,
+    14,
+    23,
+    34,
+    47
+   ],
+   "150": [
+    10,
+    17,
+    27,
+    39,
+    52
+   ],
+   "180": [
+    12,
+    20,
+    31,
+    43,
+    57
+   ]
+  },
+  "note": "No 'Dumbbell Preacher Curl' page; used the one-arm variant. The plain 'Preacher Curl' page is a barbell/EZ lift and was not used."
+ },
+ "Dumbbell Reverse Curl": {
+  "sl_name": "Dumbbell Reverse Curl",
+  "url": "https://strengthlevel.com/strength-standards/dumbbell-reverse-curl/lb",
+  "unit": "lb",
+  "per": "per dumbbell",
+  "M": {
+   "150": [
+    7,
+    19,
+    37,
+    60,
+    88
+   ],
+   "180": [
+    10,
+    23,
+    42,
+    67,
+    97
+   ],
+   "220": [
+    13,
+    28,
+    49,
+    75,
+    106
+   ]
+  },
+  "F": {
+   "120": [
+    7,
+    13,
+    20,
+    29,
+    40
+   ],
+   "150": [
+    10,
+    16,
+    24,
+    34,
+    46
+   ],
+   "180": [
+    12,
+    19,
+    28,
+    39,
+    51
+   ]
+  }
+ },
+ "Zottman Curl": {
+  "sl_name": "Zottman Curl",
+  "url": "https://strengthlevel.com/strength-standards/zottman-curl/lb",
+  "unit": "lb",
+  "per": "per dumbbell",
+  "M": {
+   "150": [
+    8,
+    19,
+    36,
+    58,
+    83
+   ],
+   "180": [
+    11,
+    23,
+    41,
+    64,
+    90
+   ],
+   "220": [
+    14,
+    27,
+    46,
+    71,
+    99
+   ]
+  },
+  "F": {
+   "120": [
+    9,
+    15,
+    22,
+    30,
+    39
+   ],
+   "150": [
+    11,
+    16,
+    24,
+    32,
+    41
+   ],
+   "180": [
+    12,
+    18,
+    25,
+    34,
+    43
+   ]
+  }
+ },
+ "Dumbbell Tricep Extension": {
+  "sl_name": "Dumbbell Tricep Extension",
+  "url": "https://strengthlevel.com/strength-standards/dumbbell-tricep-extension",
+  "unit": "lb",
+  "per": "per dumbbell",
+  "M": {
+   "150": [
+    9,
+    22,
+    40,
+    64,
+    92
+   ],
+   "180": [
+    14,
+    28,
+    49,
+    75,
+    105
+   ],
+   "220": [
+    20,
+    36,
+    59,
+    87,
+    120
+   ]
+  },
+  "F": {
+   "120": [
+    6,
+    13,
+    23,
+    36,
+    50
+   ],
+   "150": [
+    8,
+    16,
+    27,
+    40,
+    55
+   ],
+   "180": [
+    10,
+    18,
+    30,
+    44,
+    59
+   ]
+  },
+  "note": "Plain URL (no /lb in results) but page rendered in lb."
+ },
+ "Dumbbell Tricep Kickback": {
+  "sl_name": "Dumbbell Tricep Kickback",
+  "url": "https://strengthlevel.com/strength-standards/dumbbell-tricep-kickback/lb",
+  "unit": "lb",
+  "per": "per dumbbell",
+  "M": {
+   "150": [
+    8,
+    19,
+    35,
+    55,
+    80
+   ],
+   "180": [
+    11,
+    23,
+    41,
+    63,
+    89
+   ],
+   "220": [
+    15,
+    29,
+    49,
+    73,
+    100
+   ]
+  },
+  "F": {
+   "120": [
+    8,
+    14,
+    21,
+    30,
+    41
+   ],
+   "150": [
+    9,
+    16,
+    24,
+    33,
+    44
+   ],
+   "180": [
+    11,
+    17,
+    26,
+    36,
+    47
+   ]
+  }
+ },
+ "Lying Dumbbell Tricep Extension": {
+  "sl_name": "Lying Dumbbell Tricep Extension",
+  "url": "https://strengthlevel.com/strength-standards/lying-dumbbell-tricep-extension/lb",
+  "unit": "lb",
+  "per": "per dumbbell",
+  "M": {
+   "150": [
+    11,
+    22,
+    38,
+    59,
+    83
+   ],
+   "180": [
+    15,
+    28,
+    46,
+    69,
+    95
+   ],
+   "220": [
+    21,
+    36,
+    56,
+    81,
+    109
+   ]
+  },
+  "F": {
+   "120": [
+    6,
+    13,
+    24,
+    38,
+    54
+   ],
+   "150": [
+    8,
+    16,
+    28,
+    43,
+    60
+   ],
+   "180": [
+    10,
+    19,
+    32,
+    48,
+    66
+   ]
+  }
+ },
+ "Dumbbell Fly": {
+  "sl_name": "Dumbbell Fly",
+  "url": "https://strengthlevel.com/strength-standards/dumbbell-fly/lb",
+  "unit": "lb",
+  "per": "per dumbbell",
+  "M": {
+   "150": [
+    14,
+    27,
+    45,
+    68,
+    94
+   ],
+   "180": [
+    18,
+    33,
+    53,
+    78,
+    106
+   ],
+   "220": [
+    24,
+    41,
+    63,
+    89,
+    119
+   ]
+  },
+  "F": {
+   "120": [
+    8,
+    15,
+    24,
+    36,
+    49
+   ],
+   "150": [
+    10,
+    17,
+    27,
+    39,
+    53
+   ],
+   "180": [
+    11,
+    19,
+    29,
+    42,
+    57
+   ]
+  }
+ },
+ "Incline Dumbbell Fly": {
+  "sl_name": "Incline Dumbbell Fly",
+  "url": "https://strengthlevel.com/strength-standards/incline-dumbbell-fly",
+  "unit": "lb",
+  "per": "per dumbbell",
+  "M": {
+   "150": [
+    17,
+    31,
+    49,
+    71,
+    96
+   ],
+   "180": [
+    23,
+    38,
+    58,
+    82,
+    109
+   ],
+   "220": [
+    31,
+    48,
+    70,
+    96,
+    124
+   ]
+  },
+  "F": {
+   "120": [
+    8,
+    16,
+    26,
+    39,
+    54
+   ],
+   "150": [
+    10,
+    18,
+    29,
+    43,
+    59
+   ],
+   "180": [
+    12,
+    21,
+    32,
+    47,
+    63
+   ]
+  },
+  "note": "Plain URL but page rendered in lb. Incline fly standards come out higher than flat Dumbbell Fly at every level."
+ },
+ "Dumbbell Lateral Raise": {
+  "sl_name": "Dumbbell Lateral Raise",
+  "url": "https://strengthlevel.com/strength-standards/dumbbell-lateral-raise/lb",
+  "unit": "lb",
+  "per": "per dumbbell",
+  "M": {
+   "150": [
+    9,
+    18,
+    32,
+    49,
+    69
+   ],
+   "180": [
+    12,
+    22,
+    37,
+    55,
+    76
+   ],
+   "220": [
+    15,
+    27,
+    43,
+    63,
+    85
+   ]
+  },
+  "F": {
+   "120": [
+    6,
+    12,
+    19,
+    27,
+    37
+   ],
+   "150": [
+    7,
+    13,
+    20,
+    30,
+    40
+   ],
+   "180": [
+    8,
+    14,
+    22,
+    31,
+    42
+   ]
+  }
+ },
+ "Dumbbell Front Raise": {
+  "sl_name": "Dumbbell Front Raise",
+  "url": "https://strengthlevel.com/strength-standards/dumbbell-front-raise/lb",
+  "unit": "lb",
+  "per": "per dumbbell",
+  "M": {
+   "150": [
+    7,
+    17,
+    33,
+    53,
+    77
+   ],
+   "180": [
+    10,
+    22,
+    38,
+    60,
+    86
+   ],
+   "220": [
+    14,
+    27,
+    46,
+    69,
+    96
+   ]
+  },
+  "F": {
+   "120": [
+    6,
+    11,
+    19,
+    30,
+    42
+   ],
+   "150": [
+    7,
+    13,
+    22,
+    32,
+    45
+   ],
+   "180": [
+    8,
+    14,
+    23,
+    35,
+    47
+   ]
+  }
+ },
+ "Dumbbell Reverse Fly": {
+  "sl_name": "Dumbbell Reverse Fly",
+  "url": "https://strengthlevel.com/strength-standards/dumbbell-reverse-fly/lb",
+  "unit": "lb",
+  "per": "per dumbbell",
+  "M": {
+   "150": [
+    5,
+    15,
+    33,
+    56,
+    84
+   ],
+   "180": [
+    8,
+    20,
+    39,
+    64,
+    94
+   ],
+   "220": [
+    11,
+    26,
+    47,
+    74,
+    106
+   ]
+  },
+  "F": {
+   "120": [
+    5,
+    11,
+    20,
+    32,
+    45
+   ],
+   "150": [
+    6,
+    13,
+    22,
+    34,
+    48
+   ],
+   "180": [
+    7,
+    14,
+    24,
+    37,
+    51
+   ]
+  }
+ },
+ "Dumbbell Row": {
+  "sl_name": "Dumbbell Row",
+  "url": "https://strengthlevel.com/strength-standards/dumbbell-row/lb",
+  "unit": "lb",
+  "per": "per dumbbell",
+  "M": {
+   "150": [
+    33,
+    54,
+    81,
+    113,
+    149
+   ],
+   "180": [
+    44,
+    67,
+    97,
+    132,
+    171
+   ],
+   "220": [
+    57,
+    83,
+    116,
+    155,
+    196
+   ]
+  },
+  "F": {
+   "120": [
+    18,
+    29,
+    44,
+    62,
+    82
+   ],
+   "150": [
+    21,
+    33,
+    49,
+    68,
+    89
+   ],
+   "180": [
+    24,
+    37,
+    54,
+    73,
+    95
+   ]
+  }
+ },
+ "Chest Supported Dumbbell Row": {
+  "sl_name": "Chest Supported Dumbbell Row",
+  "url": "https://strengthlevel.com/strength-standards/chest-supported-dumbbell-row/lb",
+  "unit": "lb",
+  "per": "per dumbbell",
+  "M": {
+   "150": [
+    24,
+    43,
+    69,
+    102,
+    138
+   ],
+   "180": [
+    33,
+    55,
+    84,
+    119,
+    158
+   ],
+   "220": [
+    44,
+    69,
+    101,
+    139,
+    181
+   ]
+  },
+  "F": {
+   "120": [
+    14,
+    26,
+    42,
+    63,
+    85
+   ],
+   "150": [
+    18,
+    31,
+    48,
+    69,
+    94
+   ],
+   "180": [
+    21,
+    35,
+    53,
+    75,
+    100
+   ]
+  }
+ },
+ "Dumbbell Shrug": {
+  "sl_name": "Dumbbell Shrug",
+  "url": "https://strengthlevel.com/strength-standards/dumbbell-shrug/lb",
+  "unit": "lb",
+  "per": "per dumbbell",
+  "M": {
+   "150": [
+    28,
+    51,
+    83,
+    122,
+    166
+   ],
+   "180": [
+    38,
+    64,
+    99,
+    141,
+    188
+   ],
+   "220": [
+    50,
+    79,
+    118,
+    164,
+    215
+   ]
+  },
+  "F": {
+   "120": [
+    13,
+    27,
+    49,
+    76,
+    109
+   ],
+   "150": [
+    17,
+    33,
+    57,
+    86,
+    120
+   ],
+   "180": [
+    20,
+    38,
+    63,
+    95,
+    130
+   ]
+  }
+ },
+ "Dumbbell Upright Row": {
+  "sl_name": "Dumbbell Upright Row",
+  "url": "https://strengthlevel.com/strength-standards/dumbbell-upright-row/lb",
+  "unit": "lb",
+  "per": "per dumbbell",
+  "M": {
+   "150": [
+    13,
+    26,
+    46,
+    71,
+    100
+   ],
+   "180": [
+    18,
+    34,
+    55,
+    82,
+    113
+   ],
+   "220": [
+    24,
+    42,
+    67,
+    96,
+    129
+   ]
+  },
+  "F": {
+   "120": [
+    11,
+    18,
+    27,
+    38,
+    51
+   ],
+   "150": [
+    13,
+    21,
+    31,
+    42,
+    55
+   ],
+   "180": [
+    15,
+    23,
+    34,
+    46,
+    59
+   ]
+  }
+ },
+ "Dumbbell Pullover": {
+  "sl_name": "Dumbbell Pullover",
+  "url": "https://strengthlevel.com/strength-standards/dumbbell-pullover",
+  "unit": "lb",
+  "per": "per dumbbell",
+  "M": {
+   "150": [
+    25,
+    43,
+    66,
+    95,
+    127
+   ],
+   "180": [
+    33,
+    53,
+    79,
+    110,
+    144
+   ],
+   "220": [
+    43,
+    66,
+    94,
+    128,
+    164
+   ]
+  },
+  "F": {
+   "120": [
+    14,
+    24,
+    38,
+    55,
+    74
+   ],
+   "150": [
+    17,
+    28,
+    42,
+    60,
+    80
+   ],
+   "180": [
+    19,
+    31,
+    46,
+    64,
+    85
+   ]
+  },
+  "note": "Plain URL but page rendered in lb. Single-dumbbell exercise; page boilerplate says weights are for one dumbbell."
+ },
+ "Dumbbell Floor Press": {
+  "sl_name": "Dumbbell Floor Press",
+  "url": "https://strengthlevel.com/strength-standards/dumbbell-floor-press/lb",
+  "unit": "lb",
+  "per": "per dumbbell",
+  "M": {
+   "150": [
+    25,
+    42,
+    65,
+    93,
+    124
+   ],
+   "180": [
+    33,
+    52,
+    77,
+    107,
+    140
+   ],
+   "220": [
+    42,
+    64,
+    91,
+    124,
+    159
+   ]
+  },
+  "F": {
+   "120": [
+    14,
+    24,
+    36,
+    51,
+    67
+   ],
+   "150": [
+    17,
+    28,
+    41,
+    56,
+    74
+   ],
+   "180": [
+    20,
+    31,
+    45,
+    62,
+    80
+   ]
+  }
+ },
+ "Close Grip Dumbbell Bench Press": {
+  "sl_name": "Close Grip Dumbbell Bench Press",
+  "url": "https://strengthlevel.com/strength-standards/close-grip-dumbbell-bench-press/lb",
+  "unit": "lb",
+  "per": "per dumbbell",
+  "M": {
+   "150": [
+    22,
+    39,
+    61,
+    89,
+    120
+   ],
+   "180": [
+    30,
+    49,
+    74,
+    104,
+    138
+   ],
+   "220": [
+    40,
+    61,
+    89,
+    122,
+    158
+   ]
+  },
+  "F": {
+   "120": [
+    14,
+    24,
+    36,
+    50,
+    66
+   ],
+   "150": [
+    18,
+    28,
+    41,
+    56,
+    73
+   ],
+   "180": [
+    21,
+    32,
+    45,
+    61,
+    79
+   ]
+  }
+ },
+ "Dumbbell Spider Curl": {
+  "sl_name": "Spider Curl",
+  "url": "https://strengthlevel.com/strength-standards/spider-curl/lb",
+  "unit": "lb",
+  "per": "unknown",
+  "M": {
+   "150": [
+    21,
+    39,
+    64,
+    95,
+    130
+   ],
+   "180": [
+    29,
+    50,
+    78,
+    111,
+    149
+   ],
+   "220": [
+    40,
+    63,
+    94,
+    131,
+    172
+   ]
+  },
+  "F": {
+   "120": [
+    14,
+    25,
+    40,
+    59,
+    81
+   ],
+   "150": [
+    19,
+    32,
+    49,
+    69,
+    93
+   ],
+   "180": [
+    24,
+    38,
+    56,
+    79,
+    103
+   ]
+  },
+  "note": "No dumbbell-specific spider curl page; 'Spider Curl' page shows the barbell note ('Barbell weights include the weight of the bar, normally 20 kg / 44 lb') and no per-dumbbell sentence, so it is likely a barbell/EZ-bar lift. Treat with caution for a dumbbell standard."
+ },
+ "Dumbbell Y Raise": {
+  "sl_name": "Dumbbell Incline Y Raise",
+  "url": "https://strengthlevel.com/strength-standards/dumbbell-incline-y-raise",
+  "unit": "lb",
+  "per": "per dumbbell",
+  "M": {
+   "150": [
+    3,
+    14,
+    35,
+    65,
+    103
+   ],
+   "180": [
+    4,
+    16,
+    38,
+    70,
+    110
+   ],
+   "220": [
+    5,
+    19,
+    43,
+    76,
+    117
+   ]
+  },
+  "F": {
+   "120": [
+    3,
+    10,
+    21,
+    37,
+    56
+   ],
+   "150": [
+    4,
+    11,
+    23,
+    39,
+    58
+   ],
+   "180": [
+    4,
+    12,
+    24,
+    41,
+    61
+   ]
+  },
+  "note": "Site only has the incline variant. Plain URL but page rendered in lb. Very steep curve (Beginner 3-5 lb, Elite 103-117 lb for men) - elite looks implausibly high for a Y raise."
+ },
+ "Dumbbell Lunge": {
+  "sl_name": "Dumbbell Lunge",
+  "url": "https://strengthlevel.com/strength-standards/dumbbell-lunge/lb",
+  "unit": "lb",
+  "per": "per dumbbell",
+  "M": {
+   "150": [
+    16,
+    33,
+    58,
+    88,
+    124
+   ],
+   "180": [
+    22,
+    41,
+    67,
+    100,
+    137
+   ],
+   "220": [
+    28,
+    50,
+    78,
+    114,
+    153
+   ]
+  },
+  "F": {
+   "120": [
+    11,
+    23,
+    39,
+    60,
+    83
+   ],
+   "150": [
+    13,
+    25,
+    42,
+    64,
+    88
+   ],
+   "180": [
+    15,
+    28,
+    45,
+    67,
+    93
+   ]
+  },
+  "note": ""
+ },
+ "Dumbbell Bulgarian Split Squat": {
+  "sl_name": "Dumbbell Bulgarian Split Squat",
+  "url": "https://strengthlevel.com/strength-standards/dumbbell-bulgarian-split-squat",
+  "unit": "lb",
+  "per": "per dumbbell",
+  "M": {
+   "150": [
+    22,
+    40,
+    63,
+    92,
+    124
+   ],
+   "180": [
+    30,
+    49,
+    75,
+    106,
+    140
+   ],
+   "220": [
+    39,
+    61,
+    89,
+    122,
+    159
+   ]
+  },
+  "F": {
+   "120": [
+    14,
+    26,
+    42,
+    63,
+    87
+   ],
+   "150": [
+    17,
+    30,
+    47,
+    69,
+    93
+   ],
+   "180": [
+    19,
+    33,
+    51,
+    74,
+    99
+   ]
+  },
+  "note": "Search returned only x-vs-y pages; URL taken from the strengthlevel.com/strength-standards index page link. The vs page (dumbbell-bulgarian-split-squat-vs-bulgarian-split-squat/lb) gives overall M [25,43,69,101,136], F [15,28,45,66,91]."
+ },
+ "Dumbbell Squat": {
+  "sl_name": "Dumbbell Squat",
+  "url": "https://strengthlevel.com/strength-standards/dumbbell-squat/lb",
+  "unit": "lb",
+  "per": "per dumbbell",
+  "M": {
+   "150": [
+    20,
+    39,
+    65,
+    98,
+    136
+   ],
+   "180": [
+    26,
+    47,
+    75,
+    111,
+    150
+   ],
+   "220": [
+    33,
+    56,
+    87,
+    125,
+    167
+   ]
+  },
+  "F": {
+   "120": [
+    13,
+    25,
+    43,
+    66,
+    92
+   ],
+   "150": [
+    14,
+    28,
+    47,
+    70,
+    97
+   ],
+   "180": [
+    16,
+    30,
+    50,
+    74,
+    102
+   ]
+  },
+  "note": ""
+ },
+ "Goblet Squat": {
+  "sl_name": "Goblet Squat",
+  "url": "https://strengthlevel.com/strength-standards/goblet-squat",
+  "unit": "lb",
+  "per": "per dumbbell",
+  "M": {
+   "150": [
+    29,
+    51,
+    82,
+    120,
+    163
+   ],
+   "180": [
+    35,
+    59,
+    92,
+    132,
+    177
+   ],
+   "220": [
+    42,
+    69,
+    104,
+    146,
+    193
+   ]
+  },
+  "F": {
+   "120": [
+    22,
+    36,
+    56,
+    80,
+    107
+   ],
+   "150": [
+    24,
+    39,
+    59,
+    84,
+    111
+   ],
+   "180": [
+    25,
+    41,
+    62,
+    87,
+    115
+   ]
+  },
+  "note": "Search returned only x-vs-y pages; URL taken from the index page link. 'per dumbbell' is the page's generic dumbbell footnote (goblet squat uses one weight anyway). The vs page goblet-squat-vs-squat gives overall M [31,55,88,129,174], F [23,38,58,83,110]."
+ },
+ "Dumbbell Front Squat": {
+  "sl_name": "Dumbbell Front Squat",
+  "url": "https://strengthlevel.com/strength-standards/dumbbell-front-squat/lb",
+  "unit": "lb",
+  "per": "per dumbbell",
+  "M": {
+   "150": [
+    19,
+    37,
+    63,
+    96,
+    133
+   ],
+   "180": [
+    24,
+    44,
+    71,
+    106,
+    145
+   ],
+   "220": [
+    29,
+    51,
+    81,
+    117,
+    158
+   ]
+  },
+  "F": {
+   "120": [
+    15,
+    27,
+    43,
+    64,
+    86
+   ],
+   "150": [
+    18,
+    31,
+    48,
+    69,
+    92
+   ],
+   "180": [
+    20,
+    34,
+    51,
+    73,
+    97
+   ]
+  },
+  "note": ""
+ },
+ "Dumbbell Romanian Deadlift": {
+  "sl_name": "Dumbbell Romanian Deadlift",
+  "url": "https://strengthlevel.com/strength-standards/dumbbell-romanian-deadlift/lb",
+  "unit": "lb",
+  "per": "per dumbbell",
+  "M": {
+   "150": [
+    33,
+    55,
+    83,
+    118,
+    156
+   ],
+   "180": [
+    43,
+    67,
+    98,
+    136,
+    177
+   ],
+   "220": [
+    55,
+    82,
+    116,
+    157,
+    201
+   ]
+  },
+  "F": {
+   "120": [
+    21,
+    37,
+    57,
+    82,
+    111
+   ],
+   "150": [
+    25,
+    41,
+    63,
+    89,
+    118
+   ],
+   "180": [
+    28,
+    45,
+    68,
+    95,
+    125
+   ]
+  },
+  "note": ""
+ },
+ "Dumbbell Deadlift": {
+  "sl_name": "Dumbbell Deadlift",
+  "url": "https://strengthlevel.com/strength-standards/dumbbell-deadlift/lb",
+  "unit": "lb",
+  "per": "per dumbbell",
+  "M": {
+   "150": [
+    26,
+    50,
+    84,
+    126,
+    174
+   ],
+   "180": [
+    33,
+    60,
+    96,
+    141,
+    192
+   ],
+   "220": [
+    42,
+    72,
+    111,
+    159,
+    213
+   ]
+  },
+  "F": {
+   "120": [
+    14,
+    30,
+    52,
+    80,
+    112
+   ],
+   "150": [
+    18,
+    35,
+    58,
+    88,
+    122
+   ],
+   "180": [
+    21,
+    39,
+    64,
+    96,
+    131
+   ]
+  },
+  "note": ""
+ },
+ "Dumbbell Calf Raise": {
+  "sl_name": "Dumbbell Calf Raise",
+  "url": "https://strengthlevel.com/strength-standards/dumbbell-calf-raise/lb",
+  "unit": "lb",
+  "per": "per dumbbell",
+  "M": {
+   "150": [
+    15,
+    37,
+    70,
+    114,
+    165
+   ],
+   "180": [
+    22,
+    47,
+    83,
+    130,
+    185
+   ],
+   "220": [
+    30,
+    58,
+    98,
+    149,
+    207
+   ]
+  },
+  "F": {
+   "120": [
+    10,
+    24,
+    45,
+    72,
+    104
+   ],
+   "150": [
+    13,
+    28,
+    50,
+    79,
+    112
+   ],
+   "180": [
+    15,
+    31,
+    55,
+    84,
+    119
+   ]
+  },
+  "note": ""
+ },
+ "Dumbbell Wrist Curl": {
+  "sl_name": "Dumbbell Wrist Curl",
+  "url": "https://strengthlevel.com/strength-standards/dumbbell-wrist-curl/lb",
+  "unit": "lb",
+  "per": "per dumbbell",
+  "M": {
+   "150": [
+    13,
+    29,
+    52,
+    82,
+    117
+   ],
+   "180": [
+    17,
+    35,
+    60,
+    92,
+    129
+   ],
+   "220": [
+    22,
+    42,
+    69,
+    104,
+    143
+   ]
+  },
+  "F": {
+   "120": [
+    6,
+    15,
+    31,
+    52,
+    77
+   ],
+   "150": [
+    7,
+    18,
+    34,
+    56,
+    82
+   ],
+   "180": [
+    8,
+    20,
+    37,
+    60,
+    86
+   ]
+  },
+  "note": ""
+ },
+ "Dumbbell Reverse Wrist Curl": {
+  "sl_name": "Dumbbell Reverse Wrist Curl",
+  "url": "https://strengthlevel.com/strength-standards/dumbbell-reverse-wrist-curl/lb",
+  "unit": "lb",
+  "per": "per dumbbell",
+  "M": {
+   "150": [
+    4,
+    14,
+    32,
+    58,
+    89
+   ],
+   "180": [
+    5,
+    17,
+    36,
+    63,
+    95
+   ],
+   "220": [
+    7,
+    20,
+    40,
+    68,
+    102
+   ]
+  },
+  "F": {
+   "120": [
+    4,
+    11,
+    23,
+    39,
+    58
+   ],
+   "150": [
+    4,
+    12,
+    24,
+    40,
+    60
+   ],
+   "180": [
+    5,
+    12,
+    25,
+    42,
+    61
+   ]
+  },
+  "note": ""
+ },
+ "Dumbbell Thruster": {
+  "sl_name": "Dumbbell Thruster",
+  "url": "https://strengthlevel.com/strength-standards/dumbbell-thruster",
+  "unit": "lb",
+  "per": "per dumbbell",
+  "M": {
+   "150": [
+    9,
+    24,
+    46,
+    75,
+    110
+   ],
+   "180": [
+    13,
+    30,
+    54,
+    86,
+    122
+   ],
+   "220": [
+    18,
+    37,
+    64,
+    98,
+    137
+   ]
+  },
+  "F": {
+   "120": [
+    10,
+    19,
+    30,
+    44,
+    60
+   ],
+   "150": [
+    12,
+    21,
+    32,
+    47,
+    63
+   ],
+   "180": [
+    13,
+    22,
+    34,
+    49,
+    66
+   ]
+  },
+  "note": "Female beginner at 120 lb (10) is higher than male beginner at 150 lb (9), as shown on page."
+ },
+ "Dumbbell Snatch": {
+  "sl_name": "Dumbbell Snatch",
+  "url": "https://strengthlevel.com/strength-standards/dumbbell-snatch",
+  "unit": "lb",
+  "per": "per dumbbell",
+  "M": {
+   "150": [
+    18,
+    37,
+    62,
+    94,
+    132
+   ],
+   "180": [
+    25,
+    46,
+    74,
+    109,
+    149
+   ],
+   "220": [
+    34,
+    57,
+    88,
+    126,
+    169
+   ]
+  },
+  "F": {
+   "120": [
+    14,
+    23,
+    34,
+    49,
+    64
+   ],
+   "150": [
+    17,
+    26,
+    39,
+    54,
+    70
+   ],
+   "180": [
+    19,
+    29,
+    42,
+    58,
+    75
+   ]
+  },
+  "note": "Single-dumbbell lift; values are for the one dumbbell."
+ },
+ "Dumbbell Push Press": {
+  "sl_name": "Dumbbell Push Press",
+  "url": "https://strengthlevel.com/strength-standards/dumbbell-push-press/lb",
+  "unit": "lb",
+  "per": "per dumbbell",
+  "M": {
+   "150": [
+    20,
+    37,
+    59,
+    87,
+    119
+   ],
+   "180": [
+    28,
+    47,
+    72,
+    102,
+    136
+   ],
+   "220": [
+    37,
+    59,
+    87,
+    120,
+    157
+   ]
+  },
+  "F": {
+   "120": [
+    15,
+    23,
+    34,
+    47,
+    62
+   ],
+   "150": [
+    17,
+    27,
+    38,
+    52,
+    67
+   ],
+   "180": [
+    20,
+    30,
+    42,
+    56,
+    72
+   ]
+  },
+  "note": ""
+ },
+ "Dumbbell Hang Clean": {
+  "sl_name": "Dumbbell Hang Clean",
+  "url": "https://strengthlevel.com/strength-standards/dumbbell-hang-clean/lb",
+  "unit": "lb",
+  "per": "per dumbbell",
+  "M": {
+   "150": [
+    18,
+    39,
+    71,
+    111,
+    158
+   ],
+   "180": [
+    22,
+    45,
+    77,
+    119,
+    168
+   ],
+   "220": [
+    26,
+    51,
+    85,
+    129,
+    179
+   ]
+  },
+  "F": {
+   "120": [
+    12,
+    22,
+    37,
+    55,
+    75
+   ],
+   "150": [
+    16,
+    28,
+    44,
+    63,
+    85
+   ],
+   "180": [
+    20,
+    33,
+    50,
+    71,
+    94
+   ]
+  },
+  "note": ""
+ },
+ "Dumbbell Split Squat": {
+  "sl_name": "Dumbbell Split Squat",
+  "url": "https://strengthlevel.com/strength-standards/dumbbell-split-squat/lb",
+  "unit": "lb",
+  "per": "per dumbbell",
+  "M": {
+   "150": [
+    21,
+    39,
+    63,
+    92,
+    126
+   ],
+   "180": [
+    27,
+    46,
+    72,
+    103,
+    139
+   ],
+   "220": [
+    33,
+    54,
+    82,
+    116,
+    153
+   ]
+  },
+  "F": {
+   "120": [
+    15,
+    26,
+    42,
+    61,
+    83
+   ],
+   "150": [
+    16,
+    28,
+    44,
+    64,
+    86
+   ],
+   "180": [
+    18,
+    30,
+    47,
+    67,
+    89
+   ]
+  },
+  "note": ""
+ },
+ "Kettlebell Goblet Squat": {
+  "sl_name": "Goblet Squat",
+  "url": "https://strengthlevel.com/strength-standards/goblet-squat",
+  "unit": "lb",
+  "per": "unknown",
+  "M": {
+   "150": [
+    29,
+    51,
+    82,
+    120,
+    163
+   ],
+   "180": [
+    35,
+    59,
+    92,
+    132,
+    177
+   ],
+   "220": [
+    42,
+    69,
+    104,
+    146,
+    193
+   ]
+  },
+  "F": {
+   "120": [
+    22,
+    36,
+    56,
+    80,
+    107
+   ],
+   "150": [
+    24,
+    39,
+    59,
+    84,
+    111
+   ],
+   "180": [
+    25,
+    41,
+    62,
+    87,
+    115
+   ]
+  },
+  "note": "No kettlebell-specific page; used alternative 'Goblet Squat' (same data as the Goblet Squat entry). Page footnote refers to dumbbells only; does not mention kettlebells. Single implement either way."
+ },
+ "Pull Ups": {
+  "sl_name": "Pull Ups",
+  "url": "https://strengthlevel.com/strength-standards/pull-ups/lb",
+  "unit": "reps",
+  "per": "reps",
+  "M": {
+   "150": [
+    "<1",
+    7,
+    14,
+    22,
+    31
+   ],
+   "180": [
+    1,
+    7,
+    13,
+    21,
+    28
+   ],
+   "220": [
+    "<1",
+    6,
+    11,
+    18,
+    25
+   ]
+  },
+  "F": {
+   "120": [
+    "<1",
+    "<1",
+    6,
+    13,
+    21
+   ],
+   "150": [
+    "<1",
+    "<1",
+    6,
+    11,
+    18
+   ],
+   "180": [
+    "<1",
+    "<1",
+    5,
+    10,
+    16
+   ]
+  },
+  "note": "'<1' is shown on the page as '< 1'. The page also has a 1RM added/assisted weight table; see 'Weighted Pull Ups'. Page: 'If the standard is negative, you have assistance weight. If positive, you add on weight using a weight belt.'"
+ },
+ "Chin Ups": {
+  "sl_name": "Chin Ups",
+  "url": "https://strengthlevel.com/strength-standards/chin-ups/lb",
+  "unit": "reps",
+  "per": "reps",
+  "M": {
+   "150": [
+    1,
+    8,
+    14,
+    22,
+    31
+   ],
+   "180": [
+    1,
+    7,
+    13,
+    21,
+    28
+   ],
+   "220": [
+    1,
+    7,
+    12,
+    18,
+    25
+   ]
+  },
+  "F": {
+   "120": [
+    "<1",
+    1,
+    7,
+    12,
+    18
+   ],
+   "150": [
+    "<1",
+    1,
+    6,
+    10,
+    16
+   ],
+   "180": [
+    "<1",
+    1,
+    5,
+    9,
+    14
+   ]
+  },
+  "note": "The page also has a 1RM added/assisted weight table; see 'Weighted Chin Ups'."
+ },
+ "Neutral Grip Pull Ups": {
+  "sl_name": "Neutral Grip Pull Ups",
+  "url": "https://strengthlevel.com/strength-standards/neutral-grip-pull-ups",
+  "unit": "reps",
+  "per": "reps",
+  "M": {
+   "150": [
+    1,
+    8,
+    14,
+    23,
+    32
+   ],
+   "180": [
+    2,
+    8,
+    14,
+    22,
+    30
+   ],
+   "220": [
+    2,
+    7,
+    12,
+    19,
+    26
+   ]
+  },
+  "F": {
+   "120": [
+    "<1",
+    2,
+    7,
+    12,
+    18
+   ],
+   "150": [
+    "<1",
+    2,
+    7,
+    11,
+    16
+   ],
+   "180": [
+    "<1",
+    1,
+    6,
+    9,
+    14
+   ]
+  },
+  "note": "No added-weight table on this page."
+ },
+ "Push Ups": {
+  "sl_name": "Push Ups",
+  "url": "https://strengthlevel.com/strength-standards/push-ups/lb",
+  "unit": "reps",
+  "per": "reps",
+  "M": {
+   "150": [
+    5,
+    20,
+    40,
+    64,
+    91
+   ],
+   "180": [
+    6,
+    20,
+    38,
+    60,
+    83
+   ],
+   "220": [
+    6,
+    19,
+    35,
+    54,
+    74
+   ]
+  },
+  "F": {
+   "120": [
+    "<1",
+    7,
+    19,
+    33,
+    49
+   ],
+   "150": [
+    "<1",
+    7,
+    17,
+    30,
+    44
+   ],
+   "180": [
+    "<1",
+    7,
+    16,
+    27,
+    40
+   ]
+  },
+  "note": ""
+ },
+ "Dips": {
+  "sl_name": "Dips",
+  "url": "https://strengthlevel.com/strength-standards/dips/lb",
+  "unit": "reps",
+  "per": "reps",
+  "M": {
+   "150": [
+    2,
+    10,
+    20,
+    32,
+    44
+   ],
+   "180": [
+    4,
+    10,
+    20,
+    31,
+    42
+   ],
+   "220": [
+    4,
+    10,
+    19,
+    28,
+    38
+   ]
+  },
+  "F": {
+   "120": [
+    "<1",
+    1,
+    10,
+    20,
+    31
+   ],
+   "150": [
+    "<1",
+    2,
+    9,
+    18,
+    28
+   ],
+   "180": [
+    "<1",
+    1,
+    9,
+    16,
+    25
+   ]
+  },
+  "note": "The page also has a 1RM added/assisted weight table; see 'Weighted Dips'."
+ },
+ "Bench Dips": {
+  "sl_name": "Bench Dips",
+  "url": "https://strengthlevel.com/strength-standards/bench-dips/lb",
+  "unit": "reps",
+  "per": "reps",
+  "M": {
+   "150": [
+    "<1",
+    13,
+    31,
+    53,
+    77
+   ],
+   "180": [
+    1,
+    14,
+    31,
+    50,
+    72
+   ],
+   "220": [
+    3,
+    14,
+    29,
+    46,
+    65
+   ]
+  },
+  "F": {
+   "120": [
+    "<1",
+    9,
+    20,
+    34,
+    48
+   ],
+   "150": [
+    "<1",
+    9,
+    19,
+    30,
+    43
+   ],
+   "180": [
+    "<1",
+    8,
+    17,
+    27,
+    38
+   ]
+  },
+  "note": "No added-weight table."
+ },
+ "Sit Ups": {
+  "sl_name": "Sit Ups",
+  "url": "https://strengthlevel.com/strength-standards/sit-ups/lb",
+  "unit": "reps",
+  "per": "reps",
+  "M": {
+   "150": [
+    5,
+    27,
+    57,
+    94,
+    136
+   ],
+   "180": [
+    5,
+    24,
+    51,
+    83,
+    119
+   ],
+   "220": [
+    4,
+    20,
+    44,
+    71,
+    102
+   ]
+  },
+  "F": {
+   "120": [
+    "<1",
+    17,
+    46,
+    83,
+    125
+   ],
+   "150": [
+    "<1",
+    14,
+    40,
+    71,
+    106
+   ],
+   "180": [
+    "<1",
+    12,
+    35,
+    62,
+    93
+   ]
+  },
+  "note": ""
+ },
+ "Crunches": {
+  "sl_name": "Crunches",
+  "url": "https://strengthlevel.com/strength-standards/crunches/lb",
+  "unit": "reps",
+  "per": "reps",
+  "M": {
+   "150": [
+    1,
+    22,
+    52,
+    89,
+    130
+   ],
+   "180": [
+    3,
+    22,
+    49,
+    81,
+    117
+   ],
+   "220": [
+    3,
+    20,
+    44,
+    72,
+    104
+   ]
+  },
+  "F": {
+   "120": [
+    "<1",
+    16,
+    45,
+    82,
+    124
+   ],
+   "150": [
+    "<1",
+    14,
+    40,
+    71,
+    107
+   ],
+   "180": [
+    "<1",
+    12,
+    35,
+    63,
+    94
+   ]
+  },
+  "note": ""
+ },
+ "Hanging Leg Raise": {
+  "sl_name": "Hanging Leg Raise",
+  "url": "https://strengthlevel.com/strength-standards/hanging-leg-raise/lb",
+  "unit": "reps",
+  "per": "reps",
+  "M": {
+   "150": [
+    "<1",
+    8,
+    17,
+    29,
+    41
+   ],
+   "180": [
+    1,
+    9,
+    17,
+    28,
+    38
+   ],
+   "220": [
+    2,
+    9,
+    16,
+    25,
+    35
+   ]
+  },
+  "F": {
+   "120": [
+    "<1",
+    6,
+    14,
+    24,
+    34
+   ],
+   "150": [
+    "<1",
+    7,
+    14,
+    23,
+    32
+   ],
+   "180": [
+    1,
+    7,
+    13,
+    21,
+    30
+   ]
+  },
+  "note": ""
+ },
+ "Hanging Knee Raise": {
+  "sl_name": "Hanging Knee Raise",
+  "url": "https://strengthlevel.com/strength-standards/hanging-knee-raise/lb",
+  "unit": "reps",
+  "per": "reps",
+  "M": {
+   "150": [
+    "<1",
+    8,
+    21,
+    36,
+    52
+   ],
+   "180": [
+    "<1",
+    9,
+    20,
+    34,
+    48
+   ],
+   "220": [
+    "<1",
+    9,
+    19,
+    31,
+    44
+   ]
+  },
+  "F": {
+   "120": [
+    "<1",
+    7,
+    17,
+    29,
+    42
+   ],
+   "150": [
+    "<1",
+    7,
+    16,
+    26,
+    38
+   ],
+   "180": [
+    "<1",
+    7,
+    14,
+    23,
+    33
+   ]
+  },
+  "note": ""
+ },
+ "Bodyweight Squat": {
+  "sl_name": "Bodyweight Squat",
+  "url": "https://strengthlevel.com/strength-standards/bodyweight-squat/lb",
+  "unit": "reps",
+  "per": "reps",
+  "M": {
+   "150": [
+    3,
+    26,
+    58,
+    98,
+    143
+   ],
+   "180": [
+    3,
+    23,
+    52,
+    87,
+    126
+   ],
+   "220": [
+    2,
+    20,
+    45,
+    75,
+    109
+   ]
+  },
+  "F": {
+   "120": [
+    "<1",
+    13,
+    43,
+    80,
+    123
+   ],
+   "150": [
+    "<1",
+    12,
+    37,
+    69,
+    106
+   ],
+   "180": [
+    "<1",
+    10,
+    33,
+    61,
+    93
+   ]
+  },
+  "note": ""
+ },
+ "Inverted Row": {
+  "sl_name": "Inverted Row",
+  "url": "https://strengthlevel.com/strength-standards/inverted-row",
+  "unit": "reps",
+  "per": "reps",
+  "M": {
+   "150": [
+    "<1",
+    8,
+    19,
+    33,
+    48
+   ],
+   "180": [
+    "<1",
+    9,
+    19,
+    32,
+    46
+   ],
+   "220": [
+    1,
+    9,
+    18,
+    30,
+    42
+   ]
+  },
+  "F": {
+   "120": [
+    "<1",
+    5,
+    12,
+    21,
+    31
+   ],
+   "150": [
+    "<1",
+    6,
+    13,
+    21,
+    29
+   ],
+   "180": [
+    1,
+    7,
+    12,
+    20,
+    27
+   ]
+  },
+  "note": ""
+ },
+ "Handstand Push Ups": {
+  "sl_name": "Handstand Push Ups",
+  "url": "https://strengthlevel.com/strength-standards/handstand-push-ups/lb",
+  "unit": "reps",
+  "per": "reps",
+  "M": {
+   "150": [
+    "<1",
+    1,
+    10,
+    22,
+    34
+   ],
+   "180": [
+    "<1",
+    3,
+    11,
+    21,
+    32
+   ],
+   "220": [
+    "<1",
+    3,
+    10,
+    20,
+    30
+   ]
+  },
+  "F": {
+   "120": [
+    "<1",
+    1,
+    9,
+    18,
+    29
+   ],
+   "150": [
+    "<1",
+    1,
+    9,
+    16,
+    26
+   ],
+   "180": [
+    "<1",
+    "<1",
+    8,
+    14,
+    23
+   ]
+  },
+  "note": ""
+ },
+ "One Arm Push Ups": {
+  "sl_name": "One Arm Push Ups",
+  "url": "https://strengthlevel.com/strength-standards/one-arm-push-ups/lb",
+  "unit": "reps",
+  "per": "reps",
+  "M": {
+   "150": [
+    "<1",
+    1,
+    10,
+    21,
+    33
+   ],
+   "180": [
+    "<1",
+    2,
+    10,
+    21,
+    32
+   ],
+   "220": [
+    "<1",
+    3,
+    10,
+    19,
+    29
+   ]
+  },
+  "F": {
+   "120": [
+    "<1",
+    "<1",
+    7,
+    15,
+    25
+   ],
+   "150": [
+    "<1",
+    "<1",
+    8,
+    16,
+    24
+   ],
+   "180": [
+    "<1",
+    1,
+    8,
+    15,
+    23
+   ]
+  },
+  "note": "Page does not say whether reps are per arm."
+ },
+ "Diamond Push Ups": {
+  "sl_name": "Diamond Push Ups",
+  "url": "https://strengthlevel.com/strength-standards/diamond-push-ups",
+  "unit": "reps",
+  "per": "reps",
+  "M": {
+   "150": [
+    "<1",
+    11,
+    24,
+    39,
+    55
+   ],
+   "180": [
+    3,
+    11,
+    24,
+    37,
+    52
+   ],
+   "220": [
+    4,
+    11,
+    22,
+    34,
+    47
+   ]
+  },
+  "F": {
+   "120": [
+    "<1",
+    5,
+    12,
+    23,
+    33
+   ],
+   "150": [
+    "<1",
+    6,
+    13,
+    22,
+    32
+   ],
+   "180": [
+    "<1",
+    7,
+    13,
+    22,
+    30
+   ]
+  },
+  "note": ""
+ },
+ "Pike Push Up": {
+  "sl_name": "Pike Push Up",
+  "url": "https://strengthlevel.com/strength-standards/pike-push-up",
+  "unit": "reps",
+  "per": "reps",
+  "M": {
+   "150": [
+    "<1",
+    7,
+    17,
+    30,
+    44
+   ],
+   "180": [
+    "<1",
+    8,
+    17,
+    29,
+    42
+   ],
+   "220": [
+    "<1",
+    8,
+    16,
+    27,
+    38
+   ]
+  },
+  "F": {
+   "120": [
+    "<1",
+    4,
+    11,
+    19,
+    28
+   ],
+   "150": [
+    "<1",
+    4,
+    10,
+    18,
+    25
+   ],
+   "180": [
+    "<1",
+    4,
+    9,
+    16,
+    23
+   ]
+  },
+  "note": ""
+ },
+ "Decline Push Up": {
+  "sl_name": "Decline Push Up",
+  "url": "https://strengthlevel.com/strength-standards/decline-push-up",
+  "unit": "reps",
+  "per": "reps",
+  "M": {
+   "150": [
+    2,
+    13,
+    28,
+    45,
+    63
+   ],
+   "180": [
+    5,
+    15,
+    28,
+    44,
+    60
+   ],
+   "220": [
+    6,
+    15,
+    28,
+    42,
+    56
+   ]
+  },
+  "F": {
+   "120": [
+    "<1",
+    7,
+    17,
+    29,
+    43
+   ],
+   "150": [
+    "<1",
+    8,
+    17,
+    28,
+    40
+   ],
+   "180": [
+    "<1",
+    8,
+    16,
+    26,
+    37
+   ]
+  },
+  "note": ""
+ },
+ "Incline Push Up": {
+  "sl_name": "Incline Push Up",
+  "url": "https://strengthlevel.com/strength-standards/incline-push-up/lb",
+  "unit": "reps",
+  "per": "reps",
+  "M": {
+   "150": [
+    "<1",
+    12,
+    31,
+    55,
+    80
+   ],
+   "180": [
+    "<1",
+    13,
+    31,
+    52,
+    75
+   ],
+   "220": [
+    2,
+    14,
+    30,
+    48,
+    69
+   ]
+  },
+  "F": {
+   "120": [
+    "<1",
+    5,
+    17,
+    32,
+    48
+   ],
+   "150": [
+    "<1",
+    7,
+    17,
+    31,
+    45
+   ],
+   "180": [
+    "<1",
+    7,
+    17,
+    29,
+    42
+   ]
+  },
+  "note": "Male Incline standards are below regular Push Ups at every level (e.g. 180 lb Elite 75 vs 83)."
+ },
+ "Muscle Ups": {
+  "sl_name": "Muscle Ups",
+  "url": "https://strengthlevel.com/strength-standards/muscle-ups/lb",
+  "unit": "reps",
+  "per": "reps",
+  "M": {
+   "150": [
+    "<1",
+    2,
+    7,
+    11,
+    17
+   ],
+   "180": [
+    "<1",
+    2,
+    7,
+    11,
+    16
+   ],
+   "220": [
+    "<1",
+    2,
+    7,
+    10,
+    15
+   ]
+  },
+  "F": {
+   "120": [
+    "<1",
+    "<1",
+    4,
+    9,
+    14
+   ],
+   "150": [
+    "<1",
+    "<1",
+    5,
+    9,
+    14
+   ],
+   "180": [
+    "<1",
+    "<1",
+    5,
+    9,
+    13
+   ]
+  },
+  "note": "Page also has a 1RM added/assisted weight table (lb). Male 150: [-23,0,26,54,83], 180: [-22,4,32,63,95], 220: [-24,4,36,70,104]; Female 120: [-28,-10,10,31,53], 150: [-26,-6,16,41,65], 180: [-27,-5,20,46,73]. Negative = assistance, positive = added via weight belt."
+ },
+ "Pistol Squat": {
+  "sl_name": "Pistol Squat",
+  "url": "https://strengthlevel.com/strength-standards/pistol-squat-vs-lunge",
+  "unit": "lb",
+  "per": "n/a",
+  "all": {
+   "M": [
+    -29,
+    12,
+    62,
+    121,
+    184
+   ],
+   "F": [
+    -24,
+    1,
+    32,
+    65,
+    102
+   ]
+  },
+  "note": "No standalone pistol-squat page in search results (two searches); values from the Pistol Squat vs Lunge comparison page, 'Measured in lb', signed values, no bodyweight table, not stated whether per leg. Comparison pages appear to express all exercises as signed lb (1RM-equivalent), not reps: the same type of page gives Bodyweight Squat Elite +737 lb (M) while its own page gives 126 reps at 180 lb."
+ },
+ "Lunge": {
+  "sl_name": "Lunge",
+  "url": "https://strengthlevel.com/strength-standards/lunge/lb",
+  "unit": "reps",
+  "per": "reps",
+  "M": {
+   "150": [
+    "<1",
+    14,
+    38,
+    68,
+    101
+   ],
+   "180": [
+    "<1",
+    13,
+    35,
+    61,
+    90
+   ],
+   "220": [
+    "<1",
+    12,
+    31,
+    53,
+    78
+   ]
+  },
+  "F": {
+   "120": [
+    "<1",
+    10,
+    30,
+    54,
+    80
+   ],
+   "150": [
+    "<1",
+    10,
+    27,
+    47,
+    70
+   ],
+   "180": [
+    "<1",
+    9,
+    24,
+    42,
+    62
+   ]
+  },
+  "note": "Page does not say whether reps are per leg."
+ },
+ "Glute Bridge": {
+  "sl_name": "Glute Bridge",
+  "url": "https://strengthlevel.com/strength-standards/glute-bridge/lb",
+  "unit": "reps",
+  "per": "reps",
+  "M": {
+   "150": [
+    "<1",
+    12,
+    40,
+    74,
+    112
+   ],
+   "180": [
+    "<1",
+    13,
+    38,
+    69,
+    103
+   ],
+   "220": [
+    "<1",
+    14,
+    36,
+    63,
+    93
+   ]
+  },
+  "F": {
+   "120": [
+    "<1",
+    10,
+    34,
+    64,
+    98
+   ],
+   "150": [
+    "<1",
+    11,
+    32,
+    58,
+    87
+   ],
+   "180": [
+    "<1",
+    10,
+    30,
+    53,
+    78
+   ]
+  },
+  "note": "Overall community standards on page: M [<1,13,38,70,107], F [<1,10,32,60,91]. Male Novice rises with bodyweight (12->14) while higher levels fall."
+ },
+ "Back Extension": {
+  "sl_name": "Back Extension",
+  "url": "https://strengthlevel.com/strength-standards/back-extension/lb",
+  "unit": "reps",
+  "per": "reps",
+  "M": {
+   "150": [
+    3,
+    15,
+    30,
+    47,
+    66
+   ],
+   "180": [
+    5,
+    15,
+    29,
+    45,
+    62
+   ],
+   "220": [
+    6,
+    15,
+    28,
+    42,
+    57
+   ]
+  },
+  "F": {
+   "120": [
+    5,
+    14,
+    25,
+    38,
+    52
+   ],
+   "150": [
+    6,
+    13,
+    24,
+    35,
+    47
+   ],
+   "180": [
+    6,
+    13,
+    22,
+    32,
+    43
+   ]
+  },
+  "note": ""
+ },
+ "Bodyweight Calf Raise": {
+  "sl_name": "Bodyweight Calf Raise",
+  "url": "https://strengthlevel.com/strength-standards/bodyweight-calf-raise-vs-inverted-row",
+  "unit": "lb",
+  "per": "n/a",
+  "all": {
+   "M": [
+    26,
+    152,
+    319,
+    524,
+    753
+   ],
+   "F": [
+    -15,
+    75,
+    197,
+    348,
+    519
+   ]
+  },
+  "note": "Standalone page not fetched (search budget exhausted before a dedicated search). Values from the comparison page, signed lb (page shows e.g. '+26 lb'), sign convention not explained; likely 1RM-equivalent conversions of rep counts, not reps."
+ },
+ "Toes To Bar": {
+  "sl_name": "Toes To Bar",
+  "url": "https://strengthlevel.com/strength-standards/hanging-leg-raise-vs-toes-to-bar/kg",
+  "unit": "kg",
+  "per": "n/a",
+  "all": {
+   "M": [
+    -8,
+    12,
+    36,
+    63,
+    93
+   ],
+   "F": [
+    -7,
+    6,
+    20,
+    36,
+    53
+   ]
+  },
+  "note": "Only a kg comparison page appeared in search results; values in signed kg, sign convention not explained, no bodyweight table. Unit is kg, not lb."
+ },
+ "Ab Wheel Rollout": {
+  "sl_name": "Ab Wheel Rollout",
+  "url": "https://strengthlevel.com/strength-standards/sit-ups-vs-ab-wheel-rollout",
+  "unit": "lb",
+  "per": "n/a",
+  "all": {
+   "M": [
+    -33,
+    31,
+    112,
+    208,
+    314
+   ],
+   "F": [
+    -23,
+    15,
+    62,
+    116,
+    174
+   ]
+  },
+  "note": "Standalone page not fetched (search budget exhausted). Values from comparison page, signed lb, sign convention not explained, no bodyweight table."
+ },
+ "Weighted Pull Ups": {
+  "sl_name": "Pull Ups (1RM Weight by Bodyweight table)",
+  "url": "https://strengthlevel.com/strength-standards/pull-ups/lb",
+  "unit": "lb",
+  "per": "added weight",
+  "M": {
+   "150": [
+    -6,
+    28,
+    66,
+    109,
+    153
+   ],
+   "180": [
+    -4,
+    32,
+    74,
+    120,
+    168
+   ],
+   "220": [
+    -6,
+    34,
+    80,
+    130,
+    181
+   ]
+  },
+  "F": {
+   "120": [
+    -33,
+    -9,
+    18,
+    49,
+    81
+   ],
+   "150": [
+    -38,
+    -11,
+    19,
+    53,
+    88
+   ],
+   "180": [
+    -45,
+    -16,
+    17,
+    53,
+    91
+   ]
+  },
+  "note": "NOT from a dedicated weighted-pull-ups page (none searched; search budget ran out). Taken from the 1RM added/assisted weight table on the Pull Ups page: 'If the standard is negative, you have assistance weight. If positive, you add on weight using a weight belt.'"
+ },
+ "Weighted Dips": {
+  "sl_name": "Dips (1RM Added Weight table)",
+  "url": "https://strengthlevel.com/strength-standards/dips/lb",
+  "unit": "lb",
+  "per": "added weight",
+  "M": {
+   "150": [
+    3,
+    47,
+    100,
+    158,
+    219
+   ],
+   "180": [
+    11,
+    60,
+    117,
+    180,
+    247
+   ],
+   "220": [
+    17,
+    71,
+    134,
+    203,
+    274
+   ]
+  },
+  "F": {
+   "120": [
+    -32,
+    -2,
+    35,
+    76,
+    120
+   ],
+   "150": [
+    -34,
+    0,
+    41,
+    87,
+    136
+   ],
+   "180": [
+    -38,
+    0,
+    44,
+    94,
+    145
+   ]
+  },
+  "note": "NOT from a dedicated weighted-dips page (none searched; search budget ran out). Taken from the 1RM added weight table on the Dips page; negative = assistance, positive = added via weight belt. Page shows '+0 lb' where 0 is recorded."
+ },
+ "Weighted Chin Ups": {
+  "sl_name": "Chin Ups (1RM Weight by Bodyweight table)",
+  "url": "https://strengthlevel.com/strength-standards/chin-ups/lb",
+  "unit": "lb",
+  "per": "added weight",
+  "M": {
+   "150": [
+    -2,
+    30,
+    68,
+    109,
+    152
+   ],
+   "180": [
+    -1,
+    35,
+    76,
+    121,
+    167
+   ],
+   "220": [
+    -2,
+    37,
+    82,
+    130,
+    179
+   ]
+  },
+  "F": {
+   "120": [
+    -21,
+    -2,
+    20,
+    44,
+    69
+   ],
+   "150": [
+    -24,
+    -2,
+    23,
+    50,
+    77
+   ],
+   "180": [
+    -28,
+    -5,
+    22,
+    51,
+    80
+   ]
+  },
+  "note": "NOT from a dedicated weighted-chin-ups page (none searched; search budget ran out). Taken from the 1RM weight table on the Chin Ups page; negative = assistance, positive = added weight."
+ },
+ "Russian Twist": {
+  "sl_name": "Russian Twist",
+  "url": "https://strengthlevel.com/strength-standards/glute-bridge-vs-russian-twist",
+  "unit": "lb",
+  "per": "n/a",
+  "all": {
+   "M": [
+    -11,
+    87,
+    217,
+    374,
+    551
+   ],
+   "F": [
+    -17,
+    53,
+    145,
+    254,
+    377
+   ]
+  },
+  "note": "Standalone page not fetched (search budget exhausted). Comparison page, 'Measured in lb', signed values, sign convention not explained. Same page gives Glute Bridge as M [-37,66,211,394,603], F [-31,45,148,276,421] lb, confirming comparison pages use lb equivalents rather than reps."
+ },
+ "Nordic Hamstring Curl": {
+  "sl_name": "Nordic Hamstring Curl",
+  "url": "https://strengthlevel.com/strength-standards/bodyweight-squat-vs-nordic-hamstring-curl",
+  "unit": "lb",
+  "per": "n/a",
+  "all": {
+   "M": [
+    -43,
+    -2,
+    48,
+    105,
+    167
+   ],
+   "F": [
+    -29,
+    11,
+    60,
+    119,
+    183
+   ]
+  },
+  "note": "Standalone page not fetched (search budget exhausted). Comparison page, 'Measured in lb', signed values. Oddity: female standards exceed male at Novice and above."
+ }
+}
