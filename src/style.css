@@ -372,3 +372,7 @@ details.card summary { list-style: none; } details.card summary::-webkit-details
 /* chart time window */
 .rangeseg{margin-top:4px}
 .rangeseg button{min-height:32px;font-size:13px}
+
+/* sheet content never shrinks to fit: long sheets scroll instead (charts were being squeezed) */
+.sheet .body > * { flex-shrink: 0; }
+.chart { flex: none; }

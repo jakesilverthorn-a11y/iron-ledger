@@ -174,7 +174,7 @@ function niceTicks(lo, hi, n) {
 }
 function lineChart(pts, o) {
   o = o || {};
-  var W = 360, H = o.h || 170, pl = 40, pr = 14, pt = 12, pb = 24, fmt = o.fmt || function (v) { return Math.round(v); };
+  var W = 360, H = o.h || 200, pl = 40, pr = 14, pt = 12, pb = 24, fmt = o.fmt || function (v) { return Math.round(v); };
   if (!pts.length) return '';
   var t0 = o.t0 != null ? Math.min(o.t0, pts[0].t) : pts[0].t, t1 = o.t1 != null ? Math.max(o.t1, pts[pts.length - 1].t) : pts[pts.length - 1].t, lo = Infinity, hi = -Infinity;
   var dl = (t1 - t0) > 300 * DAY ? function (t) { var d = new Date(t); return MON[d.getMonth()] + ' ' + d.getFullYear(); } : fmtDate;
