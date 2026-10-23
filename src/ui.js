@@ -472,7 +472,7 @@ function progMuscles(W) {
   var rb = rangeBounds(firstWorkoutT(W)), series = seriesOver(function (t) { var o = overallRankAt(H, B, t); return o ? o.pct : null; }, rb);
   var idx = overallScore(H, now), idx30 = overallScore(H, now - 30 * DAY);
   var hero = '<div class="card section"><div class="field-label" style="margin:0">Overall strength rank</div><div class="score-hero"><div class="big">' + ov.score + '</div><div style="padding-bottom:4px"><div class="tier">' + tierOf(ov.score) + '</div><div>' + deltaHTML(ov30 ? ov.score - ov30.score : null, ' pts') + '</div></div></div>' +
-    '<div class="note">Stronger than about ' + Math.round(ov.pct) + '% of lifters your size. 100 is the strongest of people with your height, weight and sex. Based on ' + ov.groups + ' of ' + GROUPS.length + ' muscle groups.</div>' + rangeSeg() + lineChart(series, { base: 50, t0: rb.t0, t1: rb.t1, label: 'Overall rank over time', fmt: function (v) { return Math.round(v); } }) + rangeNote(series, ' pts') + '<div>' + chip + '</div></div>';
+    '<div class="note">Stronger than about ' + Math.round(ov.pct) + '% of lifters your size. 100 is the strongest of lifters with your bodyweight and sex. Based on ' + ov.groups + ' of ' + GROUPS.length + ' muscle groups.</div>' + rangeSeg() + lineChart(series, { base: 50, t0: rb.t0, t1: rb.t1, label: 'Overall rank over time', fmt: function (v) { return Math.round(v); } }) + rangeNote(series, ' pts') + '<div>' + chip + '</div></div>';
   var rows = GROUPS.map(function (g) {
     var cur = groupRankAt(H, g, B, now), old = groupRankAt(H, g, B, now - 30 * DAY);
     return { g: g, cur: cur, d: cur && old ? cur.score - old.score : null, ser: groupRankSeries(H, g, B, now, 12) };
@@ -554,7 +554,7 @@ function liftRankCard(name, H) {
     var hit = r && r.eq * k.m >= v;
     return '<div class="lrow"><span>' + (hit ? '✓ ' : '') + l + '</span><span class="num" style="font-size:18px">' + right + '</span></div>';
   }).join('');
-  var head = r ? '<div class="row" style="gap:14px"><div class="num" style="font-size:52px;line-height:.9">' + (r.est ? '≈' : '') + r.score + '</div><div class="grow"><div class="xname">' + tierOf(r.score) + ' for your size</div><div class="note">Stronger than about ' + Math.round(r.pct) + '% of ' + esc(bodyText(B)) + (r.est ? '. Estimated from the ' + CLASS_NAME[r.cls].toLowerCase() + ' standard.' : '.') + '</div></div></div>'
+  var head = r ? '<div class="row" style="gap:14px"><div class="num" style="font-size:52px;line-height:.9">' + (r.est ? '≈' : '') + r.score + '</div><div class="grow"><div class="xname">' + tierOf(r.score) + ' for your size</div><div class="note">Stronger than about ' + Math.round(r.pct) + '% of ' + esc(bodyText(B)) + (r.est ? '. Estimated from the ' + stdName(r.cls).toLowerCase() + ' standard.' : '.') + '</div></div></div>'
     : '<div class="xname">Targets for your size</div><div class="note">For ' + esc(bodyText(B)) + '. Log this lift once to get your own rank.</div>';
   var bwNote = rep && isBW(ex) ? '<div class="note">Added weight counts. A vest, belt or plate turns into extra bodyweight reps, e.g. ' + (function () { var w = unit() === 'kg' ? 10 * LB : 25, r0 = 10, eq = Math.round(bwEqReps(ex, w, r0)); return '+' + toDisp(w, unit()) + ' ' + u + ' × ' + r0 + ' counts as about ' + eq + ' reps'; })() + ' for you.</div>' : '';
   return '<div class="card section" style="gap:10px">' + head +

@@ -49,7 +49,7 @@ function isBW(ex) { return !!ex && (ex.eq === 'Bodyweight' || ex.bwk === 1); }
    BW_FRAC is roughly how much of your bodyweight each movement moves. */
 var BW_FRAC = { pullup: 1, dip: 0.95, pushup: 0.65, situp: 0.35, calfbw: 1, hangleg: 0.35 };
 var metricBW = function () { return 0; };   // the UI points this at the current body weight (lb)
-function bwFrac(ex) { var k = parseK(ex && ex.k); return (k && BW_FRAC[k.cls]) || 0.6; }
+function bwFrac(ex) { var k = parseK(ex && ex.k); return (k && (BW_FRAC[k.cls] || (DATA.std[k.cls] && DATA.std[k.cls].bf))) || 0.6; }
 function bwEqReps(ex, w, r) { var B = metricBW(); if (!(w > 0) || !(B > 0)) return r; var base = bwFrac(ex) * B; return Math.min(300, 30 * w / base + r * (base + w) / base); }
 function repsAtLoad(ex, eqReps, w) { var B = metricBW(); if (!(w > 0) || !(B > 0)) return eqReps; var base = bwFrac(ex) * B; return (eqReps - 30 * w / base) * base / (base + w); }
 function setMetric(ex, s) {
@@ -426,7 +426,7 @@ function sampleWorkouts(now) {
 }
 
 
-/* ---------- body profile & rank (1-100 vs people with your height, weight and sex) ---------- */
+/* ---------- body profile & rank (1-100 vs lifters of your bodyweight and sex, per Strength Level's tables) ---------- */
 var CLASS_NAME = { bench: 'Bench press', squat: 'Squat', deadlift: 'Deadlift', ohp: 'Overhead press', incline: 'Incline bench press', frontsquat: 'Front squat', rdl: 'Romanian deadlift', hipthrust: 'Hip thrust', bbrow: 'Barbell row', bbcurl: 'Barbell curl', bbshrug: 'Barbell shrug', dbbench: 'Dumbbell bench press', dbpress: 'Dumbbell shoulder press', dbcurl: 'Dumbbell curl', hammer: 'Hammer curl', dbtri: 'Dumbbell triceps extension', dbfly: 'Dumbbell fly', dbshrug: 'Dumbbell shrug', dbfront: 'Dumbbell front raise', dblat: 'Lateral raise', dbrow: 'Dumbbell row', dblunge: 'Dumbbell lunge', pulldown: 'Lat pulldown', cablerow: 'Seated cable row', pushdown: 'Triceps pushdown', legpress: 'Leg press', hack: 'Hack squat', chestpress: 'Chest press machine', legcurl: 'Leg curl', legext: 'Leg extension', calfmach: 'Weighted calf raise', cablecrunch: 'Cable crunch', wristcurl: 'Wrist curl', pullup: 'Pull-ups', pushup: 'Push-ups', dip: 'Dips', situp: 'Sit-ups', calfbw: 'Bodyweight calf raise', hangleg: 'Hanging leg raise' };
 var Z5 = [-1.6449, -0.8416, 0, 0.8416, 1.6449];
 function normCdf(z) {
@@ -447,15 +447,11 @@ function bwAt(b, t) {
   for (var i = 0; i < log.length; i++) if (log[i].t <= t) v = log[i].w;
   return v;
 }
-/* Boer lean-mass estimate; modest adjustment of effective bodyweight for height */
-function effBW(sex, hCm, wLb) {
-  var w = wLb / LB, lbm = function (W) { return sex === 'M' ? 0.407 * W + 0.267 * hCm - 19.2 : 0.252 * W + 0.473 * hCm - 48.3; };
-  var wt = (sex === 'M' ? 25.5 : 23.5) * Math.pow(hCm / 100, 2);
-  var f = lbm(w) / w, ft = lbm(wt) / wt;
-  var fac = clamp(Math.pow(f / ft, 0.7), 0.88, 1.1);
-  return wLb * fac;
-}
+/* Published standards are by bodyweight only, so rank against them at your actual bodyweight.
+   (An earlier version nudged this for height; that made targets drift a few % from the published tables.) */
+function effBW(sex, hCm, wLb) { return wLb; }
 /* standard anchors (Beginner..Elite = 5/20/50/80/95th percentile) for a lift at a bodyweight, log-log interpolated */
+function stdName(cls) { return CLASS_NAME[cls] || (DATA.std[cls] && DATA.std[cls].name) || cls; }
 function stdAt(cls, sex, bw) {
   var st = DATA.std[cls]; if (!st) return null;
   var rows = st[sex], keys = Object.keys(rows).map(Number).sort(function (a, b) { return a - b; });
