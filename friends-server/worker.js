@@ -1,9 +1,10 @@
 /* Iron Ledger friends server: a tiny Cloudflare Worker.
-   Gives friends usernames + passwords, a shared leaderboard and live challenges.
-   Stores only public scores, challenge progress and the sets of live workouts you share. Workouts, height and weight never leave the phone.
+   Gives friends usernames + passwords, a shared leaderboard and live challenges, and keeps each person's own
+   workout log and settings in their account (private: only that account can read or change them).
    Needs ONE KV namespace bound to this Worker with the variable name  DB  (see SERVER-SETUP.txt). */
 const ITER = 30000;               // password stretching; kept modest so it fits the free plan's CPU limit
-const MAX_USERS = 300, MAX_DOC = 16000, DAYS = 86400;
+const MAX_USERS = 300, MAX_DOC = 16000, DAYS = 86400, MAX_PDOC = 600000;
+const PDOC = /^(settings|draft|m_\d{4}-\d{2})$/;   // private docs: settings, the workout in progress, one per month of workouts
 const COLS = ['people', 'ch', 'cp', 'tg'];   // tg = live 'train together' sessions
 const VISION = '@cf/meta/llama-3.2-11b-vision-instruct';
 const enc = new TextEncoder();
@@ -70,6 +71,28 @@ async function hashPw(pw, salt) {
 async function readIdx(env) { return JSON.parse((await env.DB.get('idx')) || '[]'); }
 async function addIdx(env, uid) { const i = await readIdx(env); if (i.indexOf(uid) < 0) { i.push(uid); await env.DB.put('idx', JSON.stringify(i)); } return i; }
 
+/* ----- private account data: p:<uid>:<doc>, with the list of doc names in pi:<uid> ----- */
+async function pIndex(env, uid) { return JSON.parse((await env.DB.get('pi:' + uid)) || '[]'); }
+async function pAll(env, uid) {
+  const ids = await pIndex(env, uid), docs = await Promise.all(ids.map(id => env.DB.get('p:' + uid + ':' + id, 'json'))), res = {};
+  ids.forEach((id, i) => { if (docs[i]) res[id] = docs[i]; });
+  return res;
+}
+/* months merge by workout id, so two phones never wipe out each other's workouts; settings and the draft keep the newest copy */
+function pMerge(id, cur, v) {
+  if (id.indexOf('m_') === 0) {
+    const del = new Set((Array.isArray(v.del) ? v.del : []).slice(0, 600).map(String)), by = {};
+    // v.all: "Delete all data" clears the month instead of merging
+    ((cur && !v.all && cur.w) || []).forEach(w => { if (w && w.id != null && !del.has(String(w.id))) by[w.id] = w; });
+    (Array.isArray(v.w) ? v.w : []).forEach(w => { if (!w || w.id == null || typeof w !== 'object') return; const o = by[w.id]; if (!o || (+w.ed || 0) >= (+o.ed || 0)) by[w.id] = w; });
+    const w = Object.keys(by).map(k => by[k]).sort((a, b) => (+a.t || 0) - (+b.t || 0));
+    return { v: 1, w, at: Date.now() };
+  }
+  if (cur && (+cur.at || 0) > (+v.at || 0)) return cur;   // the server already has something newer
+  return v;
+}
+async function pDeleteAll(env, uid) { const ids = await pIndex(env, uid); await Promise.all(ids.map(id => env.DB.delete('p:' + uid + ':' + id))); await env.DB.delete('pi:' + uid); }
+
 let LAST = null;   // last /all built by this isolate: { v, body }
 async function everyone(env) {
   const idx = await readIdx(env), res = { people: {}, ch: {}, cp: {}, tg: {} };
@@ -118,6 +141,26 @@ export default {
         else { const res = await everyone(env); res.v = ver; body = JSON.stringify(res); LAST = { v: ver, body }; }
         return new Response(body, { status: 200, headers: Object.assign({ 'Content-Type': 'application/json' }, CORS) });
       }
+      if (path === '/me' || path.indexOf('/me/') === 0) {
+        // your own data: needs a current token for reads too, since this is private
+        const rec = await writer(env, tok); if (!rec) return bad('Sign in again.', 401);
+        if (req.method === 'GET' && path === '/me') return out({ ok: true, name: rec.name, docs: await pAll(env, uid) });
+        const pm = path.match(/^\/me\/([a-z0-9_-]{1,20})$/);
+        if (!pm || !PDOC.test(pm[1]) || req.method !== 'PUT') return bad('Not found', 404);
+        const id = pm[1], txt = await req.text(); if (txt.length > MAX_PDOC) return bad('Too large', 413);
+        let v; try { v = JSON.parse(txt); } catch (e) { return bad('Bad JSON'); }
+        if (!v || typeof v !== 'object' || Array.isArray(v)) return bad('Bad JSON');
+        const key = 'p:' + uid + ':' + id, cur = await env.DB.get(key, 'json'), next = pMerge(id, cur, v);
+        const ids = await pIndex(env, uid);
+        if (id.indexOf('m_') === 0 && !next.w.length) {
+          if (cur) await env.DB.delete(key);
+          if (ids.indexOf(id) >= 0) await env.DB.put('pi:' + uid, JSON.stringify(ids.filter(x => x !== id)));
+          return out({ ok: true, doc: next });
+        }
+        if (next !== cur) await env.DB.put(key, JSON.stringify(next));
+        if (ids.indexOf(id) < 0) { ids.push(id); await env.DB.put('pi:' + uid, JSON.stringify(ids)); }
+        return out({ ok: true, doc: next });
+      }
       const m = path.match(/^\/c\/(people|ch|cp|tg)\/([a-z0-9_]{3,16})$/);
       if (m && (req.method === 'PUT' || req.method === 'DELETE')) {
         if (m[2] !== uid) return bad('You can only change your own data.', 403);
@@ -148,7 +191,7 @@ export default {
         const b = await req.json().catch(() => ({})), rec = await env.DB.get('u:' + uid, 'json');
         if (!rec || (rec.gen || '0') !== tok.gen) return bad('Sign in again.', 401);
         if (!same(await hashPw(String(b.p || ''), rec.salt), rec.h)) return bad('Password is wrong.', 403);
-        await env.DB.delete('u:' + uid); await env.DB.delete('d:' + uid);
+        await env.DB.delete('u:' + uid); await env.DB.delete('d:' + uid); await pDeleteAll(env, uid);
         const i = (await readIdx(env)).filter(x => x !== uid); await env.DB.put('idx', JSON.stringify(i));
         await bump(env);
         return out({ ok: true });

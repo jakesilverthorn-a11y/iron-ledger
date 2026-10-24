@@ -376,3 +376,7 @@ details.card summary { list-style: none; } details.card summary::-webkit-details
 /* sheet content never shrinks to fit: long sheets scroll instead (charts were being squeezed) */
 .sheet .body > * { flex-shrink: 0; }
 .chart { flex: none; }
+
+/* sign-in screen: no tabs until you're signed in */
+body.gated #tabs, body.gated #restbar { display: none !important; }
+.screen.gate { padding-top: max(28px, env(safe-area-inset-top)); }

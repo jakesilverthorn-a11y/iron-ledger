@@ -23,14 +23,89 @@ function normSettings(st) {
   delete st.equip;
   return st;
 }
-function loadLocal() {
-  try {
-    var j = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
-    if (j) { S.settings = normSettings(Object.assign(defaults(), j.settings || {})); S.workouts = j.workouts || []; S.draft = j.draft || null; S.at = j.at || S.at; }
-  } catch (e) { }
+/* ----- accounts: on the web app each person signs in, and this phone keeps a copy per account ----- */
+function acctMode() { return !window.claude && typeof SRV !== 'undefined' && !!SRV.url; }
+function needGate() { return acctMode() && !srvOn(); }
+function lsKey() { return (!window.claude && typeof SRV !== 'undefined' && SRV.uid) ? LS_KEY + ':' + SRV.uid : LS_KEY; }
+function readLS(k) { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } }
+function applyLS(j) { S.settings = normSettings(Object.assign(defaults(), (j && j.settings) || {})); S.workouts = (j && j.workouts) || []; S.draft = (j && j.draft) || null; S.at = (j && j.at) || { settings: 0, draft: 0 }; }
+function hasData(j) { return !!(j && (((j.workouts || []).length) || (j.settings && j.settings.body && j.settings.body.sex))); }
+function loadLocal() { var j = readLS(lsKey()); if (j) applyLS(j); }
+/* what this phone saved before sign-in existed becomes this account's (keeps its own timestamps, so newer data elsewhere still wins) */
+function acctAdoptLegacy() {
+  var L = readLS(LS_KEY); if (!hasData(L)) return false;
+  var have = {}; S.workouts.forEach(function (w) { have[w.id] = 1; });
+  (L.workouts || []).forEach(function (w) { if (w && !have[w.id]) { S.workouts.push(w); dirtyMonths[monthKey(w.t)] = 1; } });
+  S.workouts.sort(function (a, b) { return a.t - b.t; });
+  var la = L.at || {};
+  if (L.settings && (la.settings || 1) > (S.at.settings || 0)) { S.settings = normSettings(Object.assign(defaults(), L.settings)); S.at.settings = la.settings || 1; dirtySettings = true; }
+  if (L.draft && !S.draft) { S.draft = L.draft; S.at.draft = la.draft || 1; dirtyDraft = true; }
+  try { localStorage.removeItem(LS_KEY); } catch (e) { }
+  if (typeof photosAdoptLegacy === 'function') photosAdoptLegacy();
+  if (typeof aiKeyAdoptLegacy === 'function') aiKeyAdoptLegacy();
+  return true;
+}
+function acctSignedIn(prev) {
+  dbCol = null; dirtySettings = false; dirtyDraft = false; dirtyMonths = {};
+  var acct = readLS(lsKey()); applyLS(acct);
+  var L = readLS(LS_KEY);
+  if (!acct && hasData(L)) {
+    var n = (L.workouts || []).length;
+    if (confirm('This phone has ' + (n ? n + ' workout' + (n > 1 ? 's' : '') : 'body stats and settings') + ' saved from before you signed in. Add ' + (n > 1 ? 'them' : 'it') + ' to ' + SRV.name + '\'s account?\n\nChoose Cancel if this isn\'t your data.')) acctAdoptLegacy();
+  }
+  S.settings.handle = SRV.name; saveLocal();   // no new timestamp: settings saved in the account still win
+  U.plan = null; U.confirm = null; U.tab = 'train';
+  if (typeof photosInit === 'function') photosInit();
+  if (typeof aiDetect === 'function') aiDetect();
+  render(); acctSync();
+}
+var ACCT = { last: 0, busy: false };
+async function acctSync() {
+  if (!acctMode() || !srvOn() || ACCT.busy) return;
+  ACCT.busy = true; var uid = SRV.uid;
+  if (!dbCol) { dbCol = srvPrivCol(); dbState = 'pending'; }
+  try { var snap = await dbCol.get(); if (SRV.uid === uid) { mergeRemote(snap); ACCT.last = Date.now(); if (typeof socPublishSoon === 'function' && SOC.db) socPublishSoon(); } }
+  catch (e) { if (SRV.uid === uid) { dbState = 'error'; if (U.tab === 'settings') render(); } }
+  ACCT.busy = false;
+}
+/* changes from another phone: add workouts the server has that this phone doesn't */
+function acctAdoptMonth(doc) {
+  if (!doc || !Array.isArray(doc.w)) return;
+  var del = {}; (S.settings.deleted || []).forEach(function (i) { del[i] = 1; });
+  var by = {}, ch = false; S.workouts.forEach(function (w) { by[w.id] = w; });
+  doc.w.forEach(function (w) { if (!w || w.id == null || del[w.id]) return; var o = by[w.id]; if (!o || (w.ed || 0) > (o.ed || 0)) { by[w.id] = w; ch = true; } });
+  if (!ch) return;
+  S.workouts = Object.keys(by).map(function (k) { return by[k]; }).sort(function (a, b) { return a.t - b.t; }); saveLocal();
+  var a = document.activeElement; if (!(a && a.tagName === 'INPUT') && !sheetOpen()) render();
+}
+/* forget this account on this phone (after pushing what's left) */
+async function acctSignOut() {
+  for (var i = 0; i < 50 && pushing; i++) await new Promise(function (r) { setTimeout(r, 200); });
+  if (dbCol && dbCol.srv) await pushDb();
+  if ((dirtySettings || dirtyDraft || Object.keys(dirtyMonths).length) && !confirm('Some changes have not reached your account yet (no connection?). Sign out anyway and lose them?')) return;
+  acctReset(); toast('Signed out');
+}
+function acctReset() {
+  endSession();
+  try { localStorage.removeItem(lsKey()); } catch (e) { }
+  srvSignOut(); dbCol = null; dbState = 'local'; clearTimeout(syncTimer); syncTimer = null; syncDue = 0;
+  dirtySettings = false; dirtyDraft = false; dirtyMonths = {};
+  applyLS(null); U.plan = null; U.tab = 'train'; U.confirm = null;
+  if (typeof photosInit === 'function') photosInit();
+  if (typeof aiDetect === 'function') aiDetect();
+  closeSheet(); render(); window.scrollTo(0, 0);
+}
+function viewGate() {
+  return '<div class="screen gate"><div class="screen-head"><div><div class="sub">Your workout log</div><h1>Iron Ledger</h1></div></div>' +
+    '<div class="card section"><h2>Sign in</h2><div class="note">Your workouts, settings and progress are saved to your own account, so only you see your log and you can use it on any phone. Friends only see the strength scores you choose to share.</div>' +
+    '<input class="input" id="su" maxlength="16" autocapitalize="none" autocomplete="username" autocorrect="off" spellcheck="false" placeholder="Username" aria-label="Username">' +
+    '<input class="input" id="sp" type="password" autocomplete="current-password" placeholder="Password (6+ characters)" aria-label="Password">' +
+    '<div class="note" id="s-err" style="color:var(--down);min-height:0"></div>' +
+    '<div class="row"><button class="btn primary grow" data-act="srvIn">Sign in</button><button class="btn grow" data-act="srvUp">Create account</button></div>' +
+    '<div class="note">New here? Type a username and password, then tap <b>Create account</b>. There is no password reset, so pick one you will remember.</div></div></div>';
 }
 function saveLocal() {
-  try { localStorage.setItem(LS_KEY, JSON.stringify({ settings: S.settings, workouts: S.workouts, draft: S.draft, at: S.at })); saveLocal.warned = false; }
+  try { localStorage.setItem(lsKey(), JSON.stringify({ settings: S.settings, workouts: S.workouts, draft: S.draft, at: S.at })); saveLocal.warned = false; }
   catch (e) { if (!saveLocal.warned) { saveLocal.warned = true; setTimeout(function () { toast('Your phone is out of storage for this app. Save a backup file in Settings, and free up space.'); }, 50); } }
 }
 function persist(o) {
@@ -38,9 +113,16 @@ function persist(o) {
   if (o.settings) { S.at.settings = Date.now(); dirtySettings = true; }
   if (o.draft) { S.at.draft = Date.now(); dirtyDraft = true; }
   if (o.month != null) dirtyMonths[monthKey(o.month)] = 1;
-  saveLocal(); clearTimeout(syncTimer); syncTimer = setTimeout(pushDb, 900);
+  saveLocal();
+  // to your account: the workout in progress goes up every 15 s at most (fewer server writes); finished workouts and settings right away
+  schedulePush(dbCol && dbCol.srv && !dirtySettings && !Object.keys(dirtyMonths).length ? 15000 : 900);
   if (typeof socPublishSoon === 'function' && SOC.db) { socPublishSoon(); socProgressSoon(); }
   if (o.draft && typeof tgSoon === 'function') tgSoon();
+}
+var syncDue = 0;
+function schedulePush(ms) {
+  var due = Date.now() + ms; if (syncTimer && syncDue && syncDue <= due) return;
+  clearTimeout(syncTimer); syncDue = due; syncTimer = setTimeout(function () { syncTimer = null; syncDue = 0; pushDb(); }, ms);
 }
 async function pushDb() {
   if (!dbCol) return;
@@ -55,10 +137,10 @@ async function pushDb() {
       var k = keys[i], ws = S.workouts.filter(function (w) { return monthKey(w.t) === k; });
       if (ws.length) await dbCol.doc(k).set({ v: 1, w: ws }); else await dbCol.doc(k).delete();
     }
-    dbState = 'synced';
+    dbState = 'synced'; acctWiping = false;
   } catch (e) {
     dbState = 'error'; dirtySettings = dirtySettings || ds; dirtyDraft = dirtyDraft || dd; keys.forEach(function (k) { dirtyMonths[k] = 1; });
-    clearTimeout(syncTimer); syncTimer = setTimeout(pushDb, 20000);
+    clearTimeout(syncTimer); syncTimer = null; schedulePush(20000);
   }
   pushing = false;
   if (again) { again = false; pushDb(); }
@@ -66,13 +148,18 @@ async function pushDb() {
 async function initDb() {
   try {
     var cl = window.claude;
-    if (!cl || !cl.use) { dbState = 'local'; srvBoot(); if (U.tab === 'friends') render(); return; }
+    if (!cl || !cl.use) { dbState = 'local'; srvBoot(); if (acctMode() && srvOn()) acctSync(); if (U.tab === 'friends') render(); return; }
     var user = await cl.use('user'), db = await cl.use('db');
     var id = user ? await user.id() : null;
     if (!db || !id) { dbState = 'local'; if (U.tab === 'settings') render(); return; }
     dbCol = db.collection('data/users/' + id);
     socInit(db, user, id);
-    var snap = await dbCol.get(), remoteW = [], rs = null, rd = null;
+    mergeRemote(await dbCol.get());
+  } catch (e) { dbState = 'local'; }
+}
+/* combine what's saved in the account with what's on this phone */
+function mergeRemote(snap) {
+    var remoteW = [], rs = null, rd = null;
     snap.docs.forEach(function (d) {
       var x = d.data(); if (!x) return;
       if (d.id === 'settings') rs = x; else if (d.id === 'draft') rd = x; else if (d.id.indexOf('m_') === 0) remoteW = remoteW.concat(x.w || []);
@@ -95,7 +182,6 @@ async function initDb() {
     if (push) pushDb();
     var a = document.activeElement;
     if (!(a && a.tagName === 'INPUT')) render();
-  } catch (e) { dbState = 'local'; }
 }
 
 /* ===== helpers ===== */
@@ -368,6 +454,8 @@ function recoveryHTML(compact) {
 /* ===== views ===== */
 function render() {
   var y = window.scrollY, v = $('#view');
+  if (needGate()) { document.body.classList.add('gated'); v.innerHTML = viewGate(); return; }
+  document.body.classList.remove('gated');
   var map = { train: viewTrain, lib: viewLib, prog: viewProg, body: viewBody, eat: viewEat, friends: viewFriends, settings: viewSettings };
   var html = map[U.tab]();
   if (S.draft && U.tab !== 'train') html = '<div class="screen" style="padding-bottom:0"><button class="banner" style="width:100%;text-align:left" data-act="tab" data-t="train"><span><b>Workout in progress</b> · tap to continue</span><span class="num" style="font-size:20px" id="clock2"></span></button></div>' + html;
@@ -654,8 +742,10 @@ function bodySave() {
 
 function viewSettings() {
   var st = S.settings;
-  var status = dbState === 'synced' ? 'Saved to your Claude account and this device.' : dbState === 'error' ? 'Could not reach your account just now. Saved on this device and retrying.' : dbState === 'pending' ? 'Connecting…' : 'Saved on this device only. Back up regularly.';
-  return '<div class="screen"><div class="screen-head"><h1>Settings</h1></div>' +
+  var srvAcct = dbCol && dbCol.srv;
+  var status = srvAcct ? (dbState === 'synced' ? 'Saved to your account and this phone.' : dbState === 'error' ? 'Could not reach your account just now. Saved on this phone and retrying.' : 'Connecting to your account…') : dbState === 'synced' ? 'Saved to your Claude account and this device.' : dbState === 'error' ? 'Could not reach your account just now. Saved on this device and retrying.' : dbState === 'pending' ? 'Connecting…' : 'Saved on this device only. Back up regularly.';
+  var acctCard = acctMode() && srvOn() ? '<div class="card section"><div class="row" style="gap:12px"><div class="grow"><div class="xname">' + esc(SRV.name) + '</div><div class="note">Signed in. Your workouts are saved to this account. Sign in with the same username on another phone to see them there.</div></div><button class="btn small" data-act="srvOut">Sign out</button></div></div>' : '';
+  return '<div class="screen"><div class="screen-head"><h1>Settings</h1></div>' + acctCard +
     '<div class="section"><span class="field-label">Weight units</span><div class="seg" role="group"><button aria-pressed="' + (st.unit === 'lb') + '" data-act="unit" data-k="lb">Pounds</button><button aria-pressed="' + (st.unit === 'kg') + '" data-act="unit" data-k="kg">Kilograms</button></div></div>' +
     injurySettingsHTML() +
     '<div class="section"><span class="field-label">Rest timer chime</span><div class="seg" role="group" aria-label="Rest timer chime"><button aria-pressed="' + (st.chime !== false) + '" data-act="chimeOpt" data-k="on">On</button><button aria-pressed="' + (st.chime === false) + '" data-act="chimeOpt" data-k="off">Off</button></div><div class="note">A short chime when rest is over, through your headphones or speaker. Keep the app open on screen (it stays awake during workouts); iPhones pause web apps that are in the background.</div></div>' +
@@ -903,12 +993,12 @@ document.addEventListener('click', function (ev) {
   if (a === 'srvBack') { U.codes = false; render(); return; }
   if (a === 'srvForget') { srvForget(); render(); return; }
   if (a === 'srvSaveUrl') { var sv = ($('#surl') || {}).value || ''; el.disabled = true; srvConnect(sv).then(function (m) { el.disabled = false; if (m) { var e7 = $('#surl-err'); if (e7) e7.textContent = m; } else { U.codes = false; render(); } }); return; }
-  if (a === 'srvOut') { srvSignOut(); closeSheet(); render(); toast('Signed out'); return; }
+  if (a === 'srvOut') { if (acctMode()) { acctSignOut(); return; } srvSignOut(); closeSheet(); render(); toast('Signed out'); return; }
   if (a === 'srvInvite') { copyText(srvInvite()); return; }
   if (a === 'srvPw') { U.confirm = 'pw'; manageSheet(); return; }
   if (a === 'srvDel') { U.confirm = 'delacct'; manageSheet(); return; }
   if (a === 'srvPwGo') { srvRaw('POST', '/password', { p: ($('#pw-old') || {}).value, np: ($('#pw-new') || {}).value }).then(function (r) { if (r && r.token) { SRV.token = r.token; srvSave(); } U.confirm = null; closeSheet(); toast('Password changed'); }, function (e) { var x = $('#pw-err'); if (x) x.textContent = e.message; }); return; }
-  if (a === 'srvDelGo') { srvRaw('POST', '/delete-account', { p: ($('#pw-del') || {}).value }).then(function () { U.confirm = null; S.settings.handle = ''; persist({ settings: true }); srvSignOut(); closeSheet(); render(); toast('Account deleted'); }, function (e) { var x = $('#pw-err'); if (x) x.textContent = e.message; }); return; }
+  if (a === 'srvDelGo') { srvRaw('POST', '/delete-account', { p: ($('#pw-del') || {}).value }).then(function () { if (acctMode()) { dirtySettings = false; dirtyDraft = false; dirtyMonths = {}; acctReset(); toast('Account deleted'); return; } U.confirm = null; S.settings.handle = ''; persist({ settings: true }); srvSignOut(); closeSheet(); render(); toast('Account deleted'); }, function (e) { var x = $('#pw-err'); if (x) x.textContent = e.message; }); return; }
   if (a === 'plates') { var px = S.draft && S.draft.ex[+d.x], pset = px ? (px.sets.filter(function (q) { return !q.done && +q.w > 0; })[0] || px.sets.filter(function (q) { return +q.w > 0; }).slice(-1)[0]) : null; U.pcw = pset ? String(toDisp(pset.w, unit())) : ''; plateSheet(); return; }
   if (a === 'pcBar') { st.bar = +d.v; persist({ settings: true }); plateSheet(); return; }
   if (a === 'weekGoal') { st.weekGoal = st.weekGoal >= 6 ? 2 : st.weekGoal + 1; persist({ settings: true }); render(); return; }
@@ -967,10 +1057,11 @@ document.addEventListener('click', function (ev) {
     var months = {}; S.workouts.forEach(function (w) { months[monthKey(w.t)] = 1; });
     var ids = S.workouts.map(function (w) { return w.id; });
     endSession();
-    S.workouts = []; S.draft = null; S.settings = defaults(); S.settings.deleted = ids.slice(-200); U.confirm = null; U.plan = null;
+    S.workouts = []; S.draft = null; S.settings = defaults(); S.settings.deleted = ids.slice(-200); U.confirm = null; U.plan = null; if (acctMode() && srvOn()) S.settings.handle = SRV.name;
     // photos, the AI key and the friends sign-in live outside the workout data: clear them too
     try { if (typeof photosWipe === 'function') photosWipe(); localStorage.removeItem('ironledger.ak'); } catch (e) { }
-    try { if (typeof srvSignOut === 'function' && srvOn()) srvSignOut(); } catch (e) { }
+    if (acctMode()) acctWiping = true;   // clears these months in your account too
+    else try { if (typeof srvSignOut === 'function' && srvOn()) srvSignOut(); } catch (e) { }
     Object.keys(months).forEach(function (m) { dirtyMonths[m] = 1; }); persist({ settings: true, draft: true }); render(); tick(); toast('All data deleted'); return;
   }
 });
@@ -1135,7 +1226,14 @@ function restoreFrom(txt) {
 }
 
 /* ===== boot ===== */
+if (!window.claude) srvLoad();   // which account is signed in on this phone
 loadLocal();
+if (acctMode() && srvOn() && !readLS(lsKey()) && acctAdoptLegacy()) saveLocal();   // first open after accounts arrived: your data on this phone is yours
+document.addEventListener('visibilitychange', function () {
+  if (!(dbCol && dbCol.srv)) return;
+  if (document.hidden) pushDb(); else if (Date.now() - ACCT.last > 60000) acctSync();   // send what's pending; pick up other phones' changes
+});
+window.addEventListener('pagehide', function () { if (dbCol && dbCol.srv) pushDb(); });
 document.body.classList.toggle('lift', S.settings.lift !== false);
 document.querySelectorAll('#tabs button').forEach(function (b) { b.insertAdjacentHTML('afterbegin', ico({ train: 'train', lib: 'lib', prog: 'prog', body: 'body', eat: 'eat', friends: 'users', settings: 'set' }[b.dataset.t])); });
 render();

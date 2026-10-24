@@ -3,8 +3,10 @@
 var SRV = { url: '', token: '', uid: '', name: '', subs: { people: [], ch: [], cp: [], tg: [] }, timer: null, busy: false, last: null };
 function srvOn() { return !!(SRV.url && SRV.token && SRV.uid); }
 function srvNorm(u) { u = String(u || '').trim(); if (!u) return ''; if (!/^https?:\/\//i.test(u)) u = 'https://' + u; return u.replace(/\/+$/, ''); }
+var SRV_LOADED = false;
 function srvLoad() {
-  if (window.claude) return;
+  if (window.claude || SRV_LOADED) return;
+  SRV_LOADED = true;
   try {
     var m = (location.hash || '').match(/[#&]s=([^&]+)/);
     var cfg = srvNorm(window.IL_SERVER || '');
@@ -93,9 +95,12 @@ function srvStop() {
 async function srvAuth(kind, u, p) {
   try {
     var r = await srvRaw('POST', '/' + kind, { u: u, p: p }, false);
+    var prev = SRV.uid;
     SRV.token = r.token; SRV.uid = r.uid; SRV.name = r.name; srvSave();
-    S.settings.handle = r.name; persist({ settings: true });
-    srvStop(); srvStart(); return null;
+    srvStop();
+    if (typeof acctSignedIn === 'function' && acctMode()) acctSignedIn(prev);   // load this account's own workouts
+    else { S.settings.handle = r.name; persist({ settings: true }); }
+    srvStart(); return null;
   } catch (e) { return e.message || 'Could not reach the server.'; }
 }
 async function srvConnect(url) {
@@ -108,6 +113,20 @@ async function srvConnect(url) {
 }
 function srvSignOut() { srvStop(); if (typeof AI !== 'undefined' && AI.kind === 'server') AI.kind = null; SRV.token = ''; SRV.uid = ''; SRV.name = ''; srvSave(); }
 function srvForget() { srvSignOut(); SRV.url = ''; srvSave(); }
+/* your private workouts and settings in your account (GET /me, PUT /me/<doc>), shaped like the Claude database */
+function srvPrivCol() {
+  function put(id, d) {
+    var body = d;
+    if (id.indexOf('m_') === 0) body = Object.assign({}, d, { del: (S.settings.deleted || []).slice(-600), all: !!acctWiping });
+    return srvRaw('PUT', '/me/' + id, body, true, 30000).then(function (r) { if (id.indexOf('m_') === 0 && r && r.doc && typeof acctAdoptMonth === 'function') acctAdoptMonth(r.doc); return r; });
+  }
+  return {
+    srv: true,
+    get: async function () { var r = await srvRaw('GET', '/me', null, true, 20000), docs = r.docs || {}; return { docs: Object.keys(docs).map(function (id) { return { id: id, data: function () { return docs[id]; } }; }) }; },
+    doc: function (id) { return { set: function (d) { return put(id, d); }, delete: function () { return put(id, { v: 1, w: [] }); } }; }
+  };
+}
+var acctWiping = false;
 function srvBoot() { srvLoad(); if (srvOn()) srvStart(); document.addEventListener('visibilitychange', function () { if (!document.hidden && srvOn()) srvPoll(); }); }
 
 function viewFriendsAuth() {

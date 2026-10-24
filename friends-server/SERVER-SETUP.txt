@@ -2,7 +2,9 @@ FRIENDS SERVER (one-time, about 10 minutes, free)
 
 This gives everyone their own username and password, a live leaderboard and challenges.
 Friends do NOT need Claude or any account except the one they make inside Iron Ledger.
-Only public scores and challenge progress are stored. Workouts, height and weight stay on each phone.
+When the server address is set in docs/config.js, everyone signs in when they open the app, and each person's
+workouts, body stats and settings are saved privately in their own account (only that account can read them).
+Friends see only the strength scores and challenge progress they share. Progress photos stay on each phone.
 
 You do this once. Friends just open your invite link.
 

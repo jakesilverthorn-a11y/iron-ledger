@@ -26,9 +26,11 @@ GitHub Pages republishes within a minute or two.
 
 ## Friends server (optional)
 Follow `friends-server/SERVER-SETUP.txt`, then put the Worker address in `docs/config.js`
-(`window.IL_SERVER = "https://…workers.dev"`) and push. Everyone who opens the site is connected automatically.
+(`window.IL_SERVER = "https://…workers.dev"`) and push. Everyone who opens the site is asked to sign in or create an account,
+and gets their own workout history.
 Test the server logic locally with `node friends-server/test.mjs`.
 
 ## Data
-Workouts, height and weight stay on each phone (back up from Settings). The friends server stores only usernames,
-hashed passwords, strength scores and challenge progress.
+With a friends server, each person's workouts, settings and body stats are saved privately in their own account
+(and cached on the phone, so the app works offline). Friends see only usernames, strength scores and challenge progress.
+Progress photos and an optional Claude API key stay on the phone. Without a server, everything stays on the phone.

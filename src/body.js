@@ -32,12 +32,17 @@ function idbOpen() {
 }
 function idbGet(k) { return idbOpen().then(function (db) { return new Promise(function (ok, bad) { var q = db.transaction('kv').objectStore('kv').get(k); q.onsuccess = function () { ok(q.result); }; q.onerror = function () { bad(q.error); }; }); }); }
 function idbSet(k, v) { return idbOpen().then(function (db) { return new Promise(function (ok, bad) { var tx = db.transaction('kv', 'readwrite'); tx.objectStore('kv').put(v, k); tx.oncomplete = function () { ok(); }; tx.onerror = function () { bad(tx.error); }; tx.onabort = function () { bad(tx.error || new Error('aborted')); }; }); }); }
-function legacyPhotos() { try { var a = JSON.parse(localStorage.getItem(PHOTO_KEY) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+/* each account signed in on this phone has its own photos and API key */
+function acctSfx() { return (!window.claude && typeof SRV !== 'undefined' && SRV.uid) ? ':' + SRV.uid : ''; }
+function photoK() { return 'photos' + acctSfx(); }
+function legacyPhotos() { try { var a = JSON.parse(localStorage.getItem(PHOTO_KEY + acctSfx()) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
 function photosInit() {
-  return idbGet('photos').then(function (a) {
+  PHOTOS = null; BODY_FULL = null; var k = photoK();
+  return idbGet(k).then(function (a) {
+    if (k !== photoK()) return;   // switched account meanwhile
     PHOTO_IDB = true; var old = legacyPhotos();
     PHOTOS = Array.isArray(a) ? a : [];
-    if (old.length) { var have = {}; PHOTOS.forEach(function (x) { have[x.t] = 1; }); old.forEach(function (x) { if (!have[x.t]) PHOTOS.push(x); }); PHOTOS.sort(function (x, y) { return x.t - y.t; }); return idbSet('photos', PHOTOS).then(function () { try { localStorage.removeItem(PHOTO_KEY); } catch (e) { } }); }
+    if (old.length) { var have = {}; PHOTOS.forEach(function (x) { have[x.t] = 1; }); old.forEach(function (x) { if (!have[x.t]) PHOTOS.push(x); }); PHOTOS.sort(function (x, y) { return x.t - y.t; }); return idbSet(k, PHOTOS).then(function () { try { localStorage.removeItem(PHOTO_KEY + acctSfx()); } catch (e) { } }); }
   }).catch(function () { PHOTO_IDB = false; PHOTOS = legacyPhotos(); }).then(function () { if (U.tab === 'body') render(); });
 }
 function photosLoad() { return PHOTOS || legacyPhotos(); }
@@ -48,18 +53,32 @@ function photosSave(a) {
   var prev = PHOTOS;
   if (PHOTO_IDB) {
     var next = photosTrim(a, PHOTO_MAX); PHOTOS = next;
-    return idbSet('photos', next).then(function () { return true; }, function () { PHOTOS = prev; toast('Could not save the photo. Your phone may be out of space.'); if (U.tab === 'body') render(); return false; });
+    return idbSet(photoK(), next).then(function () { return true; }, function () { PHOTOS = prev; toast('Could not save the photo. Your phone may be out of space.'); if (U.tab === 'body') render(); return false; });
   }
   var nx = photosTrim(a, PHOTO_LS_MAX);
-  try { localStorage.setItem(PHOTO_KEY, JSON.stringify(nx)); PHOTOS = nx; return Promise.resolve(true); } catch (e) { toast('Not enough space on this phone for another photo. Delete an old one.'); return Promise.resolve(false); }
+  try { localStorage.setItem(PHOTO_KEY + acctSfx(), JSON.stringify(nx)); PHOTOS = nx; return Promise.resolve(true); } catch (e) { toast('Not enough space on this phone for another photo. Delete an old one.'); return Promise.resolve(false); }
 }
 /* "Delete all data": photos, the sharper analysis copy and the API key */
 function photosWipe() {
   PHOTOS = []; BODY_FULL = null; AI.err = '';
-  try { localStorage.removeItem(PHOTO_KEY); } catch (e) { }
-  if (PHOTO_IDB) idbSet('photos', []).catch(function () { });
+  try { localStorage.removeItem(PHOTO_KEY + acctSfx()); } catch (e) { }
+  if (PHOTO_IDB) idbSet(photoK(), []).catch(function () { });
   aiKeySet(''); aiDetect().then(function () { if (U.tab === 'body') render(); });
 }
+/* photos taken before sign-in existed move into the account that adopts this phone's data */
+function photosAdoptLegacy() {
+  if (!acctSfx()) return;
+  var k = photoK(), old = []; try { old = JSON.parse(localStorage.getItem(PHOTO_KEY) || '[]'); localStorage.removeItem(PHOTO_KEY); } catch (e) { }
+  idbGet('photos').then(function (a) {
+    var src = (Array.isArray(a) ? a : []).concat(Array.isArray(old) ? old : []); if (!src.length) return;
+    return idbGet(k).then(function (b) {
+      var have = {}, all = (Array.isArray(b) ? b : []).slice(); all.forEach(function (x) { have[x.t] = 1; });
+      src.forEach(function (x) { if (x && !have[x.t]) all.push(x); }); all.sort(function (x, y) { return x.t - y.t; });
+      return idbSet(k, all).then(function () { return idbSet('photos', []); });
+    });
+  }).catch(function () { }).then(function () { photosInit(); });
+}
+function aiKeyAdoptLegacy() { try { var o = localStorage.getItem(AK_KEY); if (o && acctSfx() && !localStorage.getItem(AK_KEY + acctSfx())) localStorage.setItem(AK_KEY + acctSfx(), o); if (acctSfx()) localStorage.removeItem(AK_KEY); } catch (e) { } }
 function photoMaxNow() { return PHOTO_IDB ? PHOTO_MAX : PHOTO_LS_MAX; }
 async function savePhotoFile(p) {
   var blob = dataURLBlob(p.d), name = 'progress-' + new Date(p.t).toISOString().slice(0, 10) + '.jpg';
@@ -108,8 +127,8 @@ async function aiDetect() {
 }
 /* your own Anthropic API key: stored only on this phone, sent only to api.anthropic.com */
 var AK_KEY = 'ironledger.ak';
-function aiKey() { try { return localStorage.getItem(AK_KEY) || ''; } catch (e) { return ''; } }
-function aiKeySet(k) { try { if (k) localStorage.setItem(AK_KEY, k); else localStorage.removeItem(AK_KEY); } catch (e) { } }
+function aiKey() { try { return localStorage.getItem(AK_KEY + acctSfx()) || ''; } catch (e) { return ''; } }
+function aiKeySet(k) { try { if (k) localStorage.setItem(AK_KEY + acctSfx(), k); else localStorage.removeItem(AK_KEY + acctSfx()); } catch (e) { } }
 var AI_MODEL = 'claude-sonnet-5-5';
 async function aiAnthropic(du, prompt, key) {
   var ctl = new AbortController(), to = setTimeout(function () { ctl.abort(); }, 90000); AI.ctl = ctl;
