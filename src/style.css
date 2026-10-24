@@ -380,3 +380,8 @@ details.card summary { list-style: none; } details.card summary::-webkit-details
 /* sign-in screen: no tabs until you're signed in */
 body.gated #tabs, body.gated #restbar { display: none !important; }
 .screen.gate { padding-top: max(28px, env(safe-area-inset-top)); }
+
+/* typing on iPhone: the keyboard covers the tab bar anyway; hiding it keeps it from getting stuck mid-screen */
+body.typing #tabs { display: none; }
+body.typing .rest-pill { bottom: 8px; }
+body.vvfix #tabs, body.vvfix .rest-pill { transform: translateZ(0); }

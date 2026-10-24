@@ -456,6 +456,8 @@ function render() {
   var y = window.scrollY, v = $('#view');
   if (needGate()) { document.body.classList.add('gated'); v.innerHTML = viewGate(); return; }
   document.body.classList.remove('gated');
+  // a focused box is about to be replaced: close the keyboard first, or iPhone can leave the tab bar stuck where the keyboard was
+  var ae = document.activeElement; if (ae && ae !== document.body && v.contains(ae) && ae.blur) { ae.blur(); fixViewport(); }
   var map = { train: viewTrain, lib: viewLib, prog: viewProg, body: viewBody, eat: viewEat, friends: viewFriends, settings: viewSettings };
   var html = map[U.tab]();
   if (S.draft && U.tab !== 'train') html = '<div class="screen" style="padding-bottom:0"><button class="banner" style="width:100%;text-align:left" data-act="tab" data-t="train"><span><b>Workout in progress</b> · tap to continue</span><span class="num" style="font-size:20px" id="clock2"></span></button></div>' + html;
@@ -1100,6 +1102,24 @@ document.addEventListener('focusin', function (ev) {
   }
 });
 document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && sheetOpen()) closeSheet(); });
+/* iPhone keyboard: hide the tab bar while typing, and when the keyboard closes put the bottom bars back at the bottom
+   (Safari / Home Screen apps can leave position:fixed bars floating where the top of the keyboard was) */
+function isTyping(el) { return !!el && (el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || (el.tagName === 'INPUT' && !/^(checkbox|radio|button|submit|file|range)$/.test(el.type))); }
+var fixT = 0;
+function fixViewport() {
+  clearTimeout(fixT);
+  fixT = setTimeout(function () {
+    if (isTyping(document.activeElement)) return;
+    document.body.classList.remove('typing');
+    var x = window.scrollX, y = window.scrollY;
+    window.scrollTo(x, y + 1); window.scrollTo(x, y);   // makes iOS recompute where "bottom of the screen" is
+    document.body.classList.add('vvfix'); void document.body.offsetHeight; document.body.classList.remove('vvfix');
+  }, 120);
+}
+document.addEventListener('focusin', function (ev) { if (isTyping(ev.target) && !ev.target.closest('#sheet-root')) document.body.classList.add('typing'); });
+document.addEventListener('focusout', function () { fixViewport(); });
+if (window.visualViewport) window.visualViewport.addEventListener('resize', function () { if (!isTyping(document.activeElement)) fixViewport(); });
+window.addEventListener('orientationchange', fixViewport);
 document.addEventListener('visibilitychange', function () { if (!document.hidden) { tick(); keepAwake(); } });
 
 /* ===== picker (add exercise) ===== */
