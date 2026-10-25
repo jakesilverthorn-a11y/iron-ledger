@@ -560,6 +560,7 @@ function overallRankAt(hists, B, t) {
 
 
 /* ---------- recovery: which muscles are tired, which are fresh ---------- */
+var recMult = function () { return 1; };   // the UI points this at today's readiness (sleep, resting HR, HRV): >1 = slower recovery
 var REC_BASE = { Chest: 72, Back: 72, Quads: 72, Hamstrings: 72, Glutes: 72, Shoulders: 48, Biceps: 48, Triceps: 48, Forearms: 36, Calves: 36, Core: 36 };
 function recLoads(w) {
   var L = {};
@@ -579,7 +580,7 @@ function fatigueAt(workouts, g, t) {
     if (w.t > t) return;
     var end = Math.min(t, w.t + (w.dur || 3600) * 1000); if (t - end > 7 * DAY) return;
     var load = recLoads(w)[g]; if (!load) return;
-    var need = REC_BASE[g] * clamp(0.55 + 0.1 * load, 0.55, 1.5);
+    var need = REC_BASE[g] * clamp(0.55 + 0.1 * load, 0.55, 1.5) * recMult();
     f += Math.max(0, 1 - ((t - end) / 3600000) / need);
   });
   return Math.min(1, f);

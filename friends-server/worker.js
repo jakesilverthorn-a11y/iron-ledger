@@ -91,6 +91,41 @@ function pMerge(id, cur, v) {
   if (cur && (+cur.at || 0) > (+v.at || 0)) return cur;   // the server already has something newer
   return v;
 }
+/* ----- Apple Health, sent by an iPhone Shortcut: POST /health?k=<key> with text fields (Shortcuts sends things like "155 lb", "7 hr 12 min") ----- */
+function hNum(x) {
+  let s = String(x == null ? '' : x).replace(/\s+/g, ' ').trim(); if (!s) return null;
+  const m = s.match(/-?\d[\d.,]*/); if (!m) return null;
+  let t = m[0];
+  if (t.indexOf(',') >= 0 && t.indexOf('.') >= 0) t = t.replace(/,/g, '');
+  else if (/^\d{1,3}(,\d{3})+$/.test(t)) t = t.replace(/,/g, '');
+  else t = t.replace(',', '.');
+  const v = parseFloat(t); return isFinite(v) ? v : null;
+}
+const inR = (v, lo, hi) => v != null && v >= lo && v <= hi ? Math.round(v * 100) / 100 : null;
+function hParse(b) {
+  const raw = {}, o = {};
+  ['w', 'bf', 'rhr', 'hrv', 'steps', 'kcal', 'sleep'].forEach(k => { if (b[k] != null && String(b[k]).trim() !== '') raw[k] = String(b[k]).slice(0, 60); });
+  if (raw.w) {
+    let v = hNum(raw.w); const u = /kg|kilo/i.test(raw.w) ? 'kg' : /lb|pound/i.test(raw.w) ? 'lb' : /\bst\b|stone/i.test(raw.w) ? 'st' : '';
+    if (u === 'st') v = v * 14;
+    if (u === 'kg') o.wlb = inR(v * 2.20462, 60, 700); else if (u === 'lb' || u === 'st') o.wlb = inR(v, 60, 700); else o.w = inR(v, 25, 700);
+  }
+  if (raw.bf) { let v = hNum(raw.bf); if (v != null && v <= 1 && !/%/.test(raw.bf)) v *= 100; o.bf = inR(v, 2, 70); }
+  if (raw.rhr) o.rhr = inR(hNum(raw.rhr), 25, 200);
+  if (raw.hrv) o.hrv = inR(hNum(raw.hrv), 3, 300);
+  if (raw.steps) o.steps = inR(Math.round(hNum(raw.steps)), 0, 150000);
+  if (raw.kcal) { let v = hNum(raw.kcal); if (/kj/i.test(raw.kcal)) v = v / 4.184; o.kcal = inR(Math.round(v), 0, 10000); }
+  if (raw.sleep) {
+    const s = raw.sleep; let h = null;
+    const hm = s.match(/(\d+(?:[.,]\d+)?)\s*(h|hr|hrs|hour)/i), mm = s.match(/(\d+)\s*(m|min|mins|minute)/i), cl = s.match(/^(\d{1,2}):(\d{2})/);
+    if (hm || mm) h = (hm ? parseFloat(hm[1].replace(',', '.')) : 0) + (mm ? +mm[1] / 60 : 0);
+    else if (cl) h = +cl[1] + +cl[2] / 60;
+    else { const v = hNum(s); if (v != null) h = v > 1000 ? v / 3600 : v > 24 ? v / 60 : v; }
+    o.sleep = inR(h, 0, 18);
+  }
+  Object.keys(o).forEach(k => { if (o[k] == null) delete o[k]; });
+  return { o, raw };
+}
 async function pDeleteAll(env, uid) { const ids = await pIndex(env, uid); await Promise.all(ids.map(id => env.DB.delete('p:' + uid + ':' + id))); await env.DB.delete('pi:' + uid); }
 
 let LAST = null;   // last /all built by this isolate: { v, body }
@@ -130,6 +165,25 @@ export default {
         await addIdx(env, un);
         return out({ token: await mkToken(env, un, rec.gen || '0'), uid: un, name: rec.name });
       }
+      if (req.method === 'POST' && path === '/health') {
+        const key = url.searchParams.get('k') || req.headers.get('X-Key') || '';
+        const uid = key.length >= 20 ? await env.DB.get('hk:' + key) : null;
+        if (!uid) return bad('This Apple Health link is not valid. Copy it again from Iron Ledger (Settings > Apple Health).', 401);
+        let b = {}; const txt = await req.text(); if (txt.length > 20000) return bad('Too large', 413);
+        try { b = JSON.parse(txt); } catch (e) { try { b = Object.fromEntries(new URLSearchParams(txt)); } catch (e2) { b = {}; } }
+        url.searchParams.forEach((v, k) => { if (k !== 'k' && b[k] == null) b[k] = v; });
+        if (!b || typeof b !== 'object') b = {};
+        if (await hits(env, 'hr:' + uid, DAYS) > 48) return bad('Too many updates today.', 429);
+        const { o, raw } = hParse(b);
+        if (!Object.keys(o).length) return out({ ok: false, error: 'Nothing readable came through. Check the fields in the Shortcut.', raw }, 400);
+        const k2 = 'p:' + uid + ':health', cur = (await env.DB.get(k2, 'json')) || { v: 1, e: [] };
+        const e = Object.assign({ at: Date.now() }, o, { raw });
+        cur.e = (cur.e || []).concat([e]).slice(-500); cur.at = Date.now();
+        await env.DB.put(k2, JSON.stringify(cur));
+        const ids = await pIndex(env, uid); if (ids.indexOf('health') < 0) { ids.push('health'); await env.DB.put('pi:' + uid, JSON.stringify(ids)); }
+        const said = [o.wlb != null ? Math.round(o.wlb * 10) / 10 + ' lb' : o.w != null ? o.w + ' (weight)' : '', o.bf != null ? o.bf + '% body fat' : '', o.rhr != null ? 'resting HR ' + o.rhr : '', o.hrv != null ? 'HRV ' + o.hrv + ' ms' : '', o.sleep != null ? Math.round(o.sleep * 10) / 10 + ' h sleep' : '', o.steps != null ? o.steps + ' steps' : '', o.kcal != null ? o.kcal + ' active kcal' : ''].filter(Boolean).join(', ');
+        return out({ ok: true, message: 'Sent to Iron Ledger: ' + said, got: o });
+      }
       const tok = await who(env, req); if (!tok) return bad('Sign in again.', 401);
       const uid = tok.uid;
       if (req.method === 'GET' && path === '/all') {
@@ -140,6 +194,16 @@ export default {
         if (LAST && LAST.v === ver) body = LAST.body;
         else { const res = await everyone(env); res.v = ver; body = JSON.stringify(res); LAST = { v: ver, body }; }
         return new Response(body, { status: 200, headers: Object.assign({ 'Content-Type': 'application/json' }, CORS) });
+      }
+      if (path === '/health/key') {
+        // your private link for the Apple Health Shortcut (POST makes a new one; the old one stops working)
+        const rec = await writer(env, tok); if (!rec) return bad('Sign in again.', 401);
+        if (req.method === 'POST' || !rec.hk) {
+          if (rec.hk) await env.DB.delete('hk:' + rec.hk);
+          rec.hk = b64(crypto.getRandomValues(new Uint8Array(18)));
+          await env.DB.put('hk:' + rec.hk, uid); await env.DB.put('u:' + uid, JSON.stringify(rec));
+        }
+        return out({ ok: true, key: rec.hk });
       }
       if (path === '/me' || path.indexOf('/me/') === 0) {
         // your own data: needs a current token for reads too, since this is private
@@ -191,6 +255,7 @@ export default {
         const b = await req.json().catch(() => ({})), rec = await env.DB.get('u:' + uid, 'json');
         if (!rec || (rec.gen || '0') !== tok.gen) return bad('Sign in again.', 401);
         if (!same(await hashPw(String(b.p || ''), rec.salt), rec.h)) return bad('Password is wrong.', 403);
+        if (rec.hk) await env.DB.delete('hk:' + rec.hk);
         await env.DB.delete('u:' + uid); await env.DB.delete('d:' + uid); await pDeleteAll(env, uid);
         const i = (await readIdx(env)).filter(x => x !== uid); await env.DB.put('idx', JSON.stringify(i));
         await bump(env);

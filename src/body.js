@@ -282,7 +282,7 @@ function viewBody() {
   var wk = weakGroups(), numbers = wk.length ? '<div class="card section" style="gap:8px"><div class="xname">What your numbers say</div><div class="note">Lowest strength ranks for your size: ' + wk.slice(0, 3).map(function (x) { return '<b>' + x.g + '</b> ' + Math.round(x.s); }).join(' · ') + '</div></div>' : '';
   var planBody = ''; if (F.res && F.res.ok) { try { planBody = planHTMLBody(F.res); } catch (e) { F.res = null; } }
   var plan = planBody ? '<div class="section"><h2>Your focus</h2>' + planBody + '</div>' : (F.res && F.res.ok === false ? '<div class="banner"><span>' + esc(F.res.reason) + '</span></div>' : '');
-  return '<div class="screen">' + head + plan + photoCard + self + numbers + '<div class="note">This is training advice, not a medical assessment. If you have pain, an injury or a health condition, check with a professional first.</div></div>';
+  return '<div class="screen">' + head + plan + (typeof healthBodyCard === 'function' ? healthBodyCard() : '') + photoCard + self + numbers + '<div class="note">This is training advice, not a medical assessment. If you have pain, an injury or a health condition, check with a professional first.</div></div>';
 }
 function photosSheet() {
   var photos = photosLoad();

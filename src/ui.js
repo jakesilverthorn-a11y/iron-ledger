@@ -28,7 +28,7 @@ function acctMode() { return !window.claude && typeof SRV !== 'undefined' && !!S
 function needGate() { return acctMode() && !srvOn(); }
 function lsKey() { return (!window.claude && typeof SRV !== 'undefined' && SRV.uid) ? LS_KEY + ':' + SRV.uid : LS_KEY; }
 function readLS(k) { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } }
-function applyLS(j) { S.settings = normSettings(Object.assign(defaults(), (j && j.settings) || {})); S.workouts = (j && j.workouts) || []; S.draft = (j && j.draft) || null; S.at = (j && j.at) || { settings: 0, draft: 0 }; }
+function applyLS(j) { S.settings = normSettings(Object.assign(defaults(), (j && j.settings) || {})); S.workouts = (j && j.workouts) || []; S.draft = (j && j.draft) || null; S.at = (j && j.at) || { settings: 0, draft: 0 }; S.health = (j && j.health) || null; }
 function hasData(j) { return !!(j && (((j.workouts || []).length) || (j.settings && j.settings.body && j.settings.body.sex))); }
 function loadLocal() { var j = readLS(lsKey()); if (j) applyLS(j); }
 /* what this phone saved before sign-in existed becomes this account's (keeps its own timestamps, so newer data elsewhere still wins) */
@@ -105,7 +105,7 @@ function viewGate() {
     '<div class="note">New here? Type a username and password, then tap <b>Create account</b>. There is no password reset, so pick one you will remember.</div></div></div>';
 }
 function saveLocal() {
-  try { localStorage.setItem(lsKey(), JSON.stringify({ settings: S.settings, workouts: S.workouts, draft: S.draft, at: S.at })); saveLocal.warned = false; }
+  try { localStorage.setItem(lsKey(), JSON.stringify({ settings: S.settings, workouts: S.workouts, draft: S.draft, at: S.at, health: S.health || null })); saveLocal.warned = false; }
   catch (e) { if (!saveLocal.warned) { saveLocal.warned = true; setTimeout(function () { toast('Your phone is out of storage for this app. Save a backup file in Settings, and free up space.'); }, 50); } }
 }
 function persist(o) {
@@ -162,7 +162,7 @@ function mergeRemote(snap) {
     var remoteW = [], rs = null, rd = null;
     snap.docs.forEach(function (d) {
       var x = d.data(); if (!x) return;
-      if (d.id === 'settings') rs = x; else if (d.id === 'draft') rd = x; else if (d.id.indexOf('m_') === 0) remoteW = remoteW.concat(x.w || []);
+      if (d.id === 'settings') rs = x; else if (d.id === 'draft') rd = x; else if (d.id === 'health') S.health = x; else if (d.id.indexOf('m_') === 0) remoteW = remoteW.concat(x.w || []);
     });
     var del = {}; (S.settings.deleted || []).forEach(function (i) { del[i] = 1; });
     ((rs && rs.settings && rs.settings.deleted) || []).forEach(function (i) { del[i] = 1; });
@@ -176,6 +176,8 @@ function mergeRemote(snap) {
     if (rs && (rs.at || 0) > (S.at.settings || 0)) { S.settings = normSettings(Object.assign(defaults(), rs.settings)); S.at.settings = rs.at; }
     else if ((S.at.settings || 0) > ((rs && rs.at) || 0)) { dirtySettings = true; push = true; }
     S.settings.deleted = Object.keys(del).slice(-200);
+    // weigh-ins sent from Apple Health join your body log
+    if (typeof hApplyWeights === 'function' && hApplyWeights()) { S.at.settings = Date.now(); dirtySettings = true; push = true; }
     if (rd && (rd.at || 0) > (S.at.draft || 0)) { S.draft = rd.draft || null; S.at.draft = rd.at; }
     else if ((S.at.draft || 0) > ((rd && rd.at) || 0)) { dirtyDraft = true; push = true; }
     dbState = 'synced'; saveLocal();
@@ -445,7 +447,7 @@ function recoveryHTML(compact) {
     var r = rec[g], txt = !any ? '–' : r.level === 0 ? 'Fresh' : LEVEL_TXT[r.level] + ' · ' + readyText(r.readyH);
     return '<button class="rrow" data-act="recTap" data-g="' + g + '"><span class="dot r-' + (any ? r.level : 'n') + '"></span><span class="rn">' + g + '</span><span class="rt">' + esc(txt) + '</span></button>';
   }).join('');
-  return bodyFigure(rec, any) +
+  return (typeof readinessNote === 'function' ? readinessNote() : '') + bodyFigure(rec, any) +
     '<div class="rleg"><span><i class="dot r-0"></i>Fresh</span><span><i class="dot r-1"></i>Recovering</span><span><i class="dot r-2"></i>Tired</span></div>' +
     (any ? '<div class="rlist">' + rows + '</div>' : '<div class="note" style="text-align:center">Finish a workout and this map shows which muscles need rest.</div>') +
     (compact ? '' : '<div class="note">Estimated from the sets you logged: bigger muscles and harder sessions take longer to recover. The time shown is roughly when the muscle is ready to train hard again.</div>');
@@ -747,7 +749,7 @@ function viewSettings() {
   var srvAcct = dbCol && dbCol.srv;
   var status = srvAcct ? (dbState === 'synced' ? 'Saved to your account and this phone.' : dbState === 'error' ? 'Could not reach your account just now. Saved on this phone and retrying.' : 'Connecting to your account…') : dbState === 'synced' ? 'Saved to your Claude account and this device.' : dbState === 'error' ? 'Could not reach your account just now. Saved on this device and retrying.' : dbState === 'pending' ? 'Connecting…' : 'Saved on this device only. Back up regularly.';
   var acctCard = acctMode() && srvOn() ? '<div class="card section"><div class="row" style="gap:12px"><div class="grow"><div class="xname">' + esc(SRV.name) + '</div><div class="note">Signed in. Your workouts are saved to this account. Sign in with the same username on another phone to see them there.</div></div><button class="btn small" data-act="srvOut">Sign out</button></div></div>' : '';
-  return '<div class="screen"><div class="screen-head"><h1>Settings</h1></div>' + acctCard +
+  return '<div class="screen"><div class="screen-head"><h1>Settings</h1></div>' + acctCard + (typeof healthSettingsCard === 'function' ? healthSettingsCard() : '') +
     '<div class="section"><span class="field-label">Weight units</span><div class="seg" role="group"><button aria-pressed="' + (st.unit === 'lb') + '" data-act="unit" data-k="lb">Pounds</button><button aria-pressed="' + (st.unit === 'kg') + '" data-act="unit" data-k="kg">Kilograms</button></div></div>' +
     injurySettingsHTML() +
     '<div class="section"><span class="field-label">Rest timer chime</span><div class="seg" role="group" aria-label="Rest timer chime"><button aria-pressed="' + (st.chime !== false) + '" data-act="chimeOpt" data-k="on">On</button><button aria-pressed="' + (st.chime === false) + '" data-act="chimeOpt" data-k="off">Off</button></div><div class="note">A short chime when rest is over, through your headphones or speaker. Keep the app open on screen (it stays awake during workouts); iPhones pause web apps that are in the background.</div></div>' +
@@ -865,6 +867,7 @@ document.addEventListener('click', function (ev) {
   if (a.indexOf('eat') === 0 && eatClick(a, d, el)) return;
   if ((a.indexOf('tg') === 0 || a.indexOf('safari') === 0) && tgClick(a, d)) return;
   if (a.indexOf('body') === 0 && a !== 'bodyEdit' && a !== 'bodySave' && a !== 'bodySex' && bodyClick(a, d)) return;
+  if (a.indexOf('hk') === 0 && typeof healthClick === 'function' && healthClick(a, d)) return;
   if (a === 'close') { closeSheet(); U.confirm = null; return; }
   if (a === 'doneSummary') { closeSheet(); U.tab = 'prog'; U.seg = 'muscles'; render(); window.scrollTo(0, 0); return; }
   if (a === 'tab') { U.tab = d.t; U.confirm = null; closeSheet(); render(); window.scrollTo(0, 0); return; }
@@ -970,7 +973,9 @@ document.addEventListener('click', function (ev) {
   if (a === 'bodySex') { U.bsex = d.k; ['M', 'F'].forEach(function (k) { var bt = $('#bs-' + k); if (bt) bt.setAttribute('aria-pressed', String(k === d.k)); }); return; }
   if (a === 'bodySave') { bodySave(); return; }
   if (a === 'bodyDel') {
-    var bb = st.body; bb.log = (bb.log || []).filter(function (x) { return String(x.t) !== d.t; }); bb.w = curWeightLb(bb) || null;
+    var bb = st.body, gone = (bb.log || []).filter(function (x) { return String(x.t) === d.t; })[0];
+    if (gone && gone.h) bb.hdel = (bb.hdel || []).concat([dayKey(gone.t)]).slice(-200);   // a Health weigh-in you deleted doesn't come back
+    bb.log = (bb.log || []).filter(function (x) { return String(x.t) !== d.t; }); bb.w = curWeightLb(bb) || null;
     persist({ settings: true }); bodySheet(); render(); return;
   }
   if (a === 'exportCopy') { copyText(backupText()); return; }

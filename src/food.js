@@ -163,6 +163,10 @@ function foodTargets() {
   if (B) {
     var kg = curWeightLb(B) / LB, cm = B.h, age = +F.age || 30;
     var bmr = 10 * kg + 6.25 * cm - 5 * age + (B.sex === 'M' ? 5 : -161), tdee = bmr * (+F.act || 1.55);
+    // Apple Health: body fat gives a better resting burn (Katch-McArdle), and measured activity replaces the activity guess
+    var hbf = typeof hBodyFat === 'function' ? hBodyFat() : null, hact = F.useHealth !== false && typeof hActivity === 'function' ? hActivity() : null;
+    if (hbf) { bmr = 370 + 21.6 * kg * (1 - hbf / 100); out.bfUsed = hbf; }
+    if (hact) { tdee = (bmr + hact.kcal) * 1.1; out.hk = hact; } else if (hbf) tdee = bmr * (+F.act || 1.55);
     var adj = tdee * g.adj; if (g.cap < 0) adj = Math.max(adj, g.cap); else if (g.cap > 0) adj = Math.min(adj, g.cap);
     // protein from bodyweight, but not more than a lean-ish weight for your height (BMI 27) so heavy users aren't told to eat 250 g+
     var kgRef = Math.min(kg, 27 * Math.pow(cm / 100, 2));
@@ -177,6 +181,15 @@ function foodTargets() {
   if (F.diet === 'keto') { out.c = 40; out.f = Math.max(40, Math.round((out.kcal - out.p * 4 - out.c * 4) / 9)); }
   else { out.f = Math.round(out.kcal * 0.28 / 9); out.c = Math.max(50, Math.round((out.kcal - out.p * 4 - out.f * 9) / 4)); }
   return out;
+}
+
+/* activity from Apple Health, when it's coming in */
+function healthActField(F) {
+  var ha = typeof hActivity === 'function' ? hActivity() : null, bf = typeof hBodyFat === 'function' ? hBodyFat() : null;
+  if (!ha && !bf) return '';
+  return '<div class="card section" style="gap:8px"><div class="xname">From Apple Health</div><div class="note">' +
+    (ha ? 'You burn about <b>' + ha.kcal.toLocaleString('en-US') + ' kcal a day</b> moving (average of ' + ha.n + ' days). ' : '') + (bf ? 'Body fat ' + (Math.round(bf * 10) / 10) + '% makes the resting estimate more exact.' : '') + '</div>' +
+    (ha ? '<div class="seg" role="group" aria-label="Activity source"><button aria-pressed="' + (F.useHealth !== false) + '" data-act="eatUseHealth" data-k="on">Use Health activity</button><button aria-pressed="' + (F.useHealth === false) + '" data-act="eatUseHealth" data-k="off">Pick a level</button></div>' : '') + '</div>';
 }
 
 /* ----- which foods are allowed ----- */
@@ -409,7 +422,8 @@ function eatGoalFields() {
   var F = FS();
   return '<div><span class="field-label">Goal</span><div class="chips">' + Object.keys(FGOALS).map(function (k) { return '<button class="chip" aria-pressed="' + (F.goal === k) + '" data-act="eatGoal" data-k="' + k + '">' + FGOALS[k].n + '</button>'; }).join('') + '</div><div class="note">' + FGOALS[F.goal].d + '</div></div>' +
     '<div class="row" style="gap:10px"><label class="grow"><span class="field-label">Age</span><input class="input" id="eat-age" inputmode="numeric" value="' + (F.age || '') + '" aria-label="Age"></label><label class="grow"><span class="field-label">Meals a day</span><select class="input" id="eat-meals">' + [3, 4, 5].map(function (n) { return '<option value="' + n + '"' + (F.meals === n ? ' selected' : '') + '>' + n + (n === 3 ? ' (no snacks)' : n === 4 ? ' (1 snack)' : ' (2 snacks)') + '</option>'; }).join('') + '</select></label></div>' +
-    '<div><span class="field-label">How active are you?</span><select class="input" id="eat-act">' + ACTS.map(function (a) { return '<option value="' + a[0] + '"' + (+F.act === a[0] ? ' selected' : '') + '>' + a[1] + '</option>'; }).join('') + '</select></div>' +
+    healthActField(F) +
+    '<div' + (F.useHealth !== false && typeof hActivity === 'function' && hActivity() ? ' hidden' : '') + '><span class="field-label">How active are you?</span><select class="input" id="eat-act">' + ACTS.map(function (a) { return '<option value="' + a[0] + '"' + (+F.act === a[0] ? ' selected' : '') + '>' + a[1] + '</option>'; }).join('') + '</select></div>' +
     '<div><span class="field-label">Diet style</span><div class="chips">' + Object.keys(DIETS).map(function (k) { return '<button class="chip" aria-pressed="' + (F.diet === k) + '" data-act="eatDiet" data-k="' + k + '">' + DIETS[k].n + '</button>'; }).join('') + '</div></div>';
 }
 function goalsSheet() {
@@ -492,6 +506,7 @@ function eatClick(a, d, el) {
     case 'eatCfBack': U.cf = null; foodsSheet(); return true;
     case 'eatStart': F.setup = true; F.days = {}; persist({ settings: true }); render(); window.scrollTo(0, 0); toast('Your plan is ready. Tick your foods to tailor the ideas.'); return true;
     case 'eatGoal': F.goal = d.k; F.days = {}; persist({ settings: true }); if (sheetOpen()) eatRefreshSheet(); else render(); return true;
+    case 'eatUseHealth': F.useHealth = d.k === 'on'; F.days = {}; persist({ settings: true }); if (sheetOpen()) eatRefreshSheet(); else render(); return true;
     case 'eatDiet': F.diet = d.k; F.days = {}; persist({ settings: true }); if (sheetOpen()) eatRefreshSheet(); else render(); return true;
     case 'eatAvoid': tog(F.avoid, d.k); F.days = {}; persist({ settings: true }); eatRefreshSheet(); return true;
     case 'eatCu': tog(F.cuisines, d.k); F.days = {}; persist({ settings: true }); eatRefreshSheet(); return true;

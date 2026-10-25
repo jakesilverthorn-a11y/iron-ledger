@@ -400,6 +400,12 @@ body.typing #tabs { display: none; }
 body.typing .rest-pill { bottom: 8px; }
 body.vvfix #tabs, body.vvfix .rest-pill { transform: translateZ(0); }
 
+/* Apple Health tiles */
+.hgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.htile { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.htile .xmeta { overflow-wrap: anywhere; }
+.hkv { font-family: ui-monospace, Menlo, monospace; font-weight: 600; color: var(--accent-ink); }
+
 /* cartoon figures */
 .fig { display: block; width: 100%; height: 100%; }
 .demo.cg { background: linear-gradient(180deg, var(--surface2), var(--surface2)); }
@@ -997,6 +1003,7 @@ function overallRankAt(hists, B, t) {
 
 
 /* ---------- recovery: which muscles are tired, which are fresh ---------- */
+var recMult = function () { return 1; };   // the UI points this at today's readiness (sleep, resting HR, HRV): >1 = slower recovery
 var REC_BASE = { Chest: 72, Back: 72, Quads: 72, Hamstrings: 72, Glutes: 72, Shoulders: 48, Biceps: 48, Triceps: 48, Forearms: 36, Calves: 36, Core: 36 };
 function recLoads(w) {
   var L = {};
@@ -1016,7 +1023,7 @@ function fatigueAt(workouts, g, t) {
     if (w.t > t) return;
     var end = Math.min(t, w.t + (w.dur || 3600) * 1000); if (t - end > 7 * DAY) return;
     var load = recLoads(w)[g]; if (!load) return;
-    var need = REC_BASE[g] * clamp(0.55 + 0.1 * load, 0.55, 1.5);
+    var need = REC_BASE[g] * clamp(0.55 + 0.1 * load, 0.55, 1.5) * recMult();
     f += Math.max(0, 1 - ((t - end) / 3600000) / need);
   });
   return Math.min(1, f);
@@ -2470,6 +2477,10 @@ function foodTargets() {
   if (B) {
     var kg = curWeightLb(B) / LB, cm = B.h, age = +F.age || 30;
     var bmr = 10 * kg + 6.25 * cm - 5 * age + (B.sex === 'M' ? 5 : -161), tdee = bmr * (+F.act || 1.55);
+    // Apple Health: body fat gives a better resting burn (Katch-McArdle), and measured activity replaces the activity guess
+    var hbf = typeof hBodyFat === 'function' ? hBodyFat() : null, hact = F.useHealth !== false && typeof hActivity === 'function' ? hActivity() : null;
+    if (hbf) { bmr = 370 + 21.6 * kg * (1 - hbf / 100); out.bfUsed = hbf; }
+    if (hact) { tdee = (bmr + hact.kcal) * 1.1; out.hk = hact; } else if (hbf) tdee = bmr * (+F.act || 1.55);
     var adj = tdee * g.adj; if (g.cap < 0) adj = Math.max(adj, g.cap); else if (g.cap > 0) adj = Math.min(adj, g.cap);
     // protein from bodyweight, but not more than a lean-ish weight for your height (BMI 27) so heavy users aren't told to eat 250 g+
     var kgRef = Math.min(kg, 27 * Math.pow(cm / 100, 2));
@@ -2484,6 +2495,15 @@ function foodTargets() {
   if (F.diet === 'keto') { out.c = 40; out.f = Math.max(40, Math.round((out.kcal - out.p * 4 - out.c * 4) / 9)); }
   else { out.f = Math.round(out.kcal * 0.28 / 9); out.c = Math.max(50, Math.round((out.kcal - out.p * 4 - out.f * 9) / 4)); }
   return out;
+}
+
+/* activity from Apple Health, when it's coming in */
+function healthActField(F) {
+  var ha = typeof hActivity === 'function' ? hActivity() : null, bf = typeof hBodyFat === 'function' ? hBodyFat() : null;
+  if (!ha && !bf) return '';
+  return '<div class="card section" style="gap:8px"><div class="xname">From Apple Health</div><div class="note">' +
+    (ha ? 'You burn about <b>' + ha.kcal.toLocaleString('en-US') + ' kcal a day</b> moving (average of ' + ha.n + ' days). ' : '') + (bf ? 'Body fat ' + (Math.round(bf * 10) / 10) + '% makes the resting estimate more exact.' : '') + '</div>' +
+    (ha ? '<div class="seg" role="group" aria-label="Activity source"><button aria-pressed="' + (F.useHealth !== false) + '" data-act="eatUseHealth" data-k="on">Use Health activity</button><button aria-pressed="' + (F.useHealth === false) + '" data-act="eatUseHealth" data-k="off">Pick a level</button></div>' : '') + '</div>';
 }
 
 /* ----- which foods are allowed ----- */
@@ -2716,7 +2736,8 @@ function eatGoalFields() {
   var F = FS();
   return '<div><span class="field-label">Goal</span><div class="chips">' + Object.keys(FGOALS).map(function (k) { return '<button class="chip" aria-pressed="' + (F.goal === k) + '" data-act="eatGoal" data-k="' + k + '">' + FGOALS[k].n + '</button>'; }).join('') + '</div><div class="note">' + FGOALS[F.goal].d + '</div></div>' +
     '<div class="row" style="gap:10px"><label class="grow"><span class="field-label">Age</span><input class="input" id="eat-age" inputmode="numeric" value="' + (F.age || '') + '" aria-label="Age"></label><label class="grow"><span class="field-label">Meals a day</span><select class="input" id="eat-meals">' + [3, 4, 5].map(function (n) { return '<option value="' + n + '"' + (F.meals === n ? ' selected' : '') + '>' + n + (n === 3 ? ' (no snacks)' : n === 4 ? ' (1 snack)' : ' (2 snacks)') + '</option>'; }).join('') + '</select></label></div>' +
-    '<div><span class="field-label">How active are you?</span><select class="input" id="eat-act">' + ACTS.map(function (a) { return '<option value="' + a[0] + '"' + (+F.act === a[0] ? ' selected' : '') + '>' + a[1] + '</option>'; }).join('') + '</select></div>' +
+    healthActField(F) +
+    '<div' + (F.useHealth !== false && typeof hActivity === 'function' && hActivity() ? ' hidden' : '') + '><span class="field-label">How active are you?</span><select class="input" id="eat-act">' + ACTS.map(function (a) { return '<option value="' + a[0] + '"' + (+F.act === a[0] ? ' selected' : '') + '>' + a[1] + '</option>'; }).join('') + '</select></div>' +
     '<div><span class="field-label">Diet style</span><div class="chips">' + Object.keys(DIETS).map(function (k) { return '<button class="chip" aria-pressed="' + (F.diet === k) + '" data-act="eatDiet" data-k="' + k + '">' + DIETS[k].n + '</button>'; }).join('') + '</div></div>';
 }
 function goalsSheet() {
@@ -2799,6 +2820,7 @@ function eatClick(a, d, el) {
     case 'eatCfBack': U.cf = null; foodsSheet(); return true;
     case 'eatStart': F.setup = true; F.days = {}; persist({ settings: true }); render(); window.scrollTo(0, 0); toast('Your plan is ready. Tick your foods to tailor the ideas.'); return true;
     case 'eatGoal': F.goal = d.k; F.days = {}; persist({ settings: true }); if (sheetOpen()) eatRefreshSheet(); else render(); return true;
+    case 'eatUseHealth': F.useHealth = d.k === 'on'; F.days = {}; persist({ settings: true }); if (sheetOpen()) eatRefreshSheet(); else render(); return true;
     case 'eatDiet': F.diet = d.k; F.days = {}; persist({ settings: true }); if (sheetOpen()) eatRefreshSheet(); else render(); return true;
     case 'eatAvoid': tog(F.avoid, d.k); F.days = {}; persist({ settings: true }); eatRefreshSheet(); return true;
     case 'eatCu': tog(F.cuisines, d.k); F.days = {}; persist({ settings: true }); eatRefreshSheet(); return true;
@@ -3206,7 +3228,7 @@ function viewBody() {
   var wk = weakGroups(), numbers = wk.length ? '<div class="card section" style="gap:8px"><div class="xname">What your numbers say</div><div class="note">Lowest strength ranks for your size: ' + wk.slice(0, 3).map(function (x) { return '<b>' + x.g + '</b> ' + Math.round(x.s); }).join(' · ') + '</div></div>' : '';
   var planBody = ''; if (F.res && F.res.ok) { try { planBody = planHTMLBody(F.res); } catch (e) { F.res = null; } }
   var plan = planBody ? '<div class="section"><h2>Your focus</h2>' + planBody + '</div>' : (F.res && F.res.ok === false ? '<div class="banner"><span>' + esc(F.res.reason) + '</span></div>' : '');
-  return '<div class="screen">' + head + plan + photoCard + self + numbers + '<div class="note">This is training advice, not a medical assessment. If you have pain, an injury or a health condition, check with a professional first.</div></div>';
+  return '<div class="screen">' + head + plan + (typeof healthBodyCard === 'function' ? healthBodyCard() : '') + photoCard + self + numbers + '<div class="note">This is training advice, not a medical assessment. If you have pain, an injury or a health condition, check with a professional first.</div></div>';
 }
 function photosSheet() {
   var photos = photosLoad();
@@ -3372,6 +3394,153 @@ function chatSheet() {
   openSheet('Analyze in Claude', '<div class="note">Uses your Claude account (no API key). It takes two steps because the Claude app cannot write into this app directly.</div>' +
     '<div class="card section" style="gap:8px"><div class="xname">1 · Send the photo to Claude</div><div class="note">Tap below and pick <b>Claude</b> in the share sheet. The photo and the instructions go into a new chat (the instructions are also copied, in case you need to paste them).</div><button class="btn primary block" data-act="bodyChatSend">' + (U.chatSent ? 'Send again' : 'Send photo to Claude') + '</button><button class="linkbtn" style="font-size:13px" data-act="bodyChatCopy">Copy the instructions only</button></div>' +
     '<div class="card section" style="gap:8px"><div class="xname">2 · Paste Claude\'s reply here</div><div class="note">When Claude answers, press and hold its reply, tap <b>Copy</b>, come back and paste it below.</div><textarea class="input" id="chatans" rows="5" style="padding:10px 14px;min-height:120px;font-size:13px" placeholder="Paste Claude\'s reply"></textarea><div class="note" id="chat-err" style="color:var(--down);min-height:0"></div><button class="btn primary block" data-act="bodyChatUse">Use this analysis</button></div>');
+}
+
+/* ===== Apple Health, through an iPhone Shortcut =====
+   Web apps can't read Health directly, so a Shortcut you set up once sends your latest numbers to your account
+   (POST /health?k=<your private link key>). The server stores them in the private "health" doc; here we use them:
+   weigh-ins go into your body log (ranks use your weight on the day), activity sets calorie targets, and
+   sleep / resting heart rate / HRV adjust how fast the recovery map says you bounce back. */
+var HK = { key: '', err: '', checking: false };
+function healthOn() { return typeof acctMode === 'function' && acctMode() && srvOn(); }
+function hEntries() { return (S.health && Array.isArray(S.health.e)) ? S.health.e : []; }
+function hLast() { var e = hEntries(); return e.length ? e[e.length - 1] : null; }
+function hWeightLb(e) { if (e.wlb != null) return +e.wlb; if (e.w != null) return S.settings.unit === 'kg' ? e.w * LB : +e.w; return null; }
+/* newest value of one field, if it isn't older than maxH hours */
+function hLatest(k, maxH) {
+  var e = hEntries();
+  for (var i = e.length - 1; i >= 0; i--) if (e[i][k] != null) { if (maxH && Date.now() - e[i].at > maxH * 3600e3) return null; return { v: +e[i][k], at: e[i].at }; }
+  return null;
+}
+/* one value per day (the last reading that day), oldest first */
+function hDaily(k, days) {
+  var by = {}, cut = Date.now() - days * DAY;
+  hEntries().forEach(function (e) { if (e[k] != null && e.at >= cut) by[dayKey(e.at)] = +e[k]; });
+  return Object.keys(by).sort().map(function (d) { return { d: d, v: by[d] }; });
+}
+function hMedian(a) { if (!a.length) return null; a = a.slice().sort(function (x, y) { return x - y; }); var m = Math.floor(a.length / 2); return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2; }
+function hAvg(k, days, minN) { var a = hDaily(k, days); if (a.length < (minN || 3)) return null; var s = 0; a.forEach(function (x) { s += x.v; }); return { v: s / a.length, n: a.length }; }
+/* your usual: median of the past ~6 weeks, not counting today */
+function hBase(k) { var today = dayKey(Date.now()), a = hDaily(k, 45).filter(function (x) { return x.d !== today; }).map(function (x) { return x.v; }); return a.length >= 5 ? hMedian(a) : null; }
+
+/* weigh-ins from Health go into the body log (one per day). A weigh-in you typed that day wins; one you deleted stays deleted. */
+function hApplyWeights() {
+  var b = S.settings.body; if (!b) return false;
+  if (!Array.isArray(b.log)) b.log = [];
+  var gone = b.hdel || [], ch = false;
+  hEntries().forEach(function (e) {
+    var w = hWeightLb(e); if (!w) return;
+    var dk = dayKey(e.at); if (gone.indexOf(dk) >= 0) return;
+    var same = b.log.filter(function (x) { return dayKey(x.t) === dk; });
+    if (same.some(function (x) { return !x.h; })) return;
+    w = Math.round(w * 10) / 10;
+    if (same[0]) { if (Math.abs(same[0].w - w) > 0.05 || same[0].t !== e.at) { same[0].w = w; same[0].t = e.at; ch = true; } }
+    else { b.log.push({ t: e.at, w: w, h: 1 }); ch = true; }
+  });
+  if (ch) { b.log.sort(function (x, y) { return x.t - y.t; }); b.w = b.log[b.log.length - 1].w; }
+  return ch;
+}
+
+/* calories you burn moving, averaged over the last 10 days (Health's active energy) */
+function hActivity() { var a = hAvg('kcal', 10, 3); return a ? { kcal: Math.round(a.v), n: a.n } : null; }
+function hBodyFat() { var b = hLatest('bf', 24 * 45); return b ? b.v : null; }
+
+/* how recovered you are today, from last night's sleep, resting heart rate and HRV against your usual */
+var HR_MEMO = { t: 0, v: null };
+function hReadiness() {
+  if (Date.now() - HR_MEMO.t < 5000) return HR_MEMO.v;
+  var r = null, last = hLast();
+  if (last && Date.now() - last.at < 30 * 3600e3) {
+    var m = 1, why = [], good = [];
+    var sl = hLatest('sleep', 30), rh = hLatest('rhr', 30), hv = hLatest('hrv', 30), rb = hBase('rhr'), hb = hBase('hrv');
+    if (sl && sl.v > 0.5) { if (sl.v < 6) { m += 0.15; why.push(hrs(sl.v) + ' of sleep'); } else if (sl.v < 7) { m += 0.07; why.push(hrs(sl.v) + ' of sleep'); } else if (sl.v >= 7.5) good.push(hrs(sl.v) + ' of sleep'); }
+    if (rh && rb) { if (rh.v >= rb + 5) { m += 0.1; why.push('resting heart rate ' + Math.round(rh.v - rb) + ' above your usual'); } else if (rh.v <= rb) good.push('resting heart rate at or below your usual'); }
+    if (hv && hb) { if (hv.v <= hb * 0.8) { m += 0.1; why.push('HRV ' + Math.round((1 - hv.v / hb) * 100) + '% below your usual'); } else if (hv.v >= hb) good.push('HRV at or above your usual'); }
+    if (why.length) r = { m: Math.min(1.35, m), why: why, good: [] };
+    else if (good.length >= 2) r = { m: 0.95, why: [], good: good };
+    else if (sl || rh || hv) r = { m: 1, why: [], good: good };
+  }
+  HR_MEMO = { t: Date.now(), v: r };
+  return r;
+}
+function hrs(h) { var H = Math.floor(h), M = Math.round((h - H) * 60); if (M === 60) { H++; M = 0; } return H + ' h' + (M ? ' ' + M + ' min' : ''); }
+recMult = function () { var r = hReadiness(); return r ? r.m : 1; };
+function readinessNote() {
+  var r = hReadiness(); if (!r) return '';
+  if (r.why.length) return '<div class="banner"><span><b>Recovering a bit slower today</b> · ' + esc(r.why.join(', ')) + '. Times below allow for it.</span></div>';
+  if (r.good.length >= 2) return '<div class="banner"><span><b>Well rested</b> · ' + esc(r.good.join(', ')) + '.</span></div>';
+  return '';
+}
+
+/* ----- screens ----- */
+function hAgo(t) { var m = Math.round((Date.now() - t) / 60000); return m < 2 ? 'just now' : m < 60 ? m + ' min ago' : m < 36 * 60 ? Math.round(m / 60) + ' h ago' : fmtDate(t); }
+function healthSettingsCard() {
+  if (window.claude) return '';
+  var last = hLast();
+  var status = !healthOn() ? 'Sign in to connect Apple Health.' : last ? 'Last update ' + hAgo(last.at) + '.' : 'Not connected yet. A Shortcut on your iPhone sends your weight, activity, sleep and heart numbers here once a day.';
+  return '<div class="section"><h2>Apple Health</h2><div class="card section" style="gap:10px"><div class="note">' + esc(status) + '</div>' +
+    (healthOn() ? '<button class="btn block' + (last ? '' : ' primary') + '" data-act="hkSetup">' + (last ? 'Apple Health settings' : 'Connect Apple Health') + '</button>' : '') + '</div></div>';
+}
+function hTile(label, val, sub) { return '<div class="htile"><div class="mtag">' + label + '</div><div class="num" style="font-size:24px">' + val + '</div>' + (sub ? '<div class="xmeta">' + sub + '</div>' : '') + '</div>'; }
+function healthBodyCard() {
+  if (window.claude || !healthOn()) return '';
+  var e = hEntries();
+  if (!e.length) return '<div class="card section" style="gap:10px"><h2>Apple Health</h2><div class="note">Send your weight, activity, sleep and heart numbers from the Health app. Ranks then use your real weight on each day, calorie targets follow how active you are, and the recovery map allows for short sleep.</div><button class="btn block" data-act="hkSetup">Connect Apple Health</button></div>';
+  var u = unit(), tiles = [], B = S.settings.body || {};
+  var w = curWeightLb(B), w30 = B.log && B.log.length ? bwAt(B, Date.now() - 30 * DAY) : null;
+  if (w) tiles.push(hTile('Weight', toDisp(w, u) + ' <span class="faint" style="font-size:14px">' + uLabel() + '</span>', w30 && Math.abs(w - w30) >= 0.5 ? (w > w30 ? '+' : '−') + toDisp(Math.abs(w - w30), u) + ' in 30 days' : 'steady over 30 days'));
+  var bf = hLatest('bf', 24 * 45); if (bf) tiles.push(hTile('Body fat', Math.round(bf.v * 10) / 10 + '%', fmtDate(bf.at)));
+  var sl = hLatest('sleep', 40), sa = hAvg('sleep', 7, 3); if (sl || sa) tiles.push(hTile('Sleep', sl ? hrs(sl.v) : '–', sa ? '7-day avg ' + hrs(sa.v) : 'last night'));
+  var rh = hLatest('rhr', 72), rb = hBase('rhr'); if (rh) tiles.push(hTile('Resting HR', Math.round(rh.v) + ' <span class="faint" style="font-size:14px">bpm</span>', rb ? 'usual ' + Math.round(rb) : ''));
+  var hv = hLatest('hrv', 72), hb = hBase('hrv'); if (hv) tiles.push(hTile('HRV', Math.round(hv.v) + ' <span class="faint" style="font-size:14px">ms</span>', hb ? 'usual ' + Math.round(hb) : ''));
+  var ka = hAvg('kcal', 7, 2); if (ka) tiles.push(hTile('Active energy', Math.round(ka.v).toLocaleString('en-US'), 'kcal a day, 7-day avg'));
+  var st = hAvg('steps', 7, 2); if (st) tiles.push(hTile('Steps', Math.round(st.v).toLocaleString('en-US'), 'a day, 7-day avg'));
+  var pts = (B.log || []).filter(function (x) { return x.t >= Date.now() - 182 * DAY; }).map(function (x) { return { t: x.t, v: u === 'kg' ? x.w / LB : x.w }; });
+  return '<div class="section"><div class="row"><h2 class="grow">Health</h2><button class="btn small ghost" data-act="hkSetup">Settings</button></div>' + readinessNote() +
+    '<div class="hgrid">' + tiles.join('') + '</div>' +
+    (pts.length > 1 ? '<div class="card section" style="gap:6px"><div class="xname">Weight, last 6 months</div>' + lineChart(pts, { label: 'Weight trend', fmt: function (v) { return Math.round(v); } }) + '</div>' : '') +
+    '<div class="note">From Apple Health · updated ' + hAgo(e[e.length - 1].at) + '.</div></div>';
+}
+function hLink() { return HK.key ? SRV.url + '/health?k=' + encodeURIComponent(HK.key) : ''; }
+function healthSheet() {
+  if (!healthOn()) { toast('Sign in first.'); return; }
+  if (!HK.key && !HK.err) {
+    openSheet('Apple Health', '<div class="note">Getting your private link…</div>');
+    srvRaw('GET', '/health/key').then(function (r) { HK.key = r.key || ''; if (sheetOpen()) healthSheet(); }, function (e) { HK.err = e.message || 'Could not reach the server.'; if (sheetOpen()) healthSheet(); });
+    return;
+  }
+  var last = hLast(), raw = last && last.raw ? Object.keys(last.raw).map(function (k) { return '<b>' + esc({ w: 'Weight', bf: 'Body fat', rhr: 'Resting HR', hrv: 'HRV', steps: 'Steps', kcal: 'Active energy', sleep: 'Sleep' }[k] || k) + '</b> "' + esc(last.raw[k]) + '"'; }).join(' · ') : '';
+  var V = function (n) { return '<b class="hkv">' + n + '</b>'; };
+  openSheet('Apple Health', (HK.err ? '<div class="banner"><span>' + esc(HK.err) + '</span></div>' : '') +
+    '<div class="card section" style="gap:8px"><div class="xname">' + (last ? 'Connected' : 'Not connected yet') + '</div><div class="note">' + (last ? 'Last update ' + esc(hAgo(last.at)) + ' (' + esc(fmtDateLong(last.at)) + '). Received: ' + raw : 'Follow the steps below once. After that your iPhone sends your numbers every day by itself.') + '</div>' +
+    '<button class="btn block" data-act="hkCheck"' + (HK.checking ? ' disabled' : '') + '>' + (HK.checking ? 'Checking…' : 'Check for new data') + '</button></div>' +
+    '<div class="card section" style="gap:8px"><div class="xname">Your private link</div><div class="note">The Shortcut sends your numbers to this address. Keep it to yourself: anyone with it can add readings to your account (they can\'t see anything).</div>' +
+    '<input class="input" readonly value="' + esc(hLink()) + '" aria-label="Your Apple Health link" style="font-size:13px" onfocus="this.select()"><button class="btn primary block" data-act="hkCopy"' + (HK.key ? '' : ' disabled') + '>Copy link</button></div>' +
+    '<div class="section" style="gap:8px"><h3 style="font-size:20px">Set up the Shortcut (once, about 5 minutes)</h3><ol class="steps">' +
+    '<li>Open the <b>Shortcuts</b> app, tap <b>+</b>, and name the shortcut <b>Iron Ledger Health</b>.</li>' +
+    '<li>Add the action <b>Find Health Samples</b>. Set Type to <b>Weight</b>, Sort by <b>Start Date</b>, Order <b>Latest First</b>, and turn on <b>Limit</b> at <b>1</b>. Then add <b>Set Variable</b> and name it ' + V('w') + '.</li>' +
+    '<li>Do the same for each of these, naming the variable as shown. Skip any you don\'t track: <b>Body Fat Percentage</b> → ' + V('bf') + ', <b>Resting Heart Rate</b> → ' + V('rhr') + ', <b>Heart Rate Variability</b> → ' + V('hrv') + '.</li>' +
+    '<li>Activity for the last day: add <b>Find Health Samples</b> with Type <b>Active Energy</b> and the filter <b>Start Date is in the last 1 days</b> (no limit). Add <b>Calculate Statistics</b> set to <b>Sum</b>, then <b>Set Variable</b> ' + V('kcal') + '. Repeat with <b>Steps</b> → ' + V('steps') + '.</li>' +
+    '<li>Sleep (needs an Apple Watch or another sleep tracker): <b>Find Health Samples</b> with Type <b>Sleep Analysis</b> and <b>Start Date is in the last 1 days</b>. If it offers a Value filter, leave out <b>In Bed</b> and <b>Awake</b>. Add <b>Get Details of Health Samples</b> → <b>Duration</b>, then <b>Calculate Statistics</b> → <b>Sum</b>, then <b>Set Variable</b> ' + V('sleep') + '.</li>' +
+    '<li>Add <b>Get Contents of URL</b> and paste your link from above. Tap the arrow to show more: Method <b>POST</b>, Request Body <b>JSON</b>. Add a <b>Text</b> field for each variable you made: the key is its name (' + V('w') + ', ' + V('bf') + ', ' + V('rhr') + '…) and the value is that variable.</li>' +
+    '<li>Optional: add <b>Show Notification</b> with <b>Contents of URL</b>, so you see what was sent.</li>' +
+    '<li>Tap ▶ to run it. Allow Health access when asked, then come back here and tap <b>Check for new data</b>.</li>' +
+    '<li>Make it automatic: in Shortcuts open <b>Automation</b> → <b>+</b> → <b>Time of Day</b>, pick a time you usually have your phone unlocked (for example 8:30 AM), <b>Daily</b>, <b>Run Immediately</b>, and choose <b>Iron Ledger Health</b>. iPhone keeps Health data locked while the phone is locked, so a 3 AM run would find nothing.</li>' +
+    '</ol></div>' +
+    '<div class="note">What it\'s used for: your weigh-ins go into your body log (a weigh-in you type yourself that day wins), so ranks use your weight on each day. Active energy sets your daily calories on the Eat tab, and body fat makes the calorie estimate more exact. Sleep, resting heart rate and HRV adjust the recovery map. It all stays private in your account.</div>' +
+    '<div class="note">Sharing your Shortcut with a friend? The link inside it is yours. They must replace it with their own link from their Iron Ledger.</div>' +
+    '<button class="btn block ghost" data-act="hkNew"' + (HK.key ? '' : ' disabled') + '>Make a new link (the old one stops working)</button>');
+}
+function healthClick(a) {
+  if (a === 'hkSetup') { HK.err = ''; healthSheet(); return true; }
+  if (a === 'hkCopy') { copyText(hLink(), 'Link copied. Paste it into Get Contents of URL.'); return true; }
+  if (a === 'hkCheck') { HK.checking = true; healthSheet(); ACCT.last = 0; acctSync().then(function () { HK.checking = false; if (sheetOpen()) healthSheet(); var l = hLast(); toast(l ? 'Last update ' + hAgo(l.at) : 'Nothing received yet'); }); return true; }
+  if (a === 'hkNew') {
+    if (!confirm('Make a new link? The Shortcut stops working until you paste the new link into it.')) return true;
+    srvRaw('POST', '/health/key').then(function (r) { HK.key = r.key || ''; healthSheet(); toast('New link made. Paste it into your Shortcut.'); }, function (e) { toast(e.message); });
+    return true;
+  }
+  return false;
 }
 
 /* ===== train together, live =====
@@ -3724,7 +3893,7 @@ function acctMode() { return !window.claude && typeof SRV !== 'undefined' && !!S
 function needGate() { return acctMode() && !srvOn(); }
 function lsKey() { return (!window.claude && typeof SRV !== 'undefined' && SRV.uid) ? LS_KEY + ':' + SRV.uid : LS_KEY; }
 function readLS(k) { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } }
-function applyLS(j) { S.settings = normSettings(Object.assign(defaults(), (j && j.settings) || {})); S.workouts = (j && j.workouts) || []; S.draft = (j && j.draft) || null; S.at = (j && j.at) || { settings: 0, draft: 0 }; }
+function applyLS(j) { S.settings = normSettings(Object.assign(defaults(), (j && j.settings) || {})); S.workouts = (j && j.workouts) || []; S.draft = (j && j.draft) || null; S.at = (j && j.at) || { settings: 0, draft: 0 }; S.health = (j && j.health) || null; }
 function hasData(j) { return !!(j && (((j.workouts || []).length) || (j.settings && j.settings.body && j.settings.body.sex))); }
 function loadLocal() { var j = readLS(lsKey()); if (j) applyLS(j); }
 /* what this phone saved before sign-in existed becomes this account's (keeps its own timestamps, so newer data elsewhere still wins) */
@@ -3801,7 +3970,7 @@ function viewGate() {
     '<div class="note">New here? Type a username and password, then tap <b>Create account</b>. There is no password reset, so pick one you will remember.</div></div></div>';
 }
 function saveLocal() {
-  try { localStorage.setItem(lsKey(), JSON.stringify({ settings: S.settings, workouts: S.workouts, draft: S.draft, at: S.at })); saveLocal.warned = false; }
+  try { localStorage.setItem(lsKey(), JSON.stringify({ settings: S.settings, workouts: S.workouts, draft: S.draft, at: S.at, health: S.health || null })); saveLocal.warned = false; }
   catch (e) { if (!saveLocal.warned) { saveLocal.warned = true; setTimeout(function () { toast('Your phone is out of storage for this app. Save a backup file in Settings, and free up space.'); }, 50); } }
 }
 function persist(o) {
@@ -3858,7 +4027,7 @@ function mergeRemote(snap) {
     var remoteW = [], rs = null, rd = null;
     snap.docs.forEach(function (d) {
       var x = d.data(); if (!x) return;
-      if (d.id === 'settings') rs = x; else if (d.id === 'draft') rd = x; else if (d.id.indexOf('m_') === 0) remoteW = remoteW.concat(x.w || []);
+      if (d.id === 'settings') rs = x; else if (d.id === 'draft') rd = x; else if (d.id === 'health') S.health = x; else if (d.id.indexOf('m_') === 0) remoteW = remoteW.concat(x.w || []);
     });
     var del = {}; (S.settings.deleted || []).forEach(function (i) { del[i] = 1; });
     ((rs && rs.settings && rs.settings.deleted) || []).forEach(function (i) { del[i] = 1; });
@@ -3872,6 +4041,8 @@ function mergeRemote(snap) {
     if (rs && (rs.at || 0) > (S.at.settings || 0)) { S.settings = normSettings(Object.assign(defaults(), rs.settings)); S.at.settings = rs.at; }
     else if ((S.at.settings || 0) > ((rs && rs.at) || 0)) { dirtySettings = true; push = true; }
     S.settings.deleted = Object.keys(del).slice(-200);
+    // weigh-ins sent from Apple Health join your body log
+    if (typeof hApplyWeights === 'function' && hApplyWeights()) { S.at.settings = Date.now(); dirtySettings = true; push = true; }
     if (rd && (rd.at || 0) > (S.at.draft || 0)) { S.draft = rd.draft || null; S.at.draft = rd.at; }
     else if ((S.at.draft || 0) > ((rd && rd.at) || 0)) { dirtyDraft = true; push = true; }
     dbState = 'synced'; saveLocal();
@@ -4141,7 +4312,7 @@ function recoveryHTML(compact) {
     var r = rec[g], txt = !any ? '–' : r.level === 0 ? 'Fresh' : LEVEL_TXT[r.level] + ' · ' + readyText(r.readyH);
     return '<button class="rrow" data-act="recTap" data-g="' + g + '"><span class="dot r-' + (any ? r.level : 'n') + '"></span><span class="rn">' + g + '</span><span class="rt">' + esc(txt) + '</span></button>';
   }).join('');
-  return bodyFigure(rec, any) +
+  return (typeof readinessNote === 'function' ? readinessNote() : '') + bodyFigure(rec, any) +
     '<div class="rleg"><span><i class="dot r-0"></i>Fresh</span><span><i class="dot r-1"></i>Recovering</span><span><i class="dot r-2"></i>Tired</span></div>' +
     (any ? '<div class="rlist">' + rows + '</div>' : '<div class="note" style="text-align:center">Finish a workout and this map shows which muscles need rest.</div>') +
     (compact ? '' : '<div class="note">Estimated from the sets you logged: bigger muscles and harder sessions take longer to recover. The time shown is roughly when the muscle is ready to train hard again.</div>');
@@ -4443,7 +4614,7 @@ function viewSettings() {
   var srvAcct = dbCol && dbCol.srv;
   var status = srvAcct ? (dbState === 'synced' ? 'Saved to your account and this phone.' : dbState === 'error' ? 'Could not reach your account just now. Saved on this phone and retrying.' : 'Connecting to your account…') : dbState === 'synced' ? 'Saved to your Claude account and this device.' : dbState === 'error' ? 'Could not reach your account just now. Saved on this device and retrying.' : dbState === 'pending' ? 'Connecting…' : 'Saved on this device only. Back up regularly.';
   var acctCard = acctMode() && srvOn() ? '<div class="card section"><div class="row" style="gap:12px"><div class="grow"><div class="xname">' + esc(SRV.name) + '</div><div class="note">Signed in. Your workouts are saved to this account. Sign in with the same username on another phone to see them there.</div></div><button class="btn small" data-act="srvOut">Sign out</button></div></div>' : '';
-  return '<div class="screen"><div class="screen-head"><h1>Settings</h1></div>' + acctCard +
+  return '<div class="screen"><div class="screen-head"><h1>Settings</h1></div>' + acctCard + (typeof healthSettingsCard === 'function' ? healthSettingsCard() : '') +
     '<div class="section"><span class="field-label">Weight units</span><div class="seg" role="group"><button aria-pressed="' + (st.unit === 'lb') + '" data-act="unit" data-k="lb">Pounds</button><button aria-pressed="' + (st.unit === 'kg') + '" data-act="unit" data-k="kg">Kilograms</button></div></div>' +
     injurySettingsHTML() +
     '<div class="section"><span class="field-label">Rest timer chime</span><div class="seg" role="group" aria-label="Rest timer chime"><button aria-pressed="' + (st.chime !== false) + '" data-act="chimeOpt" data-k="on">On</button><button aria-pressed="' + (st.chime === false) + '" data-act="chimeOpt" data-k="off">Off</button></div><div class="note">A short chime when rest is over, through your headphones or speaker. Keep the app open on screen (it stays awake during workouts); iPhones pause web apps that are in the background.</div></div>' +
@@ -4561,6 +4732,7 @@ document.addEventListener('click', function (ev) {
   if (a.indexOf('eat') === 0 && eatClick(a, d, el)) return;
   if ((a.indexOf('tg') === 0 || a.indexOf('safari') === 0) && tgClick(a, d)) return;
   if (a.indexOf('body') === 0 && a !== 'bodyEdit' && a !== 'bodySave' && a !== 'bodySex' && bodyClick(a, d)) return;
+  if (a.indexOf('hk') === 0 && typeof healthClick === 'function' && healthClick(a, d)) return;
   if (a === 'close') { closeSheet(); U.confirm = null; return; }
   if (a === 'doneSummary') { closeSheet(); U.tab = 'prog'; U.seg = 'muscles'; render(); window.scrollTo(0, 0); return; }
   if (a === 'tab') { U.tab = d.t; U.confirm = null; closeSheet(); render(); window.scrollTo(0, 0); return; }
@@ -4666,7 +4838,9 @@ document.addEventListener('click', function (ev) {
   if (a === 'bodySex') { U.bsex = d.k; ['M', 'F'].forEach(function (k) { var bt = $('#bs-' + k); if (bt) bt.setAttribute('aria-pressed', String(k === d.k)); }); return; }
   if (a === 'bodySave') { bodySave(); return; }
   if (a === 'bodyDel') {
-    var bb = st.body; bb.log = (bb.log || []).filter(function (x) { return String(x.t) !== d.t; }); bb.w = curWeightLb(bb) || null;
+    var bb = st.body, gone = (bb.log || []).filter(function (x) { return String(x.t) === d.t; })[0];
+    if (gone && gone.h) bb.hdel = (bb.hdel || []).concat([dayKey(gone.t)]).slice(-200);   // a Health weigh-in you deleted doesn't come back
+    bb.log = (bb.log || []).filter(function (x) { return String(x.t) !== d.t; }); bb.w = curWeightLb(bb) || null;
     persist({ settings: true }); bodySheet(); render(); return;
   }
   if (a === 'exportCopy') { copyText(backupText()); return; }
