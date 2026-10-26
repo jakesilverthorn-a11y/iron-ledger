@@ -104,6 +104,8 @@ FIX = {
   'Handstand Push-Ups': 'pushup*0.2', 'Single-Arm Push-Up': 'pushup*0.15', 'Incline Push-Up': 'pushup*1.3', 'Incline Push-Up Close-Grip': 'pushup*1.2',
   'Incline Push-Up Medium': 'pushup*1.3', 'Incline Push-Up Reverse Grip': 'pushup*1.2', 'Incline Push-Up Wide': 'pushup*1.3',
   'Decline Push-Up': 'pushup*0.8', 'Push-Ups With Feet Elevated': 'pushup*0.8', 'Push-Ups - Close Triceps Position': 'pushup*0.85',
+  # half the reps close-grip (about 60% as many as normal push-ups, per Strength Level's diamond table), half wide
+  'Pushups (Close and Wide Hand Positions)': 'pushup*0.8', 'Push-Ups With Feet On An Exercise Ball': 'pushup*0.75',
   'Close-Grip Push-Up off of a Dumbbell': 'pushup*0.85', 'Plyo Kettlebell Pushups': 'pushup*0.7', 'Suspended Push-Up': 'pushup*0.8',
   'One Arm Chin-Up': 'pullup*0.12', 'Gironda Sternum Chins': 'pullup*0.7', 'Inverted Row': 'pullup*1.6', 'Scapular Pull-Up': None,
   'Bench Dips': 'dip*2', 'Weighted Bench Dip': 'dip*2',
