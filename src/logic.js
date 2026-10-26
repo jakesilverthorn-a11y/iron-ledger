@@ -490,11 +490,20 @@ function bwAt(b, t) {
 function effBW(sex, hCm, wLb) { return wLb; }
 /* standard anchors (Beginner..Elite = 5/20/50/80/95th percentile) for a lift at a bodyweight, log-log interpolated */
 function stdName(cls) { return CLASS_NAME[cls] || (DATA.std[cls] && DATA.std[cls].name) || cls; }
+/* The published tables come from keen lifters logging their own bests, so Iron Ledger sets every level a bit easier,
+   most at the bottom (so people starting out aren't discouraged) and least at the top (Elite still means elite).
+   Weights: Beginner 80% of the published number, Novice 85%, Intermediate 90%, Advanced 93%, Elite 95%. Reps: 70 / 80 / 85 / 88 / 90%. */
+var EASE = { w: [0.8, 0.85, 0.9, 0.93, 0.95], reps: [0.7, 0.8, 0.85, 0.88, 0.9] };
 var STD_MEMO = {};
 function stdAt(cls, sex, bw) {
   var mk = cls + '|' + sex + '|' + Math.round(bw * 4), hit = STD_MEMO[mk]; if (hit) return hit.slice();
-  var r = stdAt0(cls, sex, Math.round(bw * 4) / 4); if (r) STD_MEMO[mk] = r.slice(); return r;
+  var r = stdAtRaw(cls, sex, bw); if (!r) return r;
+  var f = DATA.std[cls].u === 'reps' ? EASE.reps : EASE.w;
+  r = r.map(function (x, i) { return x * f[i]; });
+  STD_MEMO[mk] = r.slice(); return r;
 }
+/* the published numbers, unchanged */
+function stdAtRaw(cls, sex, bw) { return stdAt0(cls, sex, Math.round(bw * 4) / 4); }
 function stdAt0(cls, sex, bw) {
   var st = DATA.std[cls]; if (!st) return null;
   var rows = st[sex], keys = Object.keys(rows).map(Number).sort(function (a, b) { return a - b; });

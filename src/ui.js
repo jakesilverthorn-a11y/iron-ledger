@@ -762,7 +762,7 @@ function viewSettings() {
     '<div class="card section" style="gap:10px"><div class="xname">Spreadsheet</div><div class="note">Every set you have logged, ready for Excel, Numbers or Google Sheets.</div><button class="btn block" data-act="exportCsv">Export to spreadsheet (CSV)</button></div>' +
     '<details class="card"><summary style="cursor:pointer;font-weight:600">Copy as text instead</summary><div class="section" style="gap:10px;margin-top:10px"><button class="btn block" data-act="exportCopy">Copy backup text</button><textarea class="input" id="restore" rows="3" style="padding:10px 14px;min-height:80px" placeholder="Paste backup text here to restore"></textarea><button class="btn block" data-act="restore">Restore from pasted text</button></div></details>' +
     (U.confirm === 'wipe' ? '<div class="banner"><span>Delete every workout and setting?</span><span class="row"><button class="btn small danger" data-act="wipe2">Delete all</button><button class="btn small" data-act="noconfirm">Keep</button></span></div>' : '<button class="btn block ghost danger" data-act="wipe">Delete all data</button>') + '</div>' +
-    '<div class="note">Strength is estimated with the Epley formula: weight × (1 + reps ÷ 30). Ranks compare that with strength standards from strengthlevel.com. Exercise demos come from the open Free Exercise DB (public domain).</div></div>';
+    '<div class="note">Strength is estimated with the Epley formula: weight × (1 + reps ÷ 30). Ranks compare that with strength standards from strengthlevel.com, set a little easier (most at Beginner and Novice) because those tables come from keen lifters logging their own bests. Exercise demos come from the open Free Exercise DB (public domain).</div></div>';
 }
 
 /* ===== timers ===== */

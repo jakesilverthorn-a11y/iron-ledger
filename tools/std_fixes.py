@@ -13,6 +13,16 @@ Run:  python3 tools/std_fixes.py   (edits src/data.json in place; safe to run ag
 import json, os
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FIX = {
+  # --- harder (or band-assisted) versions that were rated 1:1 against the plain lift ---
+  'Deadlift with Bands': 'deadlift*0.85', 'Deadlift with Chains': 'deadlift*0.85', 'Reverse Band Deadlift': 'deadlift*1.1',
+  'Squat with Bands': 'squat*0.85', 'Squat with Chains': 'squat*0.85', 'Reverse Band Power Squat': 'squat*1.1',
+  'Bench Press with Chains': 'bench*0.85', 'Reverse Band Bench Press': 'bench*1.1',
+  'Snatch Deadlift': 'deadlift*0.85', 'Narrow Stance Squats': 'squat*0.9',
+  'Lying Cambered Barbell Row': 'bbrow*0.8', 'Alternating Renegade Row': 'dbrow*0.5',
+  'Bent Over Two-Dumbbell Row': 'dbrow*0.8', 'Bent Over Two-Dumbbell Row With Palms In': 'dbrow*0.8',
+  'Barbell Curls Lying Against An Incline': 'bbcurl*0.8', 'Lying High Bench Barbell Curl': 'bbcurl*0.75', 'Seated Close-Grip Concentration Barbell Curl': 'bbcurl*0.8',
+  'One Arm Dumbbell Bench Press': 'dbbench*0.9', 'Reverse Grip Triceps Pushdown': 'pushdown*0.75',
+  'Ring Dips': 'dip*0.65', 'Wide-Grip Rear Pull-Up': 'pullup*0.75', 'Wide-Grip Pulldown Behind The Neck': 'pulldown*0.9',
   # --- logged per dumbbell / kettlebell, but rated against a barbell total ---
   'Stiff-Legged Dumbbell Deadlift': 'rdl*0.34',
   'Dumbbell Clean': 'rdl*0.3',

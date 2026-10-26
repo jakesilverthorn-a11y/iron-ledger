@@ -153,6 +153,17 @@ direct  Bodyweight Squat                   Bodyweight Squat
 direct  Lunge                              Bodyweight Walking Lunge
 direct  Back Extension                     Hyperextensions (Back Extensions)
 direct  Dumbbell Hang Clean                Dumbbell Clean
+link    Lying Leg Curl                     Standing Leg Curl: legcurl -> sl_lying_leg_curl*0.5
+link    Incline Dumbbell Curl              Incline Hammer Curls: hammer -> sl_incline_dumbbell_curl*1.05
+link    Arnold Press                       Kettlebell Arnold Press: dbpress -> sl_arnold_press
+link    Dumbbell Reverse Fly               Cable Rear Delt Fly: dbfly -> sl_dumbbell_reverse_fly
+link    Dumbbell Reverse Fly               Dumbbell Lying Rear Lateral Raise: dblat -> sl_dumbbell_reverse_fly
+link    Dumbbell Reverse Fly               Dumbbell Lying One-Arm Rear Lateral Raise: dblat -> sl_dumbbell_reverse_fly
+link    Dumbbell Front Raise               Front Cable Raise: dbfront -> sl_dumbbell_front_raise
+link    Dumbbell Front Raise               Front Incline Dumbbell Raise: dbfront*1 -> sl_dumbbell_front_raise*0.85
+link    Dumbbell Front Raise               Side Laterals to Front Raise: dbfront -> sl_dumbbell_front_raise*0.85
+link    Dumbbell Front Raise               Standing Dumbbell Straight-Arm Front Delt Raise Above Head: dbfront -> sl_dumbbell_front_raise*0.75
+link    Romanian Deadlift                  Romanian Deadlift from Deficit: sl_romanian_deadlift -> sl_romanian_deadlift
 link    Upright Row                        Smith Machine Upright Row: ohp*0.75 -> sl_upright_row
 link    Upright Row                        Smith Machine One-Arm Upright Row: ohp*0.35 -> sl_upright_row*0.47
 link    Dumbbell Calf Raise                Calf Raise On A Dumbbell: calfmach*0.3 -> sl_dumbbell_calf_raise
@@ -172,10 +183,10 @@ link    Dumbbell Tricep Kickback           Seated Bent-Over Two-Arm Dumbbell Tri
 link    Dumbbell Tricep Kickback           Standing Bent-Over One-Arm Dumbbell Triceps Extension: dbtri*0.5 -> sl_dumbbell_tricep_kickback
 link    Dumbbell Tricep Kickback           Standing Bent-Over Two-Arm Dumbbell Triceps Extension: dbtri*0.5 -> sl_dumbbell_tricep_kickback
 link    Barbell Pullover                   Wide-Grip Decline Barbell Pullover: bbrow*0.4 -> sl_barbell_pullover
-link    Rack Pull                          Rack Pull with Bands: sl_rack_pull -> sl_rack_pull
-link    Box Squat                          Box Squat with Bands: sl_box_squat -> sl_box_squat
-link    Box Squat                          Box Squat with Chains: sl_box_squat -> sl_box_squat
-link    Box Squat                          Reverse Band Box Squat: sl_box_squat -> sl_box_squat
+link    Rack Pull                          Rack Pull with Bands: sl_rack_pull -> sl_rack_pull*0.85
+link    Box Squat                          Box Squat with Bands: sl_box_squat -> sl_box_squat*0.85
+link    Box Squat                          Box Squat with Chains: sl_box_squat -> sl_box_squat*0.85
+link    Box Squat                          Reverse Band Box Squat: sl_box_squat -> sl_box_squat*1.1
 link    Box Squat                          Speed Box Squat: squat*0.6 -> sl_box_squat*0.6
 link    Clean and Jerk                     Split Jerk: ohp*1.2 -> sl_clean_and_jerk*1.05
 link    Clean and Jerk                     Power Jerk: ohp*1.15 -> sl_clean_and_jerk
@@ -222,9 +233,9 @@ link    Cable Bicep Curl                   Overhead Cable Curl: sl_cable_curl ->
 link    Cable Bicep Curl                   Lying Close-Grip Bar Curl On High Pulley: sl_cable_curl -> sl_cable_curl
 link    Cable Bicep Curl                   Standing One-Arm Cable Curl: bbcurl*0.45 -> sl_cable_curl*0.45
 link    Cable Bicep Curl                   Bayesian Cable Curl: bbcurl*0.42 -> sl_cable_curl*0.42
-link    Sumo Deadlift                      Sumo Deadlift with Bands: sl_sumo_deadlift -> sl_sumo_deadlift
-link    Sumo Deadlift                      Sumo Deadlift with Chains: sl_sumo_deadlift -> sl_sumo_deadlift
-link    Sumo Deadlift                      Reverse Band Sumo Deadlift: sl_sumo_deadlift -> sl_sumo_deadlift
+link    Sumo Deadlift                      Sumo Deadlift with Bands: sl_sumo_deadlift -> sl_sumo_deadlift*0.85
+link    Sumo Deadlift                      Sumo Deadlift with Chains: sl_sumo_deadlift -> sl_sumo_deadlift*0.85
+link    Sumo Deadlift                      Reverse Band Sumo Deadlift: sl_sumo_deadlift -> sl_sumo_deadlift*1.1
 link    Smith Machine Bench Press          Smith Machine Close-Grip Bench Press: sl_smith_machine_bench_press*0.95 -> sl_smith_machine_bench_press*0.95
 link    Smith Machine Bench Press          Smith Machine Decline Press: sl_smith_machine_bench_press*1.05 -> sl_smith_machine_bench_press*1.05
 link    Smith Machine Bench Press          Smith Machine Incline Bench Press: sl_smith_machine_bench_press*0.85 -> sl_smith_machine_bench_press*0.85
@@ -237,7 +248,7 @@ link    Lying Tricep Extension (skull crusher) Incline Barbell Triceps Extension
 link    Lying Tricep Extension (skull crusher) Lying Close-Grip Barbell Triceps Extension Behind The Head: sl_lying_tricep_extension -> sl_lying_tricep_extension
 link    Lying Tricep Extension (skull crusher) Lying Close-Grip Barbell Triceps Press To Chin: sl_lying_tricep_extension -> sl_lying_tricep_extension
 link    Lying Tricep Extension (skull crusher) Standing Overhead Barbell Triceps Extension: sl_lying_tricep_extension -> sl_lying_tricep_extension
-link    Floor Press                        Floor Press with Chains: bench*0.9 -> sl_floor_press
+link    Floor Press                        Floor Press with Chains: bench*0.9 -> sl_floor_press*0.85
 link    Floor Press                        Board Press: bench*0.95 -> sl_floor_press*1.05
 link    Floor Press                        Pin Presses: bench*0.95 -> sl_floor_press*1.05
 link    T-Bar Row                          Lying T-Bar Row: sl_t_bar_row -> sl_t_bar_row
@@ -253,7 +264,6 @@ link    Snatch                             Snatch from Blocks: squat*0.55 -> sl_
 link    Power Snatch                       Power Snatch from Blocks: squat*0.5 -> sl_power_snatch
 link    Stiff Leg Deadlift                 Smith Machine Stiff-Legged Deadlift: sl_stiff_leg_deadlift -> sl_stiff_leg_deadlift
 link    Stiff Leg Deadlift                 Wide Stance Stiff Legs: sl_stiff_leg_deadlift -> sl_stiff_leg_deadlift
-link    Romanian Deadlift                  Romanian Deadlift from Deficit: sl_romanian_deadlift -> sl_romanian_deadlift
 link    Machine Bicep Curl                 Machine Preacher Curls: bbcurl*1.107 -> bbcurl*1.107
 
 skipped:
