@@ -118,20 +118,32 @@ function healthSheet() {
     '<button class="btn block" data-act="hkCheck"' + (HK.checking ? ' disabled' : '') + '>' + (HK.checking ? 'Checking…' : 'Check for new data') + '</button></div>' +
     '<div class="card section" style="gap:8px"><div class="xname">Your private link</div><div class="note">The Shortcut sends your numbers to this address. Keep it to yourself: anyone with it can add readings to your account (they can\'t see anything).</div>' +
     '<input class="input" readonly value="' + esc(hLink()) + '" aria-label="Your Apple Health link" style="font-size:13px" onfocus="this.select()"><button class="btn primary block" data-act="hkCopy"' + (HK.key ? '' : ' disabled') + '>Copy link</button></div>' +
-    '<div class="section" style="gap:8px"><h3 style="font-size:20px">Set up the Shortcut (once, about 5 minutes)</h3><ol class="steps">' +
-    '<li>Open the <b>Shortcuts</b> app, tap <b>+</b>, and name the shortcut <b>Iron Ledger Health</b>.</li>' +
-    '<li>Add the action <b>Find Health Samples</b>. Set Type to <b>Weight</b>, Sort by <b>Start Date</b>, Order <b>Latest First</b>, and turn on <b>Limit</b> at <b>1</b>. Then add <b>Set Variable</b> and name it ' + V('w') + '.</li>' +
-    '<li>Do the same for each of these, naming the variable as shown. Skip any you don\'t track: <b>Body Fat Percentage</b> → ' + V('bf') + ', <b>Resting Heart Rate</b> → ' + V('rhr') + ', <b>Heart Rate Variability</b> → ' + V('hrv') + '.</li>' +
-    '<li>Activity for the last day: add <b>Find Health Samples</b> with Type <b>Active Energy</b> and the filter <b>Start Date is in the last 1 days</b> (no limit). Add <b>Calculate Statistics</b> set to <b>Sum</b>, then <b>Set Variable</b> ' + V('kcal') + '. Repeat with <b>Steps</b> → ' + V('steps') + '.</li>' +
-    '<li>Sleep (needs an Apple Watch or another sleep tracker): <b>Find Health Samples</b> with Type <b>Sleep Analysis</b> and <b>Start Date is in the last 1 days</b>. If it offers a Value filter, leave out <b>In Bed</b> and <b>Awake</b>. Add <b>Get Details of Health Samples</b> → <b>Duration</b>, then <b>Calculate Statistics</b> → <b>Sum</b>, then <b>Set Variable</b> ' + V('sleep') + '.</li>' +
-    '<li>Add <b>Get Contents of URL</b> and paste your link from above. Tap the arrow to show more: Method <b>POST</b>, Request Body <b>JSON</b>. Add a <b>Text</b> field for each variable you made: the key is its name (' + V('w') + ', ' + V('bf') + ', ' + V('rhr') + '…) and the value is that variable.</li>' +
-    '<li>Optional: add <b>Show Notification</b> with <b>Contents of URL</b>, so you see what was sent.</li>' +
-    '<li>Tap ▶ to run it. Allow Health access when asked, then come back here and tap <b>Check for new data</b>.</li>' +
-    '<li>Make it automatic: in Shortcuts open <b>Automation</b> → <b>+</b> → <b>Time of Day</b>, pick a time you usually have your phone unlocked (for example 8:30 AM), <b>Daily</b>, <b>Run Immediately</b>, and choose <b>Iron Ledger Health</b>. iPhone keeps Health data locked while the phone is locked, so a 3 AM run would find nothing.</li>' +
+    hDiag() +
+    '<div class="section" style="gap:8px"><h3 style="font-size:20px">1 · Quick test (2 actions)</h3><div class="note">Get weight working first, then add the rest. Search for each action by name with the search box at the bottom of the shortcut editor.</div><ol class="steps">' +
+    '<li>Open <b>Shortcuts</b>, tap <b>+</b> to make a new shortcut, and name it <b>Iron Ledger Health</b>.</li>' +
+    '<li>Add <b>Find Health Samples</b>. Tap the type and pick <b>Weight</b> (in some versions it is called <b>Body Mass</b>). Set Sort by <b>Start Date</b>, Order <b>Latest First</b>, and turn on <b>Limit</b> with <b>1</b>.</li>' +
+    '<li>Add <b>Get Contents of URL</b>. Tap <b>URL</b> and paste your link from above. Tap the small arrow (or <b>Show More</b>), set Method to <b>POST</b> and Request Body to <b>JSON</b>. Tap <b>Add new field</b> → <b>Text</b>. Type ' + V('w') + ' as the key; for the value, tap the field and pick <b>Health Samples</b> from the bar above the keyboard.</li>' +
+    '<li>Tap ▶. Allow access to Health if it asks. You should see a reply starting <b>"Sent to Iron Ledger"</b>. Then tap <b>Check for new data</b> here.</li>' +
+    '</ol></div>' +
+    '<div class="section" style="gap:8px"><h3 style="font-size:20px">2 · Add the rest</h3><ol class="steps">' +
+    '<li>Add another <b>Find Health Samples</b> (Latest First, Limit 1) for each one you track: <b>Body Fat Percentage</b>, <b>Resting Heart Rate</b>, <b>Heart Rate Variability</b>. Put them all <b>above</b> Get Contents of URL.</li>' +
+    '<li>For activity, add <b>Find Health Samples</b> with <b>Active Energy</b> and the filter <b>Start Date is in the last 1 days</b> (no limit), then <b>Calculate Statistics</b> → <b>Sum</b>. Same for <b>Steps</b>.</li>' +
+    '<li>For sleep (Apple Watch), add <b>Find Health Samples</b> with <b>Sleep Analysis</b> and <b>Start Date is in the last 1 days</b>; if it offers a Value filter, leave out In Bed and Awake. Then <b>Get Details of Health Samples</b> → <b>Duration</b>, then <b>Calculate Statistics</b> → <b>Sum</b>.</li>' +
+    '<li>In Get Contents of URL, add a Text field for each: ' + V('bf') + ', ' + V('rhr') + ', ' + V('hrv') + ', ' + V('kcal') + ', ' + V('steps') + ', ' + V('sleep') + '. For each value, long-press the field → <b>Select Variable</b>, then tap the output of the matching action in the editor. Plain names like <b>Weight</b> or <b>Resting Heart Rate</b> also work as keys.</li>' +
+    '<li>Make it automatic: <b>Automation</b> tab → <b>+</b> → <b>Time of Day</b>, a time you usually have your phone unlocked (e.g. 8:30 AM), <b>Daily</b>, <b>Run Immediately</b>, then pick <b>Iron Ledger Health</b>. Health data is locked while the phone is locked.</li>' +
     '</ol></div>' +
     '<div class="note">What it\'s used for: your weigh-ins go into your body log (a weigh-in you type yourself that day wins), so ranks use your weight on each day. Active energy sets your daily calories on the Eat tab, and body fat makes the calorie estimate more exact. Sleep, resting heart rate and HRV adjust the recovery map. It all stays private in your account.</div>' +
     '<div class="note">Sharing your Shortcut with a friend? The link inside it is yours. They must replace it with their own link from their Iron Ledger.</div>' +
     '<button class="btn block ghost" data-act="hkNew"' + (HK.key ? '' : ' disabled') + '>Make a new link (the old one stops working)</button>');
+}
+/* what the server saw on the last try, so a wrong Shortcut can be fixed */
+function hDiag() {
+  var L = S.hlast;
+  if (!L) return '<div class="banner"><span><b>Nothing has reached Iron Ledger from a Shortcut yet.</b> If you ran one, the link probably isn\'t in Get Contents of URL, or the shortcut stopped before that step (Shortcuts shows a red error). Try the quick test below.</span></div>';
+  var got = L.got || {}, parts = Object.keys(got).map(function (k) { return { w: 'weight', wlb: 'weight', bf: 'body fat', rhr: 'resting HR', hrv: 'HRV', steps: 'steps', kcal: 'active energy', sleep: 'sleep' }[k] || k; });
+  return '<div class="card section" style="gap:6px"><div class="xname">Last try ' + esc(hAgo(L.at)) + (L.ok ? ' · worked' : ' · nothing readable') + '</div>' +
+    '<div class="note">' + (L.ok ? 'Read: ' + esc(parts.join(', ')) + '.' : 'Your Shortcut reached Iron Ledger, but no readings were in it. Check that Request Body is JSON and that each field\'s value is a variable (blue), not typed text.') + '</div>' +
+    '<div class="note" style="font-family:ui-monospace,Menlo,monospace;font-size:12px;overflow-wrap:anywhere">' + esc(L.method + ' · ' + (L.ct || 'no type') + ' · fields: ' + (L.keys || []).join(', ') + (L.body ? ' · ' + L.body.slice(0, 200) : '')) + '</div></div>';
 }
 function healthClick(a) {
   if (a === 'hkSetup') { HK.err = ''; healthSheet(); return true; }

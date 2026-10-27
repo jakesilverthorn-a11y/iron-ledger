@@ -28,7 +28,7 @@ function acctMode() { return !window.claude && typeof SRV !== 'undefined' && !!S
 function needGate() { return acctMode() && !srvOn(); }
 function lsKey() { return (!window.claude && typeof SRV !== 'undefined' && SRV.uid) ? LS_KEY + ':' + SRV.uid : LS_KEY; }
 function readLS(k) { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } }
-function applyLS(j) { S.settings = normSettings(Object.assign(defaults(), (j && j.settings) || {})); S.workouts = (j && j.workouts) || []; S.draft = (j && j.draft) || null; S.at = (j && j.at) || { settings: 0, draft: 0 }; S.health = (j && j.health) || null; }
+function applyLS(j) { S.settings = normSettings(Object.assign(defaults(), (j && j.settings) || {})); S.workouts = (j && j.workouts) || []; S.draft = (j && j.draft) || null; S.at = (j && j.at) || { settings: 0, draft: 0 }; S.health = (j && j.health) || null; S.hlast = (j && j.hlast) || null; }
 function hasData(j) { return !!(j && (((j.workouts || []).length) || (j.settings && j.settings.body && j.settings.body.sex))); }
 function loadLocal() { var j = readLS(lsKey()); if (j) applyLS(j); }
 /* what this phone saved before sign-in existed becomes this account's (keeps its own timestamps, so newer data elsewhere still wins) */
@@ -105,7 +105,7 @@ function viewGate() {
     '<div class="note">New here? Type a username and password, then tap <b>Create account</b>. There is no password reset, so pick one you will remember.</div></div></div>';
 }
 function saveLocal() {
-  try { localStorage.setItem(lsKey(), JSON.stringify({ settings: S.settings, workouts: S.workouts, draft: S.draft, at: S.at, health: S.health || null })); saveLocal.warned = false; }
+  try { localStorage.setItem(lsKey(), JSON.stringify({ settings: S.settings, workouts: S.workouts, draft: S.draft, at: S.at, health: S.health || null, hlast: S.hlast || null })); saveLocal.warned = false; }
   catch (e) { if (!saveLocal.warned) { saveLocal.warned = true; setTimeout(function () { toast('Your phone is out of storage for this app. Save a backup file in Settings, and free up space.'); }, 50); } }
 }
 function persist(o) {
@@ -162,7 +162,7 @@ function mergeRemote(snap) {
     var remoteW = [], rs = null, rd = null;
     snap.docs.forEach(function (d) {
       var x = d.data(); if (!x) return;
-      if (d.id === 'settings') rs = x; else if (d.id === 'draft') rd = x; else if (d.id === 'health') S.health = x; else if (d.id.indexOf('m_') === 0) remoteW = remoteW.concat(x.w || []);
+      if (d.id === 'settings') rs = x; else if (d.id === 'draft') rd = x; else if (d.id === 'health') S.health = x; else if (d.id === 'hlast') S.hlast = x; else if (d.id.indexOf('m_') === 0) remoteW = remoteW.concat(x.w || []);
     });
     var del = {}; (S.settings.deleted || []).forEach(function (i) { del[i] = 1; });
     ((rs && rs.settings && rs.settings.deleted) || []).forEach(function (i) { del[i] = 1; });

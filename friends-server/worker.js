@@ -4,7 +4,7 @@
    Needs ONE KV namespace bound to this Worker with the variable name  DB  (see SERVER-SETUP.txt). */
 const ITER = 30000;               // password stretching; kept modest so it fits the free plan's CPU limit
 const MAX_USERS = 300, MAX_DOC = 16000, DAYS = 86400, MAX_PDOC = 600000;
-const PDOC = /^(settings|draft|m_\d{4}-\d{2})$/;   // private docs: settings, the workout in progress, one per month of workouts
+const PDOC = /^(settings|draft|m_\d{4}-\d{2})$/;   // the ones the app may write (health and hlast are written by /health only)   // private docs: settings, the workout in progress, one per month of workouts
 const COLS = ['people', 'ch', 'cp', 'tg'];   // tg = live 'train together' sessions
 const VISION = '@cf/meta/llama-3.2-11b-vision-instruct';
 const enc = new TextEncoder();
@@ -102,6 +102,18 @@ function hNum(x) {
   const v = parseFloat(t); return isFinite(v) ? v : null;
 }
 const inR = (v, lo, hi) => v != null && v >= lo && v <= hi ? Math.round(v * 100) / 100 : null;
+/* field names as people might type them ("Weight", "Resting Heart Rate", "active_energy"…) -> w, bf, rhr, hrv, steps, kcal, sleep */
+const HALIAS = { w: 'w', weight: 'w', bodymass: 'w', bodyweight: 'w', bf: 'bf', bodyfat: 'bf', bodyfatpercentage: 'bf', fat: 'bf', rhr: 'rhr', restingheartrate: 'rhr', restinghr: 'rhr', resting: 'rhr',
+  hrv: 'hrv', heartratevariability: 'hrv', variability: 'hrv', steps: 'steps', step: 'steps', stepcount: 'steps', kcal: 'kcal', activeenergy: 'kcal', activecalories: 'kcal', calories: 'kcal', energy: 'kcal', active: 'kcal', sleep: 'sleep', sleepanalysis: 'sleep', asleep: 'sleep' };
+function hFields(b) {
+  const o = {};
+  Object.keys(b || {}).forEach(k => {
+    const n = HALIAS[String(k).toLowerCase().replace(/[^a-z]/g, '')]; if (!n || o[n] != null) return;
+    let v = b[k]; if (Array.isArray(v)) v = v[0]; if (v && typeof v === 'object') v = v.value != null ? v.value + (v.unit ? ' ' + v.unit : '') : JSON.stringify(v);
+    o[n] = v;
+  });
+  return o;
+}
 function hParse(b) {
   const raw = {}, o = {};
   ['w', 'bf', 'rhr', 'hrv', 'steps', 'kcal', 'sleep'].forEach(k => { if (b[k] != null && String(b[k]).trim() !== '') raw[k] = String(b[k]).slice(0, 60); });
@@ -165,22 +177,29 @@ export default {
         await addIdx(env, un);
         return out({ token: await mkToken(env, un, rec.gen || '0'), uid: un, name: rec.name });
       }
-      if (req.method === 'POST' && path === '/health') {
+      if ((req.method === 'POST' || req.method === 'GET') && path === '/health') {
         const key = url.searchParams.get('k') || req.headers.get('X-Key') || '';
         const uid = key.length >= 20 ? await env.DB.get('hk:' + key) : null;
         if (!uid) return bad('This Apple Health link is not valid. Copy it again from Iron Ledger (Settings > Apple Health).', 401);
-        let b = {}; const txt = await req.text(); if (txt.length > 20000) return bad('Too large', 413);
-        try { b = JSON.parse(txt); } catch (e) { try { b = Object.fromEntries(new URLSearchParams(txt)); } catch (e2) { b = {}; } }
+        const txt = req.method === 'POST' ? await req.text() : ''; if (txt.length > 20000) return bad('Too large', 413);
+        let b = null; try { b = JSON.parse(txt); } catch (e) { }
+        if (!b || typeof b !== 'object') { b = {}; if (/=/.test(txt)) try { b = Object.fromEntries(new URLSearchParams(txt)); } catch (e2) { } }
+        if (Array.isArray(b)) b = Object.assign({}, ...b.filter(x => x && typeof x === 'object'));
         url.searchParams.forEach((v, k) => { if (k !== 'k' && b[k] == null) b[k] = v; });
-        if (!b || typeof b !== 'object') b = {};
+        const b2 = hFields(b);
         if (await hits(env, 'hr:' + uid, DAYS) > 48) return bad('Too many updates today.', 429);
-        const { o, raw } = hParse(b);
-        if (!Object.keys(o).length) return out({ ok: false, error: 'Nothing readable came through. Check the fields in the Shortcut.', raw }, 400);
+        const { o, raw } = hParse(b2);
+        // what the last attempt looked like, so the app can show it (helps when a Shortcut sends the wrong thing)
+        const ids = await pIndex(env, uid), last = { v: 1, at: Date.now(), ok: !!Object.keys(o).length, ct: (req.headers.get('Content-Type') || '').slice(0, 60), method: req.method, keys: Object.keys(b).slice(0, 20).map(k => String(k).slice(0, 30)), body: txt.slice(0, 400), got: o };
+        await env.DB.put('p:' + uid + ':hlast', JSON.stringify(last));
+        if (ids.indexOf('hlast') < 0) ids.push('hlast');
+        if (!last.ok) { await env.DB.put('pi:' + uid, JSON.stringify(ids)); return out({ ok: false, error: 'Iron Ledger got your Shortcut, but no readings were in it. Open Iron Ledger > Settings > Apple Health to see what arrived.', raw }, 400); }
         const k2 = 'p:' + uid + ':health', cur = (await env.DB.get(k2, 'json')) || { v: 1, e: [] };
         const e = Object.assign({ at: Date.now() }, o, { raw });
         cur.e = (cur.e || []).concat([e]).slice(-500); cur.at = Date.now();
         await env.DB.put(k2, JSON.stringify(cur));
-        const ids = await pIndex(env, uid); if (ids.indexOf('health') < 0) { ids.push('health'); await env.DB.put('pi:' + uid, JSON.stringify(ids)); }
+        if (ids.indexOf('health') < 0) ids.push('health');
+        await env.DB.put('pi:' + uid, JSON.stringify(ids));
         const said = [o.wlb != null ? Math.round(o.wlb * 10) / 10 + ' lb' : o.w != null ? o.w + ' (weight)' : '', o.bf != null ? o.bf + '% body fat' : '', o.rhr != null ? 'resting HR ' + o.rhr : '', o.hrv != null ? 'HRV ' + o.hrv + ' ms' : '', o.sleep != null ? Math.round(o.sleep * 10) / 10 + ' h sleep' : '', o.steps != null ? o.steps + ' steps' : '', o.kcal != null ? o.kcal + ' active kcal' : ''].filter(Boolean).join(', ');
         return out({ ok: true, message: 'Sent to Iron Ledger: ' + said, got: o });
       }
