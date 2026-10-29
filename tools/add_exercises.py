@@ -29,7 +29,8 @@ NEW = [
     'Barbell Hip Thrust', False, 'hipthrust*0.35'),
   X('Machine Hip Thrust', 'machine', 'beginner', 'compound', ['Glutes'], ['Hamstrings'], ['glutes'], ['machine_other'],
     ['Set up in the hip thrust (glute drive) machine with the pad across your hips and upper back on the backrest.', 'Place your feet flat on the platform, about hip-width apart.', 'Drive your hips up until they are fully extended and squeeze your glutes at the top.', 'Lower under control and repeat.'],
-    'Barbell Hip Thrust', False, 'hipthrust*1'),
+    # no published machine table; most hip thrust machines max out well below barbell Advanced/Elite, so 75% of the barbell standard
+    'Barbell Hip Thrust', False, 'hipthrust*0.75'),
   # --- squats and lunges ---
   X('Dumbbell Bulgarian Split Squat', 'dumbbell', 'intermediate', 'compound', ['Quads'], ['Glutes', 'Hamstrings'], ['quadriceps'], ['dumbbell', 'bench'],
     ['Stand about two feet in front of a bench holding a dumbbell in each hand. Reach one foot back and rest its top on the bench.', 'Lower straight down by bending your front knee until your back knee nearly touches the floor.', 'Keep your torso upright and your front knee tracking over your toes.', 'Drive through your front heel to stand back up. Finish all reps, then switch legs.'],
