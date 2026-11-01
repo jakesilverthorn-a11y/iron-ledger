@@ -79,7 +79,8 @@ function hAgo(t) { var m = Math.round((Date.now() - t) / 60000); return m < 2 ? 
 function healthSettingsCard() {
   if (window.claude) return '';
   var last = hLast();
-  var status = !healthOn() ? 'Sign in to connect Apple Health.' : last ? 'Last update ' + hAgo(last.at) + '.' : 'Not connected yet. A Shortcut on your iPhone sends your weight, activity, sleep and heart numbers here once a day.';
+  var app = typeof NATIVE !== 'undefined' && NATIVE.on;
+  var status = !healthOn() ? 'Sign in to connect Apple Health.' : last ? 'Last update ' + hAgo(last.at) + '.' : app ? 'Not connected yet. Iron Ledger can read your weight, activity, sleep and heart numbers from Health.' : 'Not connected yet. A Shortcut on your iPhone sends your weight, activity, sleep and heart numbers here once a day.';
   return '<div class="section"><h2>Apple Health</h2><div class="card section" style="gap:10px"><div class="note">' + esc(status) + '</div>' +
     (healthOn() ? '<button class="btn block' + (last ? '' : ' primary') + '" data-act="hkSetup">' + (last ? 'Apple Health settings' : 'Connect Apple Health') + '</button>' : '') + '</div></div>';
 }
@@ -106,6 +107,7 @@ function healthBodyCard() {
 function hLink() { return HK.key ? SRV.url + '/health?k=' + encodeURIComponent(HK.key) : ''; }
 function healthSheet() {
   if (!healthOn()) { toast('Sign in first.'); return; }
+  if (typeof NATIVE !== 'undefined' && NATIVE.on) { nativeHealthSheet(); return; }   // the iPhone app reads Health itself, no Shortcut needed
   if (!HK.key && !HK.err) {
     openSheet('Apple Health', '<div class="note">Getting your private link…</div>');
     srvRaw('GET', '/health/key').then(function (r) { HK.key = r.key || ''; if (sheetOpen()) healthSheet(); }, function (e) { HK.err = e.message || 'Could not reach the server.'; if (sheetOpen()) healthSheet(); });

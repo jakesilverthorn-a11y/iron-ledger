@@ -148,7 +148,7 @@ async function pushDb() {
 async function initDb() {
   try {
     var cl = window.claude;
-    if (!cl || !cl.use) { dbState = 'local'; srvBoot(); if (acctMode() && srvOn()) acctSync(); if (U.tab === 'friends') render(); return; }
+    if (!cl || !cl.use) { dbState = 'local'; srvBoot(); if (acctMode() && srvOn()) acctSync().then(function () { if (typeof nativeHealthSync === 'function') nativeHealthSync(false); }); if (U.tab === 'friends') render(); return; }
     var user = await cl.use('user'), db = await cl.use('db');
     var id = user ? await user.id() : null;
     if (!db || !id) { dbState = 'local'; if (U.tab === 'settings') render(); return; }
@@ -354,7 +354,7 @@ function openSheet(title, body, opts) {
   document.body.style.overflow = 'hidden';
   var b = $('#sheet-body'); if (keepY && !opts.top) b.scrollTop = keepY; if (opts.focus) { var f = $(opts.focus, b); if (f) f.focus({ preventScroll: !!keepY }); }
 }
-function closeSheet() { $('#sheet-root').innerHTML = ''; document.body.style.overflow = ''; U.pickMode = null; U.socSheet = null; U.eatSheet = null; U.tgSheet = false; U.tgSheetOpen = false; U.chartRedraw = null; }
+function closeSheet() { $('#sheet-root').innerHTML = ''; document.body.style.overflow = ''; U.pickMode = null; U.socSheet = null; U.eatSheet = null; U.tgSheet = false; U.tgSheetOpen = false; U.chartRedraw = null; U.nhSheet = false; }
 function sheetOpen() { return !!$('#sheet-root').firstChild; }
 
 /* ===== exercise detail ===== */
@@ -768,6 +768,7 @@ function viewSettings() {
 /* ===== timers ===== */
 var tickT = null;
 function tick() {
+  if (NATIVE.on) nativeTick();
   var c = $('#clock'), c2 = $('#clock2');
   if (S.draft) { var s = fmtDur((Date.now() - S.draft.t) / 1000); if (c) c.textContent = s; if (c2) c2.textContent = s; }
   var rb = $('#restbar');
@@ -775,7 +776,7 @@ function tick() {
   document.body.classList.toggle('resting', !!U.rest);
   if (!U.rest) { if (!rb.hidden || rb.innerHTML) { rb.hidden = true; rb.dataset.k = ''; rb.innerHTML = ''; } return; }
   var left = Math.ceil((U.rest.end - Date.now()) / 1000);
-  if (left <= 0 && !U.rest.done) { U.rest.done = true; U.rest.doneAt = Date.now(); beep(); try { if (navigator.vibrate) navigator.vibrate([220, 120, 220]); } catch (e) { } }
+  if (left <= 0 && !U.rest.done) { U.rest.done = true; U.rest.doneAt = Date.now(); beep(); haptic('done'); }
   if (U.rest.done && Date.now() - U.rest.doneAt > 9000) { U.rest = null; rb.hidden = true; rb.dataset.k = ''; rb.innerHTML = ''; document.body.classList.remove('resting'); return; }
   var key = (U.rest.done ? 'd' : 'r') + U.rest.end0;
   if (rb.dataset.k !== key || rb.hidden) {
@@ -868,6 +869,7 @@ document.addEventListener('click', function (ev) {
   if ((a.indexOf('tg') === 0 || a.indexOf('safari') === 0) && tgClick(a, d)) return;
   if (a.indexOf('body') === 0 && a !== 'bodyEdit' && a !== 'bodySave' && a !== 'bodySex' && bodyClick(a, d)) return;
   if (a.indexOf('hk') === 0 && typeof healthClick === 'function' && healthClick(a, d)) return;
+  if (a.indexOf('nh') === 0 && typeof nativeClick === 'function' && nativeClick(a, d)) return;
   if (a === 'close') { closeSheet(); U.confirm = null; return; }
   if (a === 'doneSummary') { closeSheet(); U.tab = 'prog'; U.seg = 'muscles'; render(); window.scrollTo(0, 0); return; }
   if (a === 'tab') { U.tab = d.t; U.confirm = null; closeSheet(); render(); window.scrollTo(0, 0); return; }
@@ -1291,7 +1293,7 @@ function livePR(dx, s) {
   if (prev > 0 && now > prev * 1.0001 && now > (dx.prShown || 0)) {
     dx.prShown = now;
     toast('New best on ' + dx.n + ' · ' + (isBW(ex) ? Math.round(now) + ' reps' : 'est. 1RM ' + toDisp(now, unit()) + ' ' + uLabel()));
-    try { if (navigator.vibrate) navigator.vibrate(60); } catch (e) { }
+    haptic('tap');
   }
 }
 function isBarbell(ex) { return !!(ex && ex.gear && (ex.gear.indexOf('barbell') >= 0 || ex.gear.indexOf('trapbar') >= 0 || ex.gear.indexOf('ezbar') >= 0) && !isBW(ex)); }

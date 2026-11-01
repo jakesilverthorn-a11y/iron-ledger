@@ -186,8 +186,27 @@ export default {
         if (!b || typeof b !== 'object') { b = {}; if (/=/.test(txt)) try { b = Object.fromEntries(new URLSearchParams(txt)); } catch (e2) { } }
         if (Array.isArray(b)) b = Object.assign({}, ...b.filter(x => x && typeof x === 'object'));
         url.searchParams.forEach((v, k) => { if (k !== 'k' && b[k] == null) b[k] = v; });
-        const b2 = hFields(b);
         if (await hits(env, 'hr:' + uid, DAYS) > 48) return bad('Too many updates today.', 429);
+        if (Array.isArray(b.days)) {
+          // the iPhone app sends whole days at once: [{d:'YYYY-MM-DD', t, wlb, bf, rhr, hrv, steps, kcal, sleep}] (newer copy of a day replaces the older one)
+          const now = Date.now(), add = [];
+          b.days.slice(0, 400).forEach(x => {
+            if (!x || typeof x !== 'object' || !/^\d{4}-\d{2}-\d{2}$/.test(String(x.d))) return;
+            const f = {}; if (x.wlb != null) f.w = x.wlb + ' lb'; if (x.bf != null) f.bf = x.bf + '%';
+            ['rhr', 'hrv', 'steps', 'kcal', 'sleep'].forEach(k => { if (x[k] != null) f[k] = String(x[k]); });
+            const { o } = hParse(f); if (!Object.keys(o).length) return;
+            const t = Math.min(now + 3600e3, Math.max(now - 450 * DAYS * 1000, +x.t || now));
+            add.push(Object.assign({ at: t, d: String(x.d), src: 'app' }, o));
+          });
+          const k2 = 'p:' + uid + ':health', cur = (await env.DB.get(k2, 'json')) || { v: 1, e: [] }, ds = new Set(add.map(x => x.d));
+          cur.e = (cur.e || []).filter(x => !(x.d && ds.has(x.d))).concat(add).sort((p, q) => p.at - q.at).slice(-800); cur.at = now;
+          if (add.length) await env.DB.put(k2, JSON.stringify(cur));
+          const ids = await pIndex(env, uid); let ch = false; ['health', 'hlast'].forEach(x => { if (ids.indexOf(x) < 0) { ids.push(x); ch = true; } });
+          await env.DB.put('p:' + uid + ':hlast', JSON.stringify({ v: 1, at: now, ok: add.length > 0, method: 'app', ct: 'iPhone app', keys: ['days'], body: add.length + ' days', got: add.length ? add[add.length - 1] : {} }));
+          if (ch) await env.DB.put('pi:' + uid, JSON.stringify(ids));
+          return out({ ok: true, days: add.length });
+        }
+        const b2 = hFields(b);
         const { o, raw } = hParse(b2);
         // what the last attempt looked like, so the app can show it (helps when a Shortcut sends the wrong thing)
         const ids = await pIndex(env, uid), last = { v: 1, at: Date.now(), ok: !!Object.keys(o).length, ct: (req.headers.get('Content-Type') || '').slice(0, 60), method: req.method, keys: Object.keys(b).slice(0, 20).map(k => String(k).slice(0, 30)), body: txt.slice(0, 400), got: o };
