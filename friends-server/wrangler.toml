@@ -1,0 +1,20 @@
+# For "wrangler dev" / "wrangler deploy". The live server was deployed with the same bindings.
+name = "ironledger"
+main = "worker.js"
+compatibility_date = "2025-01-01"
+
+[[kv_namespaces]]
+binding = "DB"
+id = "3346bc01463c4a3abe751e1c2b80638a"
+
+[ai]
+binding = "AI"
+
+# rest-over alerts (Web Push): one small timer object per person
+[[durable_objects.bindings]]
+name = "REST"
+class_name = "RestTimer"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["RestTimer"]

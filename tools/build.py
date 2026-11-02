@@ -5,7 +5,7 @@ R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 src = lambda f: open(os.path.join(R, 'src', f)).read()
 data = src('data.json').replace('</', '<\\/')
 logic = src('logic.js').replace('__DATA__', data)
-js = '\n'.join([src('figure.js'), src('social.js'), src('server.js'), src('food.js'), src('body.js'), src('health.js'), src('native.js'), src('together.js'), src('ui.js')])
+js = '\n'.join([src('figure.js'), src('social.js'), src('server.js'), src('food.js'), src('body.js'), src('health.js'), src('native.js'), src('timers.js'), src('planner.js'), src('together.js'), src('ui.js')])
 css = src('style.css') + '\n' + src('figure.css')
 head = src('shell_head.html').replace('<meta name="claude:viewport-fit-sides" content="cover">', '''<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0f1113">
@@ -42,6 +42,9 @@ open(os.path.join(D, 'sw.js'), 'w').write('''// Iron Ledger offline cache: app s
 const V = 'il-%d';
 self.addEventListener('install', e => { self.skipWaiting(); e.waitUntil(caches.open(V).then(c => c.addAll(['./', 'index.html', 'manifest.webmanifest', 'icon-192.png']))); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== V).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
+// rest alerts: the friends server sends an empty push when rest is over
+self.addEventListener('push', e => { e.waitUntil(self.registration.showNotification('Rest is over', { body: 'Time for your next set.', tag: 'rest', renotify: true, icon: 'icon-192.png', badge: 'icon-192.png' })); });
+self.addEventListener('notificationclick', e => { e.notification.close(); e.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then(cs => { for (const c of cs) { if ('focus' in c) return c.focus(); } return clients.openWindow('./'); })); });
 self.addEventListener('fetch', e => {
   const r = e.request; if (r.method !== 'GET') return;
   const u = new URL(r.url); if (u.origin !== location.origin) return;

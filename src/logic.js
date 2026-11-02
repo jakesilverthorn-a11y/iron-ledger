@@ -44,6 +44,16 @@ function fmtW(lb, unit) { if (!lb) return '0'; return toDisp(lb, unit); }
 
 /* ---------- strength metric ---------- */
 /* bodyweight = tracked in reps: no-equipment moves, plus anything rated against a reps standard (ring dips, weighted pull-ups, ab wheel) */
+/* stretches: 'dyn' = moving warm-ups (reps), 'static' = held stretches, 'roll' = foam rolling (both timed) */
+var DYN_RE = /dynamic|circles|swings?\b|leg raises|elbows back|frog hops|march|kicks?\b|skip|inchworm|crossover|toe touch|side to side|lunge|walk|jacks|rotation|twist/i;
+function stretchKind(e) { if (!e || e.c !== 'stretching') return null; if (/SMR/.test(e.n)) return 'roll'; return DYN_RE.test(e.n) ? 'dyn' : 'static'; }
+/* held for time instead of counted in reps: the set's "reps" number is seconds */
+var TIMED_RE = /\b(plank|wall sit|isometric|l-sit|hollow body hold|dead hang|static hold)\b/i;
+function isTimed(e) {
+  if (!e) return false;
+  var k = stretchKind(e); if (k === 'static' || k === 'roll') return true;
+  return TIMED_RE.test(e.n) && !/wipers|push up to side plank|plank (jacks|to push)/i.test(e.n);
+}
 function isBW(ex) { return !!ex && (ex.eq === 'Bodyweight' || ex.bwk === 1); }
 /* weighted bodyweight work: added weight is turned into "bodyweight-equivalent reps" so a vest, belt or plate counts.
    BW_FRAC is roughly how much of your bodyweight each movement moves. */
@@ -143,7 +153,7 @@ function suggest(workouts, name, lo, hi, unit) {
   if (isBW(ex)) {
     // reps from the sets done at that weight; aim one past your weakest of them, never below what you did
     var mn = Math.min.apply(null, atTop.map(function (s) { return +s.r || 0; })) || lo;
-    return { w: top || 0, r: Math.max(lo, mn + (mn < hi ? 1 : 0)) };
+    return { w: top || 0, r: Math.max(lo, mn + (mn < hi ? (isTimed(ex) ? 5 : 1) : 0)) };
   }
   if (!top) return { w: null, r: lo };   // logged with no weight: we don't know what to load
   var allHit = atTop.length >= 1 && atTop.every(function (s) { return (+s.r || 0) >= hi; });
@@ -314,6 +324,7 @@ function generateWorkout(opts, workouts, seed) {
     return s;
   }
   function plan(e, wantCompound) {
+    if (isTimed(e)) { var ti = timedItem(e); ti.sets = opts.minutes <= 20 ? 2 : ti.sets; return ti; }
     var comp = isComp(e) && wantCompound, bw = isBW(e);
     // short sessions start every move at 2 sets so a second exercise fits; spare time is added back as sets below
     return { n: e.n, sets: opts.minutes <= 20 ? 2 : comp ? G.cSets : G.aSets, lo: bw ? Math.max(10, comp ? G.cLo : G.aLo) : (comp ? G.cLo : G.aLo), hi: bw ? Math.max(15, comp ? G.cHi : G.aHi) : (comp ? G.cHi : G.aHi), rest: comp ? G.cRest : G.aRest, comp: comp, g: null };
@@ -393,6 +404,25 @@ function swapExercise(opts, current, item, workouts, seed) {
   return { n: best.n, sets: item.sets, lo: bw ? Math.max(10, comp ? G.cLo : G.aLo) : (comp ? G.cLo : G.aLo), hi: bw ? Math.max(15, comp ? G.cHi : G.aHi) : (comp ? G.cHi : G.aHi), rest: comp ? G.cRest : G.aRest, comp: comp, g: g };
 }
 
+/* ---------- stretches before (moving warm-ups, foam rolling) or after (held stretches) a workout ---------- */
+function stretchesFor(groups, when, gear, have, n) {
+  var gm = gearMap(gear), out = [], used = {};
+  (have || []).forEach(function (x) { used[x] = 1; });
+  var ok = function (e) { return e.c === 'stretching' && available(e, gm) && !used[e.n] && !injuryBlocked(e) && (when === 'pre' ? stretchKind(e) !== 'static' : stretchKind(e) === 'static'); };
+  var score = function (e) { var s = 0; if (stretchKind(e) === 'dyn') s += 1; if (/dynamic/i.test(e.n)) s += 1; if (/SMR/.test(e.n)) s += 0.5; if (e.l === 'beginner') s += 0.5; return s + (e.id % 7) / 10; };
+  var round = 0;
+  while (out.length < n && round < 3) {
+    groups.forEach(function (g) {
+      if (out.length >= n) return;
+      var c = EX.filter(function (e) { return ok(e) && e.p.indexOf(g) >= 0; }).sort(function (a, b) { return score(b) - score(a); })[0];
+      if (c) { out.push(c); used[c.n] = 1; }
+    });
+    round++;
+  }
+  if (out.length < n) EX.filter(ok).sort(function (a, b) { return score(b) - score(a); }).slice(0, n - out.length).forEach(function (e) { out.push(e); });
+  return out;
+}
+
 /* ---------- building a live workout from a plan ---------- */
 function makeWorkoutEx(workouts, item, unit) {
   var sg = suggest(workouts, item.n, item.lo, item.hi, unit);
@@ -400,8 +430,16 @@ function makeWorkoutEx(workouts, item, unit) {
   for (var i = 0; i < item.sets; i++) sets.push({ w: sg.w, r: sg.r, done: false, sug: true });
   return { n: item.n, lo: item.lo, hi: item.hi, rest: item.rest, sets: sets };
 }
+function timedItem(e) {
+  var k = stretchKind(e);
+  if (k === 'static') return { n: e.n, sets: 2, lo: 30, hi: 30, rest: 15, comp: false, g: e.p[0] };
+  if (k === 'roll') return { n: e.n, sets: 1, lo: 45, hi: 60, rest: 15, comp: false, g: e.p[0] };
+  return { n: e.n, sets: 3, lo: 30, hi: 60, rest: 60, comp: false, g: e.p[0] };
+}
 function defaultItem(name, goal) {
   var e = BYNAME[name], G = GOALS[goal] || GOALS.strength, comp = e && isComp(e), bw = e && isBW(e);
+  if (isTimed(e)) return timedItem(e);
+  if (stretchKind(e) === 'dyn') return { n: name, sets: 1, lo: 10, hi: 12, rest: 15, comp: false, g: e.p[0] };
   return { n: name, sets: comp ? G.cSets : G.aSets, lo: bw ? Math.max(10, comp ? G.cLo : G.aLo) : (comp ? G.cLo : G.aLo), hi: bw ? Math.max(15, comp ? G.cHi : G.aHi) : (comp ? G.cHi : G.aHi), rest: comp ? G.cRest : G.aRest, comp: comp, g: e && e.p[0] };
 }
 
@@ -429,7 +467,7 @@ function findPRs(prior, w) {
 }
 function groupsHit(w) {
   var s = {};
-  w.ex.forEach(function (e) { var x = BYNAME[e.n]; if (x) x.p.forEach(function (g) { s[g] = 1; }); });
+  w.ex.forEach(function (e) { var x = BYNAME[e.n]; if (x && x.c !== 'stretching') x.p.forEach(function (g) { s[g] = 1; }); });
   return GROUPS.filter(function (g) { return s[g]; });
 }
 
@@ -574,7 +612,7 @@ var REC_BASE = { Chest: 72, Back: 72, Quads: 72, Hamstrings: 72, Glutes: 72, Sho
 function recLoads(w) {
   var L = {};
   w.ex.forEach(function (e) {
-    var x = BYNAME[e.n]; if (!x) return;
+    var x = BYNAME[e.n]; if (!x || x.c === 'stretching') return;   // stretching doesn't tire a muscle
     GROUPS.forEach(function (g) {
       var wt = x.p.indexOf(g) >= 0 ? 1 : (x.s.indexOf(g) >= 0 ? 0.4 : 0);
       if (wt) L[g] = (L[g] || 0) + wt * e.sets.length;

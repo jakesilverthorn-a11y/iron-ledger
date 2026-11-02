@@ -406,6 +406,24 @@ body.vvfix #tabs, body.vvfix .rest-pill { transform: translateZ(0); }
 .htile .xmeta { overflow-wrap: anywhere; }
 .hkv { font-family: ui-monospace, Menlo, monospace; font-weight: 600; color: var(--accent-ink); }
 
+/* hold and tempo timers */
+.tmface { position: relative; width: min(78vw, 300px); aspect-ratio: 1; margin: 6px auto 4px; }
+.tmring { width: 100%; height: 100%; display: block; }
+.tmring circle { transition: stroke-dashoffset .1s linear; }
+.tmmid { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 2px; }
+.tmbig { font-size: 64px; line-height: 1; font-family: var(--font-d); font-weight: 700; }
+.tmlabel { font-size: 14px; color: var(--muted); font-weight: 600; letter-spacing: .02em; }
+.tmsub { font-size: 14px; color: var(--muted); }
+
+/* week planner */
+.wklist { display: flex; flex-direction: column; }
+.wkrow { display: flex; align-items: center; gap: 12px; padding: 11px 2px; border-bottom: 1px solid var(--line); text-align: left; font-size: 15px; }
+.wkrow:last-child { border-bottom: 0; }
+.wkrow .wkd { width: 38px; font-weight: 600; color: var(--muted); }
+.wkrow.today .wkd { color: var(--accent-ink); }
+.wkrow.past { opacity: .55; }
+.wkrow:disabled { cursor: default; }
+
 /* cartoon figures */
 .fig { display: block; width: 100%; height: 100%; }
 .demo.cg { background: linear-gradient(180deg, var(--surface2), var(--surface2)); }
@@ -487,6 +505,16 @@ function fmtW(lb, unit) { if (!lb) return '0'; return toDisp(lb, unit); }
 
 /* ---------- strength metric ---------- */
 /* bodyweight = tracked in reps: no-equipment moves, plus anything rated against a reps standard (ring dips, weighted pull-ups, ab wheel) */
+/* stretches: 'dyn' = moving warm-ups (reps), 'static' = held stretches, 'roll' = foam rolling (both timed) */
+var DYN_RE = /dynamic|circles|swings?\b|leg raises|elbows back|frog hops|march|kicks?\b|skip|inchworm|crossover|toe touch|side to side|lunge|walk|jacks|rotation|twist/i;
+function stretchKind(e) { if (!e || e.c !== 'stretching') return null; if (/SMR/.test(e.n)) return 'roll'; return DYN_RE.test(e.n) ? 'dyn' : 'static'; }
+/* held for time instead of counted in reps: the set's "reps" number is seconds */
+var TIMED_RE = /\b(plank|wall sit|isometric|l-sit|hollow body hold|dead hang|static hold)\b/i;
+function isTimed(e) {
+  if (!e) return false;
+  var k = stretchKind(e); if (k === 'static' || k === 'roll') return true;
+  return TIMED_RE.test(e.n) && !/wipers|push up to side plank|plank (jacks|to push)/i.test(e.n);
+}
 function isBW(ex) { return !!ex && (ex.eq === 'Bodyweight' || ex.bwk === 1); }
 /* weighted bodyweight work: added weight is turned into "bodyweight-equivalent reps" so a vest, belt or plate counts.
    BW_FRAC is roughly how much of your bodyweight each movement moves. */
@@ -586,7 +614,7 @@ function suggest(workouts, name, lo, hi, unit) {
   if (isBW(ex)) {
     // reps from the sets done at that weight; aim one past your weakest of them, never below what you did
     var mn = Math.min.apply(null, atTop.map(function (s) { return +s.r || 0; })) || lo;
-    return { w: top || 0, r: Math.max(lo, mn + (mn < hi ? 1 : 0)) };
+    return { w: top || 0, r: Math.max(lo, mn + (mn < hi ? (isTimed(ex) ? 5 : 1) : 0)) };
   }
   if (!top) return { w: null, r: lo };   // logged with no weight: we don't know what to load
   var allHit = atTop.length >= 1 && atTop.every(function (s) { return (+s.r || 0) >= hi; });
@@ -757,6 +785,7 @@ function generateWorkout(opts, workouts, seed) {
     return s;
   }
   function plan(e, wantCompound) {
+    if (isTimed(e)) { var ti = timedItem(e); ti.sets = opts.minutes <= 20 ? 2 : ti.sets; return ti; }
     var comp = isComp(e) && wantCompound, bw = isBW(e);
     // short sessions start every move at 2 sets so a second exercise fits; spare time is added back as sets below
     return { n: e.n, sets: opts.minutes <= 20 ? 2 : comp ? G.cSets : G.aSets, lo: bw ? Math.max(10, comp ? G.cLo : G.aLo) : (comp ? G.cLo : G.aLo), hi: bw ? Math.max(15, comp ? G.cHi : G.aHi) : (comp ? G.cHi : G.aHi), rest: comp ? G.cRest : G.aRest, comp: comp, g: null };
@@ -836,6 +865,25 @@ function swapExercise(opts, current, item, workouts, seed) {
   return { n: best.n, sets: item.sets, lo: bw ? Math.max(10, comp ? G.cLo : G.aLo) : (comp ? G.cLo : G.aLo), hi: bw ? Math.max(15, comp ? G.cHi : G.aHi) : (comp ? G.cHi : G.aHi), rest: comp ? G.cRest : G.aRest, comp: comp, g: g };
 }
 
+/* ---------- stretches before (moving warm-ups, foam rolling) or after (held stretches) a workout ---------- */
+function stretchesFor(groups, when, gear, have, n) {
+  var gm = gearMap(gear), out = [], used = {};
+  (have || []).forEach(function (x) { used[x] = 1; });
+  var ok = function (e) { return e.c === 'stretching' && available(e, gm) && !used[e.n] && !injuryBlocked(e) && (when === 'pre' ? stretchKind(e) !== 'static' : stretchKind(e) === 'static'); };
+  var score = function (e) { var s = 0; if (stretchKind(e) === 'dyn') s += 1; if (/dynamic/i.test(e.n)) s += 1; if (/SMR/.test(e.n)) s += 0.5; if (e.l === 'beginner') s += 0.5; return s + (e.id % 7) / 10; };
+  var round = 0;
+  while (out.length < n && round < 3) {
+    groups.forEach(function (g) {
+      if (out.length >= n) return;
+      var c = EX.filter(function (e) { return ok(e) && e.p.indexOf(g) >= 0; }).sort(function (a, b) { return score(b) - score(a); })[0];
+      if (c) { out.push(c); used[c.n] = 1; }
+    });
+    round++;
+  }
+  if (out.length < n) EX.filter(ok).sort(function (a, b) { return score(b) - score(a); }).slice(0, n - out.length).forEach(function (e) { out.push(e); });
+  return out;
+}
+
 /* ---------- building a live workout from a plan ---------- */
 function makeWorkoutEx(workouts, item, unit) {
   var sg = suggest(workouts, item.n, item.lo, item.hi, unit);
@@ -843,8 +891,16 @@ function makeWorkoutEx(workouts, item, unit) {
   for (var i = 0; i < item.sets; i++) sets.push({ w: sg.w, r: sg.r, done: false, sug: true });
   return { n: item.n, lo: item.lo, hi: item.hi, rest: item.rest, sets: sets };
 }
+function timedItem(e) {
+  var k = stretchKind(e);
+  if (k === 'static') return { n: e.n, sets: 2, lo: 30, hi: 30, rest: 15, comp: false, g: e.p[0] };
+  if (k === 'roll') return { n: e.n, sets: 1, lo: 45, hi: 60, rest: 15, comp: false, g: e.p[0] };
+  return { n: e.n, sets: 3, lo: 30, hi: 60, rest: 60, comp: false, g: e.p[0] };
+}
 function defaultItem(name, goal) {
   var e = BYNAME[name], G = GOALS[goal] || GOALS.strength, comp = e && isComp(e), bw = e && isBW(e);
+  if (isTimed(e)) return timedItem(e);
+  if (stretchKind(e) === 'dyn') return { n: name, sets: 1, lo: 10, hi: 12, rest: 15, comp: false, g: e.p[0] };
   return { n: name, sets: comp ? G.cSets : G.aSets, lo: bw ? Math.max(10, comp ? G.cLo : G.aLo) : (comp ? G.cLo : G.aLo), hi: bw ? Math.max(15, comp ? G.cHi : G.aHi) : (comp ? G.cHi : G.aHi), rest: comp ? G.cRest : G.aRest, comp: comp, g: e && e.p[0] };
 }
 
@@ -872,7 +928,7 @@ function findPRs(prior, w) {
 }
 function groupsHit(w) {
   var s = {};
-  w.ex.forEach(function (e) { var x = BYNAME[e.n]; if (x) x.p.forEach(function (g) { s[g] = 1; }); });
+  w.ex.forEach(function (e) { var x = BYNAME[e.n]; if (x && x.c !== 'stretching') x.p.forEach(function (g) { s[g] = 1; }); });
   return GROUPS.filter(function (g) { return s[g]; });
 }
 
@@ -1017,7 +1073,7 @@ var REC_BASE = { Chest: 72, Back: 72, Quads: 72, Hamstrings: 72, Glutes: 72, Sho
 function recLoads(w) {
   var L = {};
   w.ex.forEach(function (e) {
-    var x = BYNAME[e.n]; if (!x) return;
+    var x = BYNAME[e.n]; if (!x || x.c === 'stretching') return;   // stretching doesn't tire a muscle
     GROUPS.forEach(function (g) {
       var wt = x.p.indexOf(g) >= 0 ? 1 : (x.s.indexOf(g) >= 0 ? 0.4 : 0);
       if (wt) L[g] = (L[g] || 0) + wt * e.sets.length;
@@ -2993,6 +3049,7 @@ function photoK() { return 'photos' + acctSfx(); }
 function legacyPhotos() { try { var a = JSON.parse(localStorage.getItem(PHOTO_KEY + acctSfx()) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
 function photosInit() {
   PHOTOS = null; BODY_FULL = null; var k = photoK();
+  if (typeof GUEST !== 'undefined' && GUEST) { PHOTOS = []; return Promise.resolve(); }
   return idbGet(k).then(function (a) {
     if (k !== photoK()) return;   // switched account meanwhile
     PHOTO_IDB = true; var old = legacyPhotos();
@@ -3005,6 +3062,7 @@ function photosLoad() { return PHOTOS || legacyPhotos(); }
 function photosTrim(a, max) { a = a.slice(); while (a.length > max) a.splice(Math.max(1, Math.floor(a.length / 2)), 1); return a; }
 var PHOTO_LS_MAX = 3;   // without IndexedDB, photos share the small space your workouts are saved in
 function photosSave(a) {
+  if (typeof GUEST !== 'undefined' && GUEST) { PHOTOS = a.slice(-PHOTO_MAX); return Promise.resolve(true); }   // guest: kept only until the app closes
   var prev = PHOTOS;
   if (PHOTO_IDB) {
     var next = photosTrim(a, PHOTO_MAX); PHOTOS = next;
@@ -3599,7 +3657,7 @@ if (NATIVE.on) {
 
 /* rest-over notification and screen-on, kept in step with the workout every second (called from tick) */
 function nativeTick() {
-  if (!NATIVE.on) return;
+  if (!NATIVE.on) { webRestTick(); return; }
   var r = U.rest, end = r && !r.done ? Math.round(r.end) : 0;
   if (end !== NATIVE.restEnd) {
     NATIVE.restEnd = end;
@@ -3607,7 +3665,7 @@ function nativeTick() {
     else nativeCall('restCancel').catch(function () { });
   }
   var aw = !!S.draft;
-  if (aw !== NATIVE.awake) { NATIVE.awake = aw; nativeCall('awake', { on: aw }).catch(function () { }); }
+  if (aw !== NATIVE.awake) { NATIVE.awake = aw; nativeCall('awake', { on: aw }).catch(function () { }); if (aw) nativeCall('notifyAsk').catch(function () { }); }
 }
 function haptic(k) {
   if (NATIVE.on) { nativeCall('haptic', { k: k || 'tap' }).catch(function () { }); return; }
@@ -3659,6 +3717,362 @@ function nativeClick(a) {
     return true;
   }
   if (a === 'nhSync') { nativeHealthSync(true); NH.busy = true; nativeHealthSheet(); return true; }
+  return false;
+}
+
+/* ----- rest alerts for the web app (Home Screen app on iPhone, iOS 16.4+): the friends server sends a push
+   when rest ends, so the alert comes even with the app closed or the phone locked ----- */
+var WP = { end: 0 };
+function webPushAvail() { return !NATIVE.on && !window.claude && typeof srvOn === 'function' && srvOn() && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window; }
+function webPushOn() { var on = ''; try { on = localStorage.getItem('il-push:' + SRV.uid) || ''; } catch (e) { } return webPushAvail() && on === '1' && Notification.permission === 'granted'; }
+function b64u8(s) { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; var r = atob(s), a = new Uint8Array(r.length); for (var i = 0; i < r.length; i++) a[i] = r.charCodeAt(i); return a; }
+async function webPushEnable() {
+  if (!webPushAvail()) throw new Error(window.navigator.standalone === false || !('PushManager' in window) ? 'On iPhone, rest alerts need Iron Ledger added to your Home Screen (Share → Add to Home Screen), then opened from there.' : 'Sign in first.');
+  var perm = await Notification.requestPermission();
+  if (perm !== 'granted') throw new Error('Notifications are off for Iron Ledger. Turn them on in the iPhone Settings app → Notifications → Iron Ledger.');
+  var reg = await navigator.serviceWorker.ready, key = (await srvRaw('GET', '/push/key', null, false)).key;
+  var sub = (await reg.pushManager.getSubscription()) || (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u8(key) }));
+  await srvRaw('POST', '/push/sub', { sub: sub.toJSON() });
+  try { localStorage.setItem('il-push:' + SRV.uid, '1'); } catch (e) { }
+}
+function webRestTick() {
+  if (!webPushOn()) return;
+  var r = U.rest, end = r && !r.done ? Math.round(r.end) : 0;
+  // watching the app when rest ends: the in-app chime is enough, so call off the push just before
+  if (end && !document.hidden && end - Date.now() < 2500) end = 0;
+  if (end !== WP.end) {
+    var was = WP.end; WP.end = end;
+    if (end) srvRaw('POST', '/push/rest', { end: end }).catch(function () { });
+    else if (was) srvRaw('DELETE', '/push/rest').catch(function () { });
+  }
+}
+/* the card in Settings, and a one-time tip during a workout */
+function restAlertCard() {
+  var body, btn = '';
+  if (NATIVE.on) body = 'On. When rest is over you get a notification, even in another app or with the phone locked. You can change it in the iPhone Settings app → Notifications → Iron Ledger.';
+  else if (window.claude) body = 'In this version the alert only sounds while Iron Ledger is open on screen. Use the Home Screen app (or the iPhone app) for alerts with the app closed.';
+  else if (webPushOn()) body = 'On. When rest is over this phone gets a notification, even with the app closed or the phone locked.';
+  else if (webPushAvail()) { body = 'Get a notification when rest is over, even with the app closed or the phone locked.'; btn = '<button class="btn block" data-act="pushOn">Turn on rest alerts</button>'; }
+  else if (!(typeof srvOn === 'function' && srvOn())) body = 'Sign in to get rest alerts with the app closed.';
+  else body = 'On iPhone, add Iron Ledger to your Home Screen (Share → Add to Home Screen) and open it from there to get rest alerts with the app closed.';
+  return '<div class="section"><span class="field-label">Rest alerts when the app is closed</span><div class="card section" style="gap:10px"><div class="note">' + body + '</div>' + btn + (NH.pushErr ? '<div class="note" style="color:var(--down)">' + esc(NH.pushErr) + '</div>' : '') + '</div></div>';
+}
+function restAlertTip() {
+  var seen = ''; try { seen = localStorage.getItem('il-push-tip') || ''; } catch (e) { }
+  if (seen || !webPushAvail() || webPushOn()) return '';
+  return '<div class="banner"><span><b>Rest alerts</b> · get a notification when rest is over, even with the app closed.</span><span class="row" style="gap:6px"><button class="btn small primary" data-act="pushOn">Turn on</button><button class="btn small" data-act="pushTipNo">Not now</button></span></div>';
+}
+function pushClick(a) {
+  if (a === 'pushOn') {
+    NH.pushErr = '';
+    webPushEnable().then(function () { try { localStorage.setItem('il-push-tip', '1'); } catch (e) { } toast('Rest alerts are on'); render(); }, function (e) { NH.pushErr = e.message; toast(e.message); render(); });
+    return true;
+  }
+  if (a === 'pushTipNo') { try { localStorage.setItem('il-push-tip', '1'); } catch (e) { } render(); return true; }
+  return false;
+}
+
+/* ===== timers in a workout: a hold timer for timed moves (planks, wall sits, stretches)
+   and a tempo timer that paces each rep (e.g. 3 s down, 1 s up) and counts them for you ===== */
+var TM = null;   // the running timer
+function tmTone(freq, ms, vol) {
+  if (S.settings.chime === false) return;
+  try {
+    var AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+    tmTone.ctx = tmTone.ctx || new AC(); var c = tmTone.ctx; if (c.state === 'suspended') c.resume();
+    var o = c.createOscillator(), g = c.createGain(), t0 = c.currentTime;
+    o.frequency.value = freq; g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(vol || 0.3, t0 + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + (ms || 120) / 1000); o.connect(g); g.connect(c.destination); o.start(t0); o.stop(t0 + (ms || 120) / 1000 + 0.02);
+  } catch (e) { }
+}
+function tmSay(t) {
+  if (S.settings.voice === false || !window.speechSynthesis) return;
+  try { speechSynthesis.cancel(); var u = new SpeechSynthesisUtterance(t); u.rate = 1.15; u.volume = 1; speechSynthesis.speak(u); } catch (e) { }
+}
+/* the set a timer fills: the first working set not ticked yet (adds one if all are done) */
+function tmSetIndex(e) {
+  for (var i = 0; i < e.sets.length; i++) if (!e.sets[i].done && !e.sets[i].wu) return i;
+  var last = e.sets[e.sets.length - 1] || {}; e.sets.push({ w: last.w == null ? null : last.w, r: last.r || e.lo, done: false, sug: true });
+  return e.sets.length - 1;
+}
+function tmStop() { if (TM) { clearInterval(TM.iv); TM = null; } try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (e) { } }
+function tmRing(frac, color) {
+  var R = 92, C = 2 * Math.PI * R, f = Math.max(0, Math.min(1, frac));
+  return '<svg viewBox="0 0 220 220" class="tmring" aria-hidden="true"><circle cx="110" cy="110" r="' + R + '" fill="none" style="stroke:var(--line2)" stroke-width="12"/>' +
+    '<circle id="tmarc" cx="110" cy="110" r="' + R + '" fill="none" style="stroke:' + (color || 'var(--accent)') + '" stroke-width="12" stroke-linecap="round" stroke-dasharray="' + C.toFixed(1) + '" stroke-dashoffset="' + (C * (1 - f)).toFixed(1) + '" transform="rotate(-90 110 110)"/></svg>';
+}
+function tmFace(big, sub, label, frac, color) {
+  return '<div class="tmface">' + tmRing(frac, color) + '<div class="tmmid"><div class="tmlabel" id="tmlabel">' + esc(label || '') + '</div><div class="tmbig num" id="tmbig">' + esc(big) + '</div><div class="tmsub" id="tmsub">' + esc(sub || '') + '</div></div></div>';
+}
+function tmUpdate(big, sub, label, frac, color) {
+  var b = $('#tmbig'), s = $('#tmsub'), l = $('#tmlabel'), a = $('#tmarc');
+  if (!b) { tmStop(); return; }   // sheet was closed
+  b.textContent = big; s.textContent = sub || ''; l.textContent = label || '';
+  if (a) { var C = 2 * Math.PI * 92; a.setAttribute('stroke-dashoffset', (C * (1 - Math.max(0, Math.min(1, frac)))).toFixed(1)); if (color) a.style.stroke = color; }
+}
+function fmtSec(s) { s = Math.max(0, Math.round(s)); return s >= 60 ? Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0') : String(s); }
+
+/* ----- hold timer ----- */
+function holdSheet(xi) {
+  var e = S.draft.ex[xi], si = tmSetIndex(e), st = e.sets[si], target = +st.r || e.lo || 30;
+  tmStop(); unlockAudio(); tmTone(660, 1, 0.0001);
+  TM = { kind: 'hold', x: xi, s: si, target: target, t0: Date.now() + 3000, last: null };
+  openSheet(e.n, '<div class="note">Set ' + (si + 1) + ' · target ' + fmtSec(target) + ' s. Get in position; it starts after 3, 2, 1.</div>' +
+    tmFace('3', 'get ready', 'Starting', 0) +
+    '<div class="row" style="gap:8px"><button class="btn small grow" data-act="tmAdj" data-v="-5">−5 s</button><button class="btn small grow" data-act="tmAdj" data-v="5">+5 s</button></div>' +
+    '<button class="btn primary block" data-act="tmDone">Stop and log it</button><button class="btn block ghost" data-act="close">Cancel</button>');
+  TM.iv = setInterval(holdTick, 100); holdTick();
+}
+function holdTick() {
+  if (!TM || TM.kind !== 'hold') return;
+  var now = Date.now();
+  if (now < TM.t0) {
+    var c = Math.ceil((TM.t0 - now) / 1000);
+    if (TM.last !== 'r' + c) { TM.last = 'r' + c; tmTone(660, 120); }
+    tmUpdate(String(c), 'get ready', 'Starting', 1 - (TM.t0 - now) / 3000); return;
+  }
+  var el = (now - TM.t0) / 1000, left = TM.target - el;
+  if (TM.last && TM.last.charAt(0) === 'r') { TM.last = 'go'; tmTone(990, 220); tmSay('Go'); haptic('tap'); }
+  if (left > 0) {
+    var cs = Math.ceil(left);
+    if (cs <= 3 && TM.last !== 'c' + cs) { TM.last = 'c' + cs; tmTone(880, 90); }
+    tmUpdate(fmtSec(left), 'of ' + fmtSec(TM.target) + ' s', 'Hold', el / TM.target);
+  } else {
+    if (!TM.hit) { TM.hit = true; tmTone(1320, 400); setTimeout(function () { tmTone(1760, 400); }, 180); tmSay('Done'); haptic('done'); }
+    tmUpdate('+' + fmtSec(-left), 'held ' + fmtSec(el) + ' s · tap Stop to log', 'Target reached', 1, 'var(--up)');
+  }
+}
+function holdDone() {
+  if (!TM || TM.kind !== 'hold') return;
+  var held = Math.max(0, Math.round((Date.now() - TM.t0) / 1000)), x = TM.x, s = TM.s;
+  tmStop(); closeSheet();
+  if (held < 1) { toast('Nothing logged.'); return; }
+  var st = S.draft.ex[x].sets[s]; st.r = held; st.sug = false; if (st.w == null) st.w = 0;
+  if (markSetDone(x, s)) toast('Logged ' + held + ' s');
+}
+
+/* ----- tempo timer: e.g. 3 s down, 0 s pause, 1 s up, 0 s pause, for N reps ----- */
+function tempoOf(name) { var t = (S.settings.tempo || {})[name]; return t && typeof t === 'object' ? t : { d: 3, b: 0, u: 1, t: 0 }; }
+function tempoSheet(xi) {
+  tmStop();
+  var e = S.draft.ex[xi], si = tmSetIndex(e), st = e.sets[si], t = tempoOf(e.n), reps = +st.r || e.lo || 8;
+  U.tempo = { x: xi, s: si, reps: reps, d: t.d, b: t.b, u: t.u, t: t.t };
+  tempoSetupSheet();
+}
+function tempoSetupSheet() {
+  var T = U.tempo, e = S.draft.ex[T.x];
+  var step = function (k, label, unitTxt) {
+    return '<div class="lrow"><span class="grow">' + label + '</span><span class="row" style="gap:6px;align-items:center"><button class="btn small" data-act="tpStep" data-k="' + k + '" data-v="-1" aria-label="Less">−</button>' +
+      '<span class="num" style="min-width:52px;text-align:center;font-size:22px">' + T[k] + (unitTxt || '') + '</span><button class="btn small" data-act="tpStep" data-k="' + k + '" data-v="1" aria-label="More">+</button></span></div>';
+  };
+  var per = T.d + T.b + T.u + T.t;
+  openSheet('Tempo · ' + e.n, '<div class="note">Paces each rep with beeps and voice cues, counts them, and logs the set when you finish. Lowering slowly (3 s or more) is a good way to build muscle with lighter weights.</div>' +
+    '<div class="card" style="padding:0 14px">' + step('reps', 'Reps') + step('d', 'Down (lowering)', ' s') + step('b', 'Pause at the bottom', ' s') + step('u', 'Up (lifting)', ' s') + step('t', 'Pause at the top', ' s') + '</div>' +
+    '<div class="note">About ' + Math.round(per * T.reps + 3) + ' s for this set · ' + T.d + '-' + T.b + '-' + T.u + '-' + T.t + ' tempo · set ' + (T.s + 1) + '</div>' +
+    '<label class="row" style="gap:8px;align-items:center"><input type="checkbox" id="tpvoice"' + (S.settings.voice === false ? '' : ' checked') + '> <span class="note" style="color:var(--fg)">Say "down" and "up" out loud</span></label>' +
+    '<button class="btn primary block" data-act="tpGo">Start</button><button class="btn block ghost" data-act="close">Cancel</button>');
+}
+function tempoGo() {
+  var T = U.tempo, e = S.draft.ex[T.x];
+  S.settings.tempo = S.settings.tempo || {}; S.settings.tempo[e.n] = { d: T.d, b: T.b, u: T.u, t: T.t }; persist({ settings: true });
+  unlockAudio(); tmTone(660, 1, 0.0001);
+  var ph = [['Down', T.d, 440], ['Hold', T.b, 660], ['Up', T.u, 880], ['Hold', T.t, 660]].filter(function (p) { return p[1] > 0; });
+  if (!ph.length) ph = [['Down', 2, 440], ['Up', 1, 880]];
+  var per = ph.reduce(function (a, p) { return a + p[1]; }, 0);
+  TM = { kind: 'tempo', x: T.x, s: T.s, reps: T.reps, ph: ph, per: per, t0: Date.now() + 3000, last: null };
+  openSheet('Tempo · ' + e.n, tmFace('3', 'get ready', 'Starting', 0) +
+    '<div class="note" style="text-align:center" id="tmreps">Rep 0 of ' + T.reps + '</div>' +
+    '<button class="btn primary block" data-act="tmDone">Stop and log reps</button><button class="btn block ghost" data-act="close">Cancel</button>');
+  TM.iv = setInterval(tempoTick, 50); tempoTick();
+}
+function tempoTick() {
+  if (!TM || TM.kind !== 'tempo') return;
+  var now = Date.now();
+  if (now < TM.t0) {
+    var c = Math.ceil((TM.t0 - now) / 1000);
+    if (TM.last !== 'r' + c) { TM.last = 'r' + c; tmTone(660, 120); }
+    tmUpdate(String(c), 'get ready', 'Starting', 1 - (TM.t0 - now) / 3000); return;
+  }
+  var el = (now - TM.t0) / 1000, rep = Math.floor(el / TM.per);
+  if (rep >= TM.reps) {
+    if (!TM.fin) { TM.fin = true; TM.done = TM.reps; tmTone(1320, 400); setTimeout(function () { tmTone(1760, 400); }, 180); tmSay('Done'); haptic('done'); setTimeout(holdDoneTempo, 900); }
+    tmUpdate(String(TM.reps), 'reps done', 'Finished', 1, 'var(--up)'); return;
+  }
+  var into = el - rep * TM.per, i = 0, acc = 0;
+  while (i < TM.ph.length - 1 && into >= acc + TM.ph[i][1]) { acc += TM.ph[i][1]; i++; }
+  var p = TM.ph[i], left = p[1] - (into - acc), key = rep + ':' + i;
+  if (TM.last !== key) { TM.last = key; tmTone(p[2], 140); if (p[0] !== 'Hold') tmSay(p[0].toLowerCase()); else tmSay('hold'); if (i === 0) haptic('tap'); }
+  TM.done = rep;
+  tmUpdate(p[0], fmtSec(Math.ceil(left)) + ' s', 'Rep ' + (rep + 1) + ' of ' + TM.reps, (into - acc) / p[1], p[0] === 'Up' ? 'var(--up)' : p[0] === 'Down' ? 'var(--accent)' : 'var(--muted)');
+  var rr = $('#tmreps'); if (rr) rr.textContent = rep + ' of ' + TM.reps + ' reps done';
+}
+function holdDoneTempo() {
+  if (!TM || TM.kind !== 'tempo') return;
+  var reps = TM.done || 0, x = TM.x, s = TM.s;
+  tmStop(); closeSheet();
+  if (reps < 1) { toast('No reps logged.'); return; }
+  var st = S.draft.ex[x].sets[s]; st.r = reps; st.sug = false;
+  if (markSetDone(x, s)) toast('Logged ' + reps + ' reps');
+  else render();
+}
+function timerClick(a, d) {
+  if (a === 'holdGo') { holdSheet(+d.x); return true; }
+  if (a === 'tempoGo') { tempoSheet(+d.x); return true; }
+  if (a === 'tpStep') { var T = U.tempo; if (!T) return true; var k = d.k, v = T[k] + (+d.v); T[k] = k === 'reps' ? Math.max(1, Math.min(50, v)) : Math.max(0, Math.min(10, v)); if (T.d + T.b + T.u + T.t === 0) T.u = 1; tempoSetupSheet(); return true; }
+  if (a === 'tpGo') { var vc = $('#tpvoice'); if (vc) { S.settings.voice = vc.checked; } tempoGo(); return true; }
+  if (a === 'tmAdj') { if (TM && TM.kind === 'hold') { TM.target = Math.max(5, TM.target + (+d.v)); TM.hit = false; } return true; }
+  if (a === 'tmDone') { if (TM && TM.kind === 'hold') holdDone(); else if (TM && TM.kind === 'tempo') holdDoneTempo(); return true; }
+  return false;
+}
+
+/* ===== plan the week ahead =====
+   Pick your training days; each day gets a focus (Push, Pull, Legs, Upper, Lower, Full body) ordered so every
+   muscle gets its rest (big muscles 72 h when possible, at least 48 h), then a full workout is built for each day. */
+var WK_FOCUS = {
+  Push: ['Chest', 'Shoulders', 'Triceps'],
+  Pull: ['Back', 'Biceps', 'Forearms', 'Core'],
+  Legs: ['Quads', 'Hamstrings', 'Glutes', 'Calves'],
+  Upper: ['Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps'],
+  Lower: ['Quads', 'Hamstrings', 'Glutes', 'Calves', 'Core'],
+  'Full body': ['Chest', 'Back', 'Shoulders', 'Quads', 'Hamstrings', 'Core'],
+  'Core & mobility': ['Core']
+};
+var BIG_MUSCLE = { Chest: 1, Back: 1, Quads: 1, Hamstrings: 1, Glutes: 1 };
+function wkTemplate(n, days) {
+  var spread = days.length < 2 || days.every(function (d, i) { return !i || d - days[i - 1] >= 2; });
+  return ({
+    1: ['Full body'], 2: spread ? ['Full body', 'Full body'] : ['Upper', 'Lower'],
+    3: spread ? ['Full body', 'Full body', 'Full body'] : ['Push', 'Pull', 'Legs'],
+    4: ['Upper', 'Lower', 'Upper', 'Lower'], 5: ['Push', 'Pull', 'Legs', 'Upper', 'Lower'],
+    6: ['Push', 'Pull', 'Legs', 'Push', 'Pull', 'Legs'], 7: ['Push', 'Pull', 'Legs', 'Push', 'Pull', 'Legs', 'Core & mobility']
+  })[n] || [];
+}
+/* how badly an order breaks rest rules: day numbers are 0..6 from Monday; ready[g] = day the muscle is fresh from past workouts */
+function wkPenalty(order, days, ready) {
+  var last = {}, pen = 0;
+  order.forEach(function (f, i) {
+    var day = days[i];
+    WK_FOCUS[f].forEach(function (g) {
+      if (ready[g] != null && day < ready[g]) pen += BIG_MUSCLE[g] ? 6 : 3;
+      if (last[g] != null) { var gap = day - last[g]; if (gap < 2) pen += BIG_MUSCLE[g] ? 20 : 10; else if (gap < 3 && BIG_MUSCLE[g]) pen += 2; }
+      last[g] = day;
+    });
+  });
+  return pen;
+}
+function wkPermute(a) {
+  if (a.length <= 1) return [a.slice()];
+  var out = [], seen = {};
+  a.forEach(function (x, i) { if (seen[x]) return; seen[x] = 1; wkPermute(a.slice(0, i).concat(a.slice(i + 1))).forEach(function (p) { out.push([x].concat(p)); }); });
+  return out;
+}
+function wkDayTime(ws, day) { var d = new Date(ws); d.setDate(d.getDate() + day); d.setHours(9, 0, 0, 0); return d.getTime(); }
+/* build the plan: days = [0..6] (Mon = 0) */
+function wkBuild(ws, days, minutes) {
+  days = days.slice().sort(function (a, b) { return a - b; });
+  var W = realWorkouts(), rec = recoveryState(W, Date.now()), ready = {};
+  GROUPS.forEach(function (g) { if (rec[g].readyH) { var t = Date.now() + rec[g].readyH * 3600e3; ready[g] = (t - ws) / DAY; } });
+  var best = null, bp = Infinity;
+  wkPermute(wkTemplate(days.length, days)).forEach(function (o) { var p = wkPenalty(o, days, ready); if (p < bp) { bp = p; best = o; } });
+  var st = S.settings, plan = { ws: ws, minutes: minutes, days: {} }, hist = W.slice();
+  (best || []).forEach(function (f, i) {
+    var t = wkDayTime(ws, days[i]);
+    var r = generateWorkout({ minutes: minutes, groups: WK_FOCUS[f], gear: gearList(), level: st.level, goal: st.goal, now: t }, hist, (t % 100003) + i + 1);
+    plan.days[days[i]] = { f: f, t: t, items: r.items, est: r.estMin };
+    // later days see the earlier planned ones as done, so exercises vary across the week
+    hist = hist.concat([{ id: 'plan' + i, t: t, dur: minutes * 60, ex: r.items.map(function (it) { return { n: it.n, sets: [{ w: 0, r: it.lo }] }; }) }]);
+  });
+  return plan;
+}
+function wkPlan() { var p = S.settings.week; return p && p.ws === weekStart(Date.now()) ? p : (p && p.ws === weekStart(Date.now() + 7 * DAY) ? p : null); }
+function wkDone(t) { var a = new Date(t).toDateString(); return realWorkouts().some(function (w) { return new Date(w.t).toDateString() === a; }); }
+/* rest warnings for one day of the plan, e.g. "Chest: 1 day after Tue" */
+function wkWarnings(p, day) {
+  var me = p.days[day]; if (!me) return [];
+  var out = [];
+  Object.keys(p.days).forEach(function (k) {
+    k = +k; if (k === day) return;
+    var gap = Math.abs(day - k); if (gap >= 2) return;
+    WK_FOCUS[p.days[k].f].forEach(function (g) { if (WK_FOCUS[me.f].indexOf(g) >= 0 && out.indexOf(g) < 0) out.push(g); });
+  });
+  return out;
+}
+
+/* ----- screens ----- */
+var WD = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+function weekPlanCard() {
+  var p = wkPlan(), ws = weekStart(Date.now()), today = Math.floor((Date.now() - ws) / DAY);
+  if (!p) return '<div class="card section" style="gap:10px"><div class="row"><h2 class="grow" style="font-size:24px">Plan your week</h2></div><div class="note">Pick your training days and get a workout for each, ordered so every muscle gets 2–3 days of rest before you train it again.</div><button class="btn block" data-act="wkSetup">Plan my week</button></div>';
+  var next = p.ws > ws;
+  var rows = [0, 1, 2, 3, 4, 5, 6].map(function (i) {
+    var dd = p.days[i], t = wkDayTime(p.ws, i), past = !next && i < today, isToday = !next && i === today, done = dd && wkDone(t);
+    return '<button class="wkrow' + (isToday ? ' today' : '') + (past ? ' past' : '') + '" data-act="wkDay" data-i="' + i + '"' + (dd ? '' : ' disabled') + '><span class="wkd">' + WD[i] + '</span><span class="grow">' + (dd ? '<b>' + esc(dd.f) + '</b> · ' + dd.items.length + ' exercises · ~' + dd.est + ' min' : '<span class="faint">Rest</span>') + '</span>' + (done ? '<span class="tag p">✓ Done</span>' : isToday && dd ? '<span class="tag p">Today</span>' : '') + '</button>';
+  }).join('');
+  var td = !next && p.days[today] && !wkDone(wkDayTime(p.ws, today)) ? '<button class="btn primary block" data-act="wpStart" data-i="' + today + '" data-wk="1">Start today\'s ' + esc(p.days[today].f) + ' workout</button>' : '';
+  return '<div class="card section" style="gap:10px"><div class="row"><h2 class="grow" style="font-size:24px">' + (next ? 'Next week' : 'This week') + '</h2><button class="btn small" data-act="wkSetup">Edit</button></div>' +
+    '<div class="wklist">' + rows + '</div>' + td + '<div class="note">Each muscle gets at least 2 days of rest (3 for big muscles when the week allows).</div></div>';
+}
+function wkSetupSheet() {
+  var p = wkPlan(), ws = weekStart(Date.now()), today = Math.floor((Date.now() - ws) / DAY);
+  if (!U.wk) {
+    var sel = p ? Object.keys(p.days).map(Number) : ({ 1: [0], 2: [0, 3], 3: [0, 2, 4], 4: [0, 1, 3, 4], 5: [0, 1, 2, 3, 4], 6: [0, 1, 2, 3, 4, 5], 7: [0, 1, 2, 3, 4, 5, 6] })[S.settings.weekGoal || 3];
+    U.wk = { days: sel, next: p ? p.ws > ws : today >= 5, minutes: p ? p.minutes : S.settings.minutes };
+  }
+  var W = U.wk, base = W.next ? weekStart(Date.now() + 7 * DAY) : ws;
+  var chips = WD.map(function (n, i) { var gone = !W.next && i < today; return '<button class="chip" aria-pressed="' + (W.days.indexOf(i) >= 0) + '" data-act="wkPick" data-i="' + i + '"' + (gone ? ' disabled' : '') + '>' + n + '</button>'; }).join('');
+  var label = function (t) { var d = new Date(t); return MON[d.getMonth()] + ' ' + d.getDate(); };
+  openSheet('Plan your week', '<div class="seg" role="group" aria-label="Which week"><button aria-pressed="' + !W.next + '" data-act="wkWhich" data-k="this">This week</button><button aria-pressed="' + W.next + '" data-act="wkWhich" data-k="next">Next week</button></div>' +
+    '<div class="note">' + label(base) + ' to ' + label(base + 6 * DAY) + '</div>' +
+    '<div><span class="field-label">Training days</span><div class="chips">' + chips + '</div></div>' +
+    '<div><span class="field-label">Minutes per workout</span><div class="seg" role="group">' + [30, 45, 60, 75, 90].map(function (m) { return '<button aria-pressed="' + (W.minutes === m) + '" data-act="wkMin" data-v="' + m + '">' + m + '</button>'; }).join('') + '</div></div>' +
+    '<div class="note">Uses your ' + profName().toLowerCase() + ' equipment and your ' + (GOALS[S.settings.goal] || GOALS.strength).n.toLowerCase() + ' goal. Workouts you already did recently are taken into account.</div>' +
+    '<button class="btn primary block" data-act="wkMake"' + (W.days.length ? '' : ' disabled') + '>Make my plan</button>' +
+    (p ? '<button class="btn block ghost danger" data-act="wkClear">Clear the plan</button>' : ''));
+}
+function wkDaySheet(i) {
+  var p = wkPlan(); if (!p || !p.days[i]) return;
+  var dd = p.days[i], warn = wkWarnings(p, i), t = wkDayTime(p.ws, i), d = new Date(t);
+  U.wkDay = i;
+  var rows = dd.items.map(function (it, k) { var ex = BYNAME[it.n]; return '<div class="plan-item"><button class="thumb" data-act="openEx" data-n="' + esc(it.n) + '">' + demoHTML(ex, false) + '</button><div class="grow"><div class="xname">' + esc(it.n) + '</div><div class="xmeta">' + it.sets + ' × ' + it.lo + '–' + it.hi + (isTimed(ex) ? ' s' : '') + ' · rest ' + fmtDur(it.rest) + '</div></div><button class="icon-btn" data-act="wkSwap" data-k="' + k + '" aria-label="Swap">' + ico('shuffle') + '</button></div>'; }).join('');
+  openSheet(WD[i] + ' · ' + dd.f, '<div class="note">' + DOW[d.getDay()] + ', ' + MON[d.getMonth()] + ' ' + d.getDate() + ' · ~' + dd.est + ' min · ' + WK_FOCUS[dd.f].join(', ') + '</div>' +
+    (warn.length ? '<div class="banner"><span>Only 1 day of rest for ' + esc(warn.join(', ')) + '. Consider moving this day.</span></div>' : '') +
+    '<div><span class="field-label">Focus</span><div class="chips">' + Object.keys(WK_FOCUS).map(function (f) { return '<button class="chip" aria-pressed="' + (f === dd.f) + '" data-act="wkFocus" data-f="' + esc(f) + '">' + esc(f) + '</button>'; }).join('') + '</div></div>' +
+    '<div class="card" style="padding:0 14px">' + rows + '</div>' +
+    '<button class="btn primary block" data-act="wpStart" data-i="' + i + '">Start this workout</button>' +
+    '<div class="row"><button class="btn grow" data-act="wkRedo">Shuffle exercises</button><button class="btn grow" data-act="wkLoad">Edit in builder</button></div>');
+}
+function wkRegen(i, focus) {
+  var p = wkPlan(), dd = p.days[i], st = S.settings, t = wkDayTime(p.ws, i);
+  var r = generateWorkout({ minutes: p.minutes, groups: WK_FOCUS[focus], gear: gearList(), level: st.level, goal: st.goal, now: t }, realWorkouts(), (Date.now() % 100003) + 1);
+  p.days[i] = { f: focus, t: t, items: r.items, est: r.estMin };
+  persist({ settings: true });
+}
+function plannerClick(a, d) {
+  if (a === 'wkSetup') { U.wk = null; wkSetupSheet(); return true; }
+  if (a === 'wkPick') { var i = +d.i, k = U.wk.days.indexOf(i); if (k >= 0) U.wk.days.splice(k, 1); else U.wk.days.push(i); wkSetupSheet(); return true; }
+  if (a === 'wkWhich') { U.wk.next = d.k === 'next'; if (!U.wk.next) { var td = Math.floor((Date.now() - weekStart(Date.now())) / DAY); U.wk.days = U.wk.days.filter(function (x) { return x >= td; }); } wkSetupSheet(); return true; }
+  if (a === 'wkMin') { U.wk.minutes = +d.v; wkSetupSheet(); return true; }
+  if (a === 'wkMake') {
+    var ws = U.wk.next ? weekStart(Date.now() + 7 * DAY) : weekStart(Date.now());
+    S.settings.week = wkBuild(ws, U.wk.days, U.wk.minutes); U.wk = null;
+    persist({ settings: true }); closeSheet(); render(); toast('Week planned'); return true;
+  }
+  if (a === 'wkClear') { S.settings.week = null; U.wk = null; persist({ settings: true }); closeSheet(); render(); return true; }
+  if (a === 'wkDay') { wkDaySheet(+d.i); return true; }
+  if (a === 'wkFocus') { wkRegen(U.wkDay, d.f); wkDaySheet(U.wkDay); render(); return true; }
+  if (a === 'wkRedo') { wkRegen(U.wkDay, wkPlan().days[U.wkDay].f); wkDaySheet(U.wkDay); render(); return true; }
+  if (a === 'wkSwap') {
+    var p = wkPlan(), dd = p.days[U.wkDay], it = dd.items[+d.k], st = S.settings;
+    var n = swapExercise({ minutes: p.minutes, groups: WK_FOCUS[dd.f], gear: gearList(), level: st.level, goal: st.goal }, dd.items, it, realWorkouts(), Date.now() % 9973);
+    if (n) { dd.items[+d.k] = n; persist({ settings: true }); wkDaySheet(U.wkDay); } else toast('No other matching exercise.');
+    return true;
+  }
+  if (a === 'wkLoad') { var dd2 = wkPlan().days[U.wkDay]; U.plan = { items: dd2.items.map(function (x) { return Object.assign({}, x); }), estMin: dd2.est, short: false }; closeSheet(); U.tab = 'train'; render(); var pl = $('.plan-item'); if (pl) pl.scrollIntoView({ block: 'center' }); return true; }
+  if (a === 'wpStart' && wkPlan()) {
+    if (S.draft) { toast('Finish or discard the current workout first.'); return true; }
+    var dd3 = wkPlan().days[+d.i]; if (!dd3) return true;
+    closeSheet(); newDraft(dd3.items); render(); window.scrollTo(0, 0); return true;
+  }
   return false;
 }
 
@@ -4009,7 +4423,13 @@ function normSettings(st) {
 }
 /* ----- accounts: on the web app each person signs in, and this phone keeps a copy per account ----- */
 function acctMode() { return !window.claude && typeof SRV !== 'undefined' && !!SRV.url; }
-function needGate() { return acctMode() && !srvOn(); }
+var GUEST = false;   // "Continue as guest": everything works, nothing is saved anywhere
+function needGate() { return acctMode() && !srvOn() && !GUEST; }
+function guestStart() { GUEST = true; dbCol = null; applyLS(null); U.tab = 'train'; U.plan = null; if (typeof photosInit === 'function') photosInit(); render(); window.scrollTo(0, 0); toast('Guest mode: nothing is saved'); }
+function guestLeave() {
+  if (S.workouts.length && !confirm('Leave guest mode? The workouts you logged as a guest will be lost.')) return;
+  endSession(); GUEST = false; applyLS(null); U.tab = 'train'; closeSheet(); render(); window.scrollTo(0, 0);
+}
 function lsKey() { return (!window.claude && typeof SRV !== 'undefined' && SRV.uid) ? LS_KEY + ':' + SRV.uid : LS_KEY; }
 function readLS(k) { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } }
 function applyLS(j) { S.settings = normSettings(Object.assign(defaults(), (j && j.settings) || {})); S.workouts = (j && j.workouts) || []; S.draft = (j && j.draft) || null; S.at = (j && j.at) || { settings: 0, draft: 0 }; S.health = (j && j.health) || null; S.hlast = (j && j.hlast) || null; }
@@ -4030,6 +4450,7 @@ function acctAdoptLegacy() {
   return true;
 }
 function acctSignedIn(prev) {
+  GUEST = false;
   dbCol = null; dirtySettings = false; dirtyDraft = false; dirtyMonths = {};
   var acct = readLS(lsKey()); applyLS(acct);
   var L = readLS(LS_KEY);
@@ -4086,9 +4507,11 @@ function viewGate() {
     '<input class="input" id="sp" type="password" autocomplete="current-password" placeholder="Password (6+ characters)" aria-label="Password">' +
     '<div class="note" id="s-err" style="color:var(--down);min-height:0"></div>' +
     '<div class="row"><button class="btn primary grow" data-act="srvIn">Sign in</button><button class="btn grow" data-act="srvUp">Create account</button></div>' +
-    '<div class="note">New here? Type a username and password, then tap <b>Create account</b>. There is no password reset, so pick one you will remember.</div></div></div>';
+    '<div class="note">New here? Type a username and password, then tap <b>Create account</b>. There is no password reset, so pick one you will remember.</div></div>' +
+    '<button class="btn block ghost" data-act="guestGo">Continue as guest</button><div class="note" style="text-align:center">As a guest nothing is saved: your workouts are gone when you close the app.</div></div>';
 }
 function saveLocal() {
+  if (GUEST) return;
   try { localStorage.setItem(lsKey(), JSON.stringify({ settings: S.settings, workouts: S.workouts, draft: S.draft, at: S.at, health: S.health || null, hlast: S.hlast || null })); saveLocal.warned = false; }
   catch (e) { if (!saveLocal.warned) { saveLocal.warned = true; setTimeout(function () { toast('Your phone is out of storage for this app. Save a backup file in Settings, and free up space.'); }, 50); } }
 }
@@ -4218,7 +4641,8 @@ function demoInner(ex) {
 }
 function startDemo(ex) {
   var T = FIG.forEx(ex), s = $('#figlive');
-  if (T && s && U.demoMode !== 'photo') FIG.live(s, T);
+  // same rule as demoInner: the cartoon shows when chosen, or when there is no photo to show instead
+  if (T && s && (U.demoMode !== 'photo' || !hasPhoto(ex))) FIG.live(s, T);
 }
 function tagsHTML(ex) {
   return ex.p.map(function (g) { return '<span class="tag p">' + esc(g) + '</span>'; }).join('') + ex.s.map(function (g) { return '<span class="tag">' + esc(g) + '</span>'; }).join('');
@@ -4338,7 +4762,7 @@ function openSheet(title, body, opts) {
   document.body.style.overflow = 'hidden';
   var b = $('#sheet-body'); if (keepY && !opts.top) b.scrollTop = keepY; if (opts.focus) { var f = $(opts.focus, b); if (f) f.focus({ preventScroll: !!keepY }); }
 }
-function closeSheet() { $('#sheet-root').innerHTML = ''; document.body.style.overflow = ''; U.pickMode = null; U.socSheet = null; U.eatSheet = null; U.tgSheet = false; U.tgSheetOpen = false; U.chartRedraw = null; U.nhSheet = false; }
+function closeSheet() { if (typeof tmStop === 'function') tmStop(); $('#sheet-root').innerHTML = ''; document.body.style.overflow = ''; U.pickMode = null; U.socSheet = null; U.eatSheet = null; U.tgSheet = false; U.tgSheetOpen = false; U.chartRedraw = null; U.nhSheet = false; }
 function sheetOpen() { return !!$('#sheet-root').firstChild; }
 
 /* ===== exercise detail ===== */
@@ -4442,12 +4866,13 @@ function render() {
   var y = window.scrollY, v = $('#view');
   if (needGate()) { document.body.classList.add('gated'); v.innerHTML = viewGate(); return; }
   document.body.classList.remove('gated');
+  var guestBar = GUEST ? '<button class="banner" style="width:100%;text-align:left;margin-top:10px" data-act="guestOut"><span><b>Guest mode</b> · nothing is saved. Tap to sign in or create an account.</span></button>' : '';
   // a focused box is about to be replaced: close the keyboard first, or iPhone can leave the tab bar stuck where the keyboard was
   var ae = document.activeElement; if (ae && ae !== document.body && v.contains(ae) && ae.blur) { ae.blur(); fixViewport(); }
   var map = { train: viewTrain, lib: viewLib, prog: viewProg, body: viewBody, eat: viewEat, friends: viewFriends, settings: viewSettings };
   var html = map[U.tab]();
   if (S.draft && U.tab !== 'train') html = '<div class="screen" style="padding-bottom:0"><button class="banner" style="width:100%;text-align:left" data-act="tab" data-t="train"><span><b>Workout in progress</b> · tap to continue</span><span class="num" style="font-size:20px" id="clock2"></span></button></div>' + html;
-  v.innerHTML = html;
+  v.innerHTML = guestBar + html;
   document.querySelectorAll('#tabs button').forEach(function (b) { if (b.dataset.t === U.tab) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
   window.scrollTo(0, y);
   tick();
@@ -4472,7 +4897,7 @@ function viewTrain() {
   var rw = realWorkouts().slice(-3).reverse();
   if (rw.length) recent = '<div class="section"><h2>Recent</h2><div class="card" style="padding:0 14px">' + rw.map(histRow).join('') + '</div></div>';
   var nudge = (dbState === 'local' && realWorkouts().length >= 3 && Date.now() - (st.lastBackup || 0) > 14 * DAY) ? '<button class="banner" style="width:100%;text-align:left" data-act="tab" data-t="settings"><span><b>Back up your workouts</b> · they live only on this phone. Tap to save a backup file.</span></button>' : '';
-  return '<div class="screen">' + head + nudge + weekCard() + tgJoinCard() + savedWorkoutsHTML() + recCard + builder + plan + '<button class="btn block" data-act="startEmpty">Start an empty workout</button>' + recent + '</div>';
+  return '<div class="screen">' + head + nudge + weekCard() + weekPlanCard() + tgJoinCard() + savedWorkoutsHTML() + recCard + builder + plan + '<button class="btn block" data-act="startEmpty">Start an empty workout</button>' + recent + '</div>';
 }
 function planHTML() {
   var p = U.plan, items = p.items;
@@ -4487,6 +4912,7 @@ function planHTML() {
   return '<div class="section"><div class="row"><h2 class="grow">Today\'s workout</h2><span class="num" style="font-size:22px">~' + estMin + ' min</span></div>' + short +
     '<div class="card" style="padding:0 14px">' + (rows || '<div class="empty">Nothing left in the plan.</div>') + '</div>' +
     '<div class="row"><button class="btn grow" data-act="pickPlan">' + ico('plus').replace('<svg', '<svg width="18" height="18"') + ' Add exercise</button><button class="btn grow" data-act="generate">Shuffle</button></div>' +
+    stretchButtons('plan', items) +
     '<button class="btn primary block" data-act="startPlan"' + (items.length ? '' : ' disabled') + '>Start workout</button>' + (items.length ? '<div class="row" style="gap:8px"><button class="btn grow" data-act="wkSendPlan">👥 Send to a friend</button><button class="btn grow" data-act="wkSavePlan">☆ Save</button></div>' : '') + '</div>';
 }
 
@@ -4496,22 +4922,23 @@ function viewWorkout() {
   d.ex.forEach(function (e) { e.sets.forEach(function (s) { if (s.done && !s.wu) { totalDone++; vol += (+s.w || 0) * (+s.r || 0); } }); });
   var cards = d.ex.map(function (e, xi) {
     var ex = BYNAME[e.n], ls = lastSession(realWorkouts(), e.n), bw = isBW(ex);
-    var li = loadInfo(ex), rows = '<div class="hd">SET</div><div class="hd">PREVIOUS</div><div class="hd">' + esc(li.h) + '</div><div class="hd">REPS</div><div class="hd"></div>';
+    var tmd = isTimed(ex), li = loadInfo(ex), rows = '<div class="hd">SET</div><div class="hd">PREVIOUS</div><div class="hd">' + esc(li.h) + '</div><div class="hd">' + (tmd ? 'SEC' : 'REPS') + '</div><div class="hd"></div>';
     var wi = -1;
     e.sets.forEach(function (s, si) {
       if (!s.wu) wi++;
-      var pv = !s.wu && ls && ls.e.sets[wi] ? ls.e.sets[wi] : null, pt = pv ? ((bw && !pv.w) ? pv.r + ' reps' : fmtW(pv.w, unit()) + ' × ' + pv.r) : '–';
+      var pv = !s.wu && ls && ls.e.sets[wi] ? ls.e.sets[wi] : null, pt = pv ? ((bw && !pv.w) ? pv.r + (tmd ? ' s' : ' reps') : fmtW(pv.w, unit()) + ' × ' + pv.r + (tmd ? ' s' : '')) : '–';
       rows += '<div class="sn' + (s.wu ? ' wu' : '') + '">' + (s.wu ? 'W' : wi + 1) + '</div><div class="prev">' + pt + '</div>' +
         '<div class="' + (s.done ? 'done' : '') + '"><input inputmode="decimal" data-k="w" data-x="' + xi + '" data-s="' + si + '" class="' + (s.sug && !s.done ? 'sug' : '') + '" value="' + (s.w == null ? '' : toDisp(s.w, unit())) + '" placeholder="' + (bw ? '0' : '–') + '" aria-label="Set ' + (si + 1) + ' weight"></div>' +
         '<div class="' + (s.done ? 'done' : '') + '"><input inputmode="numeric" data-k="r" data-x="' + xi + '" data-s="' + si + '" class="' + (s.sug && !s.done ? 'sug' : '') + '" value="' + (s.r == null ? '' : s.r) + '" placeholder="0" aria-label="Set ' + (si + 1) + ' reps"></div>' +
         '<button class="ck' + (s.done ? ' on' : '') + '" data-act="toggleSet" data-x="' + xi + '" data-s="' + si + '" aria-pressed="' + !!s.done + '" aria-label="Mark set ' + (si + 1) + ' done">' + ico('check') + '</button>';
     });
     return '<div class="xcard"><div class="xcard-head"><button class="thumb" data-act="openEx" data-n="' + esc(e.n) + '" aria-label="View ' + esc(e.n) + '">' + demoHTML(ex, false) + '</button><div class="grow"><button class="xname xlink" data-act="openEx" data-n="' + esc(e.n) + '">' + esc(e.n) + ' <span class="info-i" aria-hidden="true">i</span></button><div class="target">Target ' + e.sets.filter(function (q) { return !q.wu; }).length + ' × ' + e.lo + '–' + e.hi + ' · <button class="linkbtn" data-act="restCycle" data-x="' + xi + '" aria-label="Change rest time">rest ' + fmtDur(e.rest) + '</button>' + (isBarbell(ex) ? ' · <button class="linkbtn accent" data-act="plates" data-x="' + xi + '">Plates</button>' : '') + '</div>' + injBadge(ex) + (li.s ? '<button class="loadhint" data-act="loadInfo" data-n="' + esc(e.n) + '">⚖️ ' + esc(li.s) + '</button>' : '') + (S.settings.notes[e.n] ? '<div class="xnote">' + esc(S.settings.notes[e.n]) + '</div>' : '') + '</div><button class="icon-btn" data-act="swapEx" data-x="' + xi + '" aria-label="Swap ' + esc(e.n) + ' for a random similar exercise">' + ico('shuffle') + '</button><button class="icon-btn" data-act="altEx" data-x="' + xi + '" aria-label="Choose a different exercise">' + ico('pick') + '</button><button class="icon-btn" data-act="rmEx" data-x="' + xi + '" aria-label="Remove ' + esc(e.n) + '">' + ico('x') + '</button></div>' +
-      '<div class="sets">' + rows + '</div><div class="row"><button class="btn small ghost grow" data-act="addSet" data-x="' + xi + '" aria-label="Add a set">+ Set</button>' + (!bw && !e.sets.some(function (q) { return q.wu; }) && !e.sets.some(function (q) { return q.done; }) ? '<button class="btn small ghost grow" data-act="warmup" data-x="' + xi + '">+ Warm-up</button>' : '') + (e.sets.length > 1 ? '<button class="btn small ghost grow" data-act="rmSet" data-x="' + xi + '" aria-label="Remove a set">– Set</button>' : '') + '</div></div>';
+      '<div class="sets">' + rows + '</div>' + (tmd ? '<button class="btn small block" data-act="holdGo" data-x="' + xi + '">▶ Hold timer</button>' : '') + '<div class="row"><button class="btn small ghost grow" data-act="addSet" data-x="' + xi + '" aria-label="Add a set">+ Set</button>' + (!bw && !e.sets.some(function (q) { return q.wu; }) && !e.sets.some(function (q) { return q.done; }) ? '<button class="btn small ghost grow" data-act="warmup" data-x="' + xi + '">+ Warm-up</button>' : '') + (e.sets.length > 1 ? '<button class="btn small ghost grow" data-act="rmSet" data-x="' + xi + '" aria-label="Remove a set">– Set</button>' : '') + (!tmd && ex.c !== 'stretching' ? '<button class="btn small ghost grow" data-act="tempoGo" data-x="' + xi + '" aria-label="Tempo timer">⏱ Tempo</button>' : '') + '</div></div>';
   }).join('');
-  return '<div class="screen" style="gap:14px;padding-top:0"><div class="wk-top"><div><div class="clock" id="clock">0:00</div></div><div class="grow note" id="wk-stats">' + totalDone + (totalDone === 1 ? ' set' : ' sets') + ' · ' + volDisp(vol) + ' ' + unitL + '</div><button class="btn primary small" data-act="finish">Finish</button></div>' + tgBox() +
+  return '<div class="screen" style="gap:14px;padding-top:0"><div class="wk-top"><div><div class="clock" id="clock">0:00</div></div><div class="grow note" id="wk-stats">' + totalDone + (totalDone === 1 ? ' set' : ' sets') + ' · ' + volDisp(vol) + ' ' + unitL + '</div><button class="btn primary small" data-act="finish">Finish</button></div>' + restAlertTip() + tgBox() +
     (cards || '<div class="empty"><h3>Empty workout</h3>Add your first exercise.</div>') +
     tgWorkoutButtons() +
+    stretchButtons('draft', d.ex) +
     '<button class="btn block" data-act="pickDraft">' + ico('plus').replace('<svg', '<svg width="18" height="18"') + ' Add exercise</button>' +
     (U.confirm === 'finishOpen' ? '<div class="banner" id="finishask"><span>' + U.openSets + ' set' + (U.openSets > 1 ? 's have' : ' has') + ' numbers but ' + (U.openSets > 1 ? 'aren\'t' : 'isn\'t') + ' ticked.</span><span class="row" style="gap:6px"><button class="btn small primary" data-act="finishTick">Count them</button><button class="btn small" data-act="finishAnyway">Skip them</button></span></div>' : '') +
     (U.confirm === 'discard' ? '<div class="banner"><span>Discard this workout? Nothing will be saved.</span><span class="row"><button class="btn small danger" data-act="discard2">Discard</button><button class="btn small" data-act="noconfirm">Keep</button></span></div>' : '<button class="btn block ghost danger" data-act="discard">Discard workout</button>') + '</div>';
@@ -4735,7 +5162,7 @@ function viewSettings() {
   var acctCard = acctMode() && srvOn() ? '<div class="card section"><div class="row" style="gap:12px"><div class="grow"><div class="xname">' + esc(SRV.name) + '</div><div class="note">Signed in. Your workouts are saved to this account. Sign in with the same username on another phone to see them there.</div></div><button class="btn small" data-act="srvOut">Sign out</button></div></div>' : '';
   return '<div class="screen"><div class="screen-head"><h1>Settings</h1></div>' + acctCard + (typeof healthSettingsCard === 'function' ? healthSettingsCard() : '') +
     '<div class="section"><span class="field-label">Weight units</span><div class="seg" role="group"><button aria-pressed="' + (st.unit === 'lb') + '" data-act="unit" data-k="lb">Pounds</button><button aria-pressed="' + (st.unit === 'kg') + '" data-act="unit" data-k="kg">Kilograms</button></div></div>' +
-    injurySettingsHTML() +
+    injurySettingsHTML() + restAlertCard() +
     '<div class="section"><span class="field-label">Rest timer chime</span><div class="seg" role="group" aria-label="Rest timer chime"><button aria-pressed="' + (st.chime !== false) + '" data-act="chimeOpt" data-k="on">On</button><button aria-pressed="' + (st.chime === false) + '" data-act="chimeOpt" data-k="off">Off</button></div><div class="note">A short chime when rest is over, through your headphones or speaker. Keep the app open on screen (it stays awake during workouts); iPhones pause web apps that are in the background.</div></div>' +
     '<div class="section"><span class="field-label">Bottom corner</span><div class="seg" role="group" aria-label="Bottom corner space"><button aria-pressed="' + (st.lift !== false) + '" data-act="liftOpt" data-k="on">Keep clear</button><button aria-pressed="' + (st.lift === false) + '" data-act="liftOpt" data-k="off">Off</button></div><div class="note">Leaves room under the tab bar so a hosting badge (like "Powered by Netlify") cannot cover buttons.</div></div>' +
     '<div class="section"><h2>Your body</h2>' + bodyCard() + '</div>' +
@@ -4752,7 +5179,7 @@ function viewSettings() {
 /* ===== timers ===== */
 var tickT = null;
 function tick() {
-  if (NATIVE.on) nativeTick();
+  nativeTick();
   var c = $('#clock'), c2 = $('#clock2');
   if (S.draft) { var s = fmtDur((Date.now() - S.draft.t) / 1000); if (c) c.textContent = s; if (c2) c2.textContent = s; }
   var rb = $('#restbar');
@@ -4821,18 +5248,65 @@ function newDraft(items) {
   S.draft = { id: 'w' + now, t: now, ex: items.map(function (it) { return makeWorkoutEx(realWorkouts(), it, unit()); }) };
   U.rest = null; U.confirm = null; persist({ draft: true }); keepAwake();
 }
+/* warm-up and cool-down stretches for the muscles in a plan or the live workout */
+function stretchButtons(where, list) {
+  var hasPre = list.some(function (it) { var e = BYNAME[it.n]; return e && e.c === 'stretching' && stretchKind(e) !== 'static'; });
+  var hasPost = list.some(function (it) { var e = BYNAME[it.n]; return e && stretchKind(e) === 'static'; });
+  if (!list.length) return '';
+  return '<div class="row">' + (hasPre ? '' : '<button class="btn small ghost grow" data-act="stretchAdd" data-k="pre" data-w="' + where + '">+ Warm-up stretches</button>') +
+    (hasPost ? '' : '<button class="btn small ghost grow" data-act="stretchAdd" data-k="post" data-w="' + where + '">+ Cool-down stretches</button>') + '</div>';
+}
+function stretchAdd(when, where) {
+  var list = where === 'draft' ? (S.draft && S.draft.ex) : (U.plan && U.plan.items); if (!list) return;
+  var groups = [];
+  list.forEach(function (it) { var e = BYNAME[it.n]; if (e && e.c !== 'stretching') e.p.forEach(function (g) { if (groups.indexOf(g) < 0) groups.push(g); }); });
+  if (!groups.length) groups = S.settings.groups.slice();
+  var gear = gearList().concat(['bodyweight']);
+  var picks = stretchesFor(groups.slice(0, 5), when, gear, list.map(function (it) { return it.n; }), when === 'pre' ? 3 : 4);
+  if (!picks.length) { toast('No matching stretches for your equipment.'); return; }
+  var items = picks.map(function (e) { return defaultItem(e.n, S.settings.goal); });
+  if (where === 'draft') {
+    var made = items.map(function (it) { return makeWorkoutEx(realWorkouts(), it, unit()); });
+    if (when === 'pre') { var at = 0; while (at < S.draft.ex.length && S.draft.ex[at].sets.some(function (q) { return q.done; })) at++; S.draft.ex.splice.apply(S.draft.ex, [at, 0].concat(made)); }
+    else S.draft.ex = S.draft.ex.concat(made);
+    persist({ draft: true });
+  } else if (when === 'pre') U.plan.items = items.concat(U.plan.items); else U.plan.items = U.plan.items.concat(items);
+  render(); toast('Added ' + picks.length + (when === 'pre' ? ' warm-up' : ' cool-down') + ' stretches');
+}
+/* tick a set: check it has numbers, start the rest timer, look for a new best */
+function markSetDone(xi, si) {
+  var ex = S.draft.ex[xi], s = ex.sets[si], X = BYNAME[ex.n], bw = isBW(X);
+  if (!(+s.r > 0)) { toast(isTimed(X) ? 'Enter the seconds first, or use the hold timer.' : 'Enter the reps first.'); return false; }
+  if (!bw && !(+s.w > 0)) { toast('Enter the weight first.'); return false; }
+  s.done = true; s.sug = false;
+  var nx = ex.sets[si + 1]; if (nx && !nx.done && nx.sug && (nx.w == null)) nx.w = s.w;
+  var rs = s.wu ? 45 : (ex.rest || 90); U.rest = { end: Date.now() + rs * 1000, total: rs, end0: Date.now() }; unlockAudio();
+  if (!s.wu) livePR(ex, s);
+  persist({ draft: true }); render(); return true;
+}
 /* the live workout is over: stop the live session, rest timer and screen wake lock */
 function endSession() {
   try { tgEnd(); } catch (e) { }
   U.rest = null;
   try { if (wakeLock) wakeLock.release(); } catch (e) { } wakeLock = null;
 }
+function finishAskSheet(w, open) {
+  var n = workoutSets(w), mins = Math.max(1, Math.round((Date.now() - S.draft.t) / 60000));
+  openSheet('Finish workout?', '<div class="note">' + w.ex.length + ' exercise' + (w.ex.length === 1 ? '' : 's') + ' · ' + n + ' set' + (n === 1 ? '' : 's') + ' ticked · ' + mins + ' min</div>' +
+    (open ? '<div class="banner"><span>' + open + ' set' + (open > 1 ? 's have' : ' has') + ' numbers but ' + (open > 1 ? 'aren\'t' : 'isn\'t') + ' ticked.</span></div>' +
+      '<button class="btn primary block" data-act="finishTick">Count ' + (open > 1 ? 'them' : 'it') + ' and finish</button>' + (w.ex.length ? '<button class="btn block" data-act="finishAnyway">Finish without ' + (open > 1 ? 'them' : 'it') + '</button>' : '')
+      : '<button class="btn primary block" data-act="finishAnyway">Finish and save</button>') +
+    '<button class="btn block ghost" data-act="close">Keep going</button>');
+}
 function finishWorkout(force) {
   // sets with weight and reps typed in but never ticked: ask instead of silently dropping them
   var open = 0; S.draft.ex.forEach(function (e) { e.sets.forEach(function (q) { if (!q.done && !q.wu && !q.sug && +q.r > 0) open++; }); });
-  if (open && !force) { U.confirm = 'finishOpen'; U.openSets = open; render(); var b = $('#finishask'); if (b) b.scrollIntoView({ block: 'center' }); return; }
   var w = finishDraft(S.draft, Date.now());
-  if (!w.ex.length) { toast('Check off at least one set first.'); return; }
+  if (!w.ex.length && !open) { toast('Check off at least one set first.'); return; }
+  // always ask first, so a stray tap on Finish doesn't end the workout
+  if (!force) { finishAskSheet(w, open); return; }
+  if (!w.ex.length) { closeSheet(); toast('Check off at least one set first.'); return; }
+  closeSheet();
   endSession();
   var prs = findPRs(realWorkouts(), w);
   S.workouts.push(w); S.workouts.sort(function (a, b) { return a.t - b.t; });
@@ -4854,6 +5328,12 @@ document.addEventListener('click', function (ev) {
   if (a.indexOf('body') === 0 && a !== 'bodyEdit' && a !== 'bodySave' && a !== 'bodySex' && bodyClick(a, d)) return;
   if (a.indexOf('hk') === 0 && typeof healthClick === 'function' && healthClick(a, d)) return;
   if (a.indexOf('nh') === 0 && typeof nativeClick === 'function' && nativeClick(a, d)) return;
+  if (typeof timerClick === 'function' && timerClick(a, d)) return;
+  if (a === 'stretchAdd') { stretchAdd(d.k, d.w); return; }
+  if ((a.indexOf('wk') === 0 || a === 'wpStart') && typeof plannerClick === 'function' && plannerClick(a, d)) return;
+  if ((a === 'pushOn' || a === 'pushTipNo') && pushClick(a)) return;
+  if (a === 'guestGo') { guestStart(); return; }
+  if (a === 'guestOut') { guestLeave(); return; }
   if (a === 'close') { closeSheet(); U.confirm = null; return; }
   if (a === 'doneSummary') { closeSheet(); U.tab = 'prog'; U.seg = 'muscles'; render(); window.scrollTo(0, 0); return; }
   if (a === 'tab') { U.tab = d.t; U.confirm = null; closeSheet(); render(); window.scrollTo(0, 0); return; }
@@ -4891,15 +5371,9 @@ document.addEventListener('click', function (ev) {
   if (a === 'addToDraft' || a === 'addToPlan') { U.pickMode = a === 'addToDraft' ? 'draft' : 'plan'; addExerciseTo(d.n); return; }
   if (a === 'openEx') { exerciseSheet(d.n); return; }
   if (a === 'toggleSet') {
-    var ex = S.draft.ex[+d.x], s = ex.sets[+d.s], bw = isBW(BYNAME[ex.n]);
-    if (!s.done) {
-      if (!(+s.r > 0)) { toast('Enter the reps first.'); return; }
-      if (!bw && !(+s.w > 0)) { toast('Enter the weight first.'); return; }
-      s.done = true; s.sug = false;
-      var nx = ex.sets[+d.s + 1]; if (nx && !nx.done && nx.sug && (nx.w == null)) nx.w = s.w;
-      var rs = s.wu ? 45 : (ex.rest || 90); U.rest = { end: Date.now() + rs * 1000, total: rs, end0: Date.now() }; unlockAudio();
-      if (!s.wu) livePR(ex, s);
-    } else s.done = false;
+    var ex = S.draft.ex[+d.x], s = ex.sets[+d.s];
+    if (!s.done) { markSetDone(+d.x, +d.s); return; }
+    s.done = false;
     persist({ draft: true }); render(); return;
   }
   if (a === 'addSet') { var e2 = S.draft.ex[+d.x], l = e2.sets[e2.sets.length - 1]; e2.sets.push({ w: l ? l.w : null, r: l ? l.r : e2.lo, done: false, sug: true }); persist({ draft: true }); render(); return; }

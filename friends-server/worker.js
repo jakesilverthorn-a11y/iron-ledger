@@ -148,6 +148,54 @@ async function everyone(env) {
   return res;
 }
 
+/* ----- rest-over alerts for the web app (Web Push). Each person's rest timer is a small Durable Object
+   that wakes at the end of the rest and sends an empty push; the app's service worker shows "Rest is over". ----- */
+let VAPID = null;
+async function vapid(env) {
+  if (VAPID) return VAPID;
+  let v = await env.DB.get('vapid', 'json');
+  if (!v) {
+    const kp = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+    v = { priv: await crypto.subtle.exportKey('jwk', kp.privateKey), pub: b64(await crypto.subtle.exportKey('raw', kp.publicKey)) };
+    await env.DB.put('vapid', JSON.stringify(v));
+  }
+  VAPID = { pub: v.pub, key: await crypto.subtle.importKey('jwk', v.priv, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']) };
+  return VAPID;
+}
+async function vapidAuth(env, endpoint) {
+  const V = await vapid(env), aud = new URL(endpoint).origin;
+  const head = b64(enc.encode(JSON.stringify({ typ: 'JWT', alg: 'ES256' })));
+  const body = b64(enc.encode(JSON.stringify({ aud, exp: Math.floor(Date.now() / 1000) + 12 * 3600, sub: 'https://jakesilverthorn-a11y.github.io/iron-ledger/' })));
+  const sig = b64(await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, V.key, enc.encode(head + '.' + body)));
+  return 'vapid t=' + head + '.' + body + '.' + sig + ', k=' + V.pub;
+}
+async function pushAll(env, uid) {
+  const subs = (await env.DB.get('ps:' + uid, 'json')) || [];
+  const keep = [];
+  for (const s of subs) {
+    let r = null;
+    try { r = await fetch(s.endpoint, { method: 'POST', headers: { Authorization: await vapidAuth(env, s.endpoint), TTL: '120', Urgency: 'high', 'Content-Length': '0' } }); } catch (e) { }
+    if (!r || (r.status !== 404 && r.status !== 410)) keep.push(s);   // 404/410: that phone unsubscribed
+  }
+  if (keep.length !== subs.length) await env.DB.put('ps:' + uid, JSON.stringify(keep));
+  return subs.length;
+}
+export class RestTimer {
+  constructor(state, env) { this.state = state; this.env = env; }
+  async fetch(req) {
+    const b = await req.json();
+    if (b.cancel) { await this.state.storage.deleteAlarm(); await this.state.storage.delete('job'); return new Response('{}'); }
+    await this.state.storage.put('job', { uid: b.uid, end: b.end });
+    await this.state.storage.setAlarm(b.end);
+    return new Response('{}');
+  }
+  async alarm() {
+    const job = await this.state.storage.get('job'); if (!job) return;
+    await this.state.storage.delete('job');
+    await pushAll(this.env, job.uid);
+  }
+}
+
 export default {
   async fetch(req, env, ctx) {
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
@@ -155,6 +203,7 @@ export default {
     const url = new URL(req.url), path = url.pathname.replace(/\/+$/, '') || '/';
     try {
       if (path === '/' || path === '/ping') return out({ ok: true, app: 'iron-ledger', v: 1 });
+      if (path === '/push/key') return out({ key: (await vapid(env)).pub });
       if (req.method === 'POST' && (path === '/signup' || path === '/login')) {
         let b; try { b = await req.json(); } catch (e) { return bad('Bad request'); }
         const name = String(b.u || '').trim(), pw = String(b.p || ''), un = name.toLowerCase();
@@ -233,6 +282,25 @@ export default {
         else { const res = await everyone(env); res.v = ver; body = JSON.stringify(res); LAST = { v: ver, body }; }
         return new Response(body, { status: 200, headers: Object.assign({ 'Content-Type': 'application/json' }, CORS) });
       }
+      if (path === '/push/sub' && req.method === 'POST') {
+        // this phone's push subscription (one per device, up to 5)
+        if (!await writer(env, tok)) return bad('Sign in again.', 401);
+        const b = await req.json().catch(() => ({})), sub = b && b.sub;
+        if (!sub || typeof sub.endpoint !== 'string' || !/^(https:\/\/|http:\/\/(127\.0\.0\.1|localhost)[:/])/.test(sub.endpoint) || sub.endpoint.length > 1000) return bad('Bad subscription');
+        const list = ((await env.DB.get('ps:' + uid, 'json')) || []).filter(s => s.endpoint !== sub.endpoint);
+        list.push({ endpoint: sub.endpoint, at: Date.now() });
+        await env.DB.put('ps:' + uid, JSON.stringify(list.slice(-5)));
+        return out({ ok: true });
+      }
+      if (path === '/push/rest' && (req.method === 'POST' || req.method === 'DELETE')) {
+        if (!env.REST) return bad('Rest alerts are not set up on this server.', 501);
+        const b = req.method === 'POST' ? await req.json().catch(() => ({})) : { cancel: true };
+        const stub = env.REST.get(env.REST.idFromName(uid));
+        if (b.cancel) { await stub.fetch('https://rest/', { method: 'POST', body: JSON.stringify({ cancel: true }) }); return out({ ok: true }); }
+        const end = +b.end; if (!(end > Date.now() - 5000 && end < Date.now() + 3 * 3600e3)) return bad('Bad time');
+        await stub.fetch('https://rest/', { method: 'POST', body: JSON.stringify({ uid, end }) });
+        return out({ ok: true });
+      }
       if (path === '/health/key') {
         // your private link for the Apple Health Shortcut (POST makes a new one; the old one stops working)
         const rec = await writer(env, tok); if (!rec) return bad('Sign in again.', 401);
@@ -294,7 +362,7 @@ export default {
         if (!rec || (rec.gen || '0') !== tok.gen) return bad('Sign in again.', 401);
         if (!same(await hashPw(String(b.p || ''), rec.salt), rec.h)) return bad('Password is wrong.', 403);
         if (rec.hk) await env.DB.delete('hk:' + rec.hk);
-        await env.DB.delete('u:' + uid); await env.DB.delete('d:' + uid); await pDeleteAll(env, uid);
+        await env.DB.delete('u:' + uid); await env.DB.delete('d:' + uid); await env.DB.delete('ps:' + uid); await pDeleteAll(env, uid);
         const i = (await readIdx(env)).filter(x => x !== uid); await env.DB.put('idx', JSON.stringify(i));
         await bump(env);
         return out({ ok: true });

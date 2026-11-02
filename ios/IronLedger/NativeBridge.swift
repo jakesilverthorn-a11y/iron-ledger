@@ -26,6 +26,15 @@ final class NativeBridge {
             Self.scheduleRestNotification(after: seconds, body: body)
             reply(id, ["ok": true])
 
+        case "notifyAsk":
+            // asked when a workout starts, so the first rest alert isn't held up by the permission prompt
+            UNUserNotificationCenter.current().getNotificationSettings { settings in
+                if settings.authorizationStatus == .notDetermined {
+                    UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+                }
+            }
+            reply(id, ["ok": true])
+
         case "restCancel":
             UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["rest"])
             reply(id, ["ok": true])
@@ -104,6 +113,7 @@ final class NativeBridge {
         content.title = "Rest is over"
         content.body = body
         content.sound = .default
+        content.interruptionLevel = .timeSensitive   // gets through Focus modes, like a timer would
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: max(1, seconds), repeats: false)
         center.add(UNNotificationRequest(identifier: "rest", content: content, trigger: trigger))
     }

@@ -38,6 +38,7 @@ function photoK() { return 'photos' + acctSfx(); }
 function legacyPhotos() { try { var a = JSON.parse(localStorage.getItem(PHOTO_KEY + acctSfx()) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
 function photosInit() {
   PHOTOS = null; BODY_FULL = null; var k = photoK();
+  if (typeof GUEST !== 'undefined' && GUEST) { PHOTOS = []; return Promise.resolve(); }
   return idbGet(k).then(function (a) {
     if (k !== photoK()) return;   // switched account meanwhile
     PHOTO_IDB = true; var old = legacyPhotos();
@@ -50,6 +51,7 @@ function photosLoad() { return PHOTOS || legacyPhotos(); }
 function photosTrim(a, max) { a = a.slice(); while (a.length > max) a.splice(Math.max(1, Math.floor(a.length / 2)), 1); return a; }
 var PHOTO_LS_MAX = 3;   // without IndexedDB, photos share the small space your workouts are saved in
 function photosSave(a) {
+  if (typeof GUEST !== 'undefined' && GUEST) { PHOTOS = a.slice(-PHOTO_MAX); return Promise.resolve(true); }   // guest: kept only until the app closes
   var prev = PHOTOS;
   if (PHOTO_IDB) {
     var next = photosTrim(a, PHOTO_MAX); PHOTOS = next;
