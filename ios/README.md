@@ -6,10 +6,14 @@ A native iPhone app that shows the live Iron Ledger web app
 - **Apple Health, read directly**: weight, body fat, resting heart rate, HRV, sleep, steps and active energy.
   No Shortcut needed. The first time it reads two months of history; after that it reads a few days each
   time you open the app (at most every 3 hours).
-- **Rest-over notification** when the rest timer ends while you're in another app or the phone is locked.
+- **Rest-over notification** (time-sensitive, gets through Focus) when the rest timer ends while you're in another app or the phone is locked.
 - **Haptics** on ticking a set and when rest is over.
 - **Screen stays on** during a workout.
 - **Share sheet** for backups, workout pictures and the timeline video.
+- **Workouts saved to Apple Health** as strength training (Fitness app, Activity rings), with estimated calories.
+  Can be turned off in the app's Apple Health screen.
+- **Quick actions**: press and hold the app icon for *Today's workout*, *Empty workout* or *Log weight*.
+- **Waist size** is read from Health into your measurements.
 
 Your workouts are the same as on the web: sign in with the same username.
 Changes to the web app show up in the app automatically, so there's nothing to rebuild for normal updates.

@@ -10,13 +10,40 @@
 	<key>NSHealthShareUsageDescription</key>
 	<string>Iron Ledger reads your weight, body fat, resting heart rate, HRV, sleep, steps and active energy to rank your lifts by your real bodyweight, set your calorie targets and adjust your recovery map.</string>
 	<key>NSHealthUpdateUsageDescription</key>
-	<string>Iron Ledger does not write to Apple Health.</string>
+	<string>Iron Ledger saves your finished workouts to Apple Health, so they show in Fitness and count toward your Activity rings.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Take progress photos for the Body tab.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Choose progress photos for the Body tab.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Save workout pictures and your progress timeline to Photos.</string>
+	<key>UIApplicationShortcutItems</key>
+	<array>
+		<dict>
+			<key>UIApplicationShortcutItemType</key>
+			<string>com.jakesilverthorn.ironledger.today</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Today's workout</string>
+			<key>UIApplicationShortcutItemIconType</key>
+			<string>UIApplicationShortcutIconTypePlay</string>
+		</dict>
+		<dict>
+			<key>UIApplicationShortcutItemType</key>
+			<string>com.jakesilverthorn.ironledger.empty</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Empty workout</string>
+			<key>UIApplicationShortcutItemIconType</key>
+			<string>UIApplicationShortcutIconTypeAdd</string>
+		</dict>
+		<dict>
+			<key>UIApplicationShortcutItemType</key>
+			<string>com.jakesilverthorn.ironledger.weight</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Log weight</string>
+			<key>UIApplicationShortcutItemIconType</key>
+			<string>UIApplicationShortcutIconTypeCompose</string>
+		</dict>
+	</array>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 </dict>

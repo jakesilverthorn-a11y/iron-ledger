@@ -16,7 +16,31 @@ window.ILNativeReply = function (o) {
   var c = o && NATIVE.cb[o.id]; if (!c) return; delete NATIVE.cb[o.id];
   if (o.err) { var e = new Error(o.err); if (o.cancel) e.name = 'AbortError'; c.bad(e); } else c.ok(o.data);
 };
-window.ILNativeEvent = function (name) { if (name === 'foreground') { nativeHealthSync(false); if (typeof tick === 'function') tick(); } };
+window.ILNativeEvent = function (name, arg) {
+  if (name === 'foreground') { nativeHealthSync(false); if (typeof tick === 'function') tick(); }
+  if (name === 'quick') nativeQuick(arg);
+};
+/* pressing and holding the app icon: Today's workout, Empty workout, Log weight */
+function nativeQuick(k) {
+  if (typeof needGate === 'function' && needGate()) { toast('Sign in first.'); return; }
+  closeSheet();
+  if (k === 'weight') { U.tab = 'settings'; render(); bodySheet(); return; }
+  U.tab = 'train';
+  if (S.draft) { render(); window.scrollTo(0, 0); toast('Your workout is still going'); return; }
+  if (k === 'empty') { newDraft([]); render(); window.scrollTo(0, 0); openPicker('draft'); return; }
+  // today's planned workout if there is one, otherwise a fresh workout from your builder settings
+  var p = typeof wkPlan === 'function' && wkPlan(), ti = Math.floor((Date.now() - weekStart(Date.now())) / DAY);
+  if (p && p.ws === weekStart(Date.now()) && p.days[ti]) { newDraft(p.days[ti].items); render(); window.scrollTo(0, 0); toast('Started today\'s ' + p.days[ti].f + ' workout'); return; }
+  var st = S.settings, r = generateWorkout({ minutes: st.minutes, groups: st.groups, gear: gearList(), level: st.level, goal: st.goal }, realWorkouts(), (Date.now() % 100003) + 1);
+  U.plan = r.items.length ? r : null; render(); var pl = $('.plan-item'); if (pl) pl.scrollIntoView({ block: 'center' });
+}
+/* finished workouts go to Apple Health (Fitness app, Activity rings), if you allow it */
+function nativeSaveWorkout(w) {
+  if (!nativeHealthOn() || nhGet('wk') === '0' || !w || !w.dur) return;
+  var B = S.settings.body, kg = (curWeightLb(B) || 165) / LB, hrs = w.dur / 3600;
+  var kcal = Math.round(5 * kg * hrs);   // strength training ≈ 5 METs
+  nativeCall('saveWorkout', { start: w.t, end: w.t + w.dur * 1000, kcal: kcal }, 120000).then(function () { toast('Saved to Apple Health'); }, function (e) { NH.err = e.message; });
+}
 
 /* share sheet for files and links (the web view's own share support is patchy) */
 if (NATIVE.on) {
@@ -77,19 +101,21 @@ function nativeHealthSheet() {
   openSheet('Apple Health', (NH.err ? '<div class="banner"><span>' + esc(NH.err) + '</span></div>' : '') +
     '<div class="card section" style="gap:10px"><div class="xname">' + (on ? 'Connected' : 'Connect Apple Health') + '</div>' +
     '<div class="note">' + (on ? (last ? 'Last update ' + esc(hAgo(last.at)) + '. ' : '') + 'Iron Ledger reads Health each time you open it (at most every few hours).' :
-      'Iron Ledger reads your weight, body fat, resting heart rate, HRV, sleep, steps and active energy straight from Apple Health. Nothing is written to Health, and only you can see these numbers.') + '</div>' +
+      'Iron Ledger reads your weight, body fat, resting heart rate, HRV, sleep, steps, active energy and waist size straight from Apple Health, and can save your finished workouts there. Only you can see these numbers.') + '</div>' +
     (on ? '<button class="btn primary block" data-act="nhSync"' + (NH.busy ? ' disabled' : '') + '>' + (NH.busy ? 'Reading Apple Health…' : 'Update now') + '</button>'
       : '<button class="btn primary block" data-act="nhConnect"' + (NH.busy ? ' disabled' : '') + '>' + (NH.busy ? 'Connecting…' : 'Connect Apple Health') + '</button>') + '</div>' +
+    (on ? '<div class="card section" style="gap:8px"><div class="xname">Save workouts to Apple Health</div><div class="note">Finished workouts show in the Fitness app as strength training and count toward your Activity rings.</div><div class="seg" role="group" aria-label="Save workouts to Health"><button aria-pressed="' + (nhGet('wk') !== '0') + '" data-act="nhWk" data-k="1">On</button><button aria-pressed="' + (nhGet('wk') === '0') + '" data-act="nhWk" data-k="0">Off</button></div></div>' : '') +
     '<div class="note">What it\'s used for: your weigh-ins go into your body log (a weigh-in you type yourself that day wins), so ranks use your weight on each day. Active energy sets your daily calories on the Eat tab, and body fat makes the calorie estimate more exact. Sleep, resting heart rate and HRV adjust the recovery map.</div>' +
     '<div class="note">To change what Iron Ledger can read: Settings app → Health → Data Access &amp; Devices → Iron Ledger. If a number never shows up, check it is switched on there.</div>');
 }
-function nativeClick(a) {
+function nativeClick(a, d) {
   if (a === 'nhConnect') {
     NH.busy = true; NH.err = ''; nativeHealthSheet();
     nativeCall('healthAuth', {}, 600000).then(function () { nhSet('', '1'); NH.busy = false; return nativeHealthSync(true); }, function (e) { NH.busy = false; NH.err = e.message; })
       .then(function () { if (sheetOpen()) nativeHealthSheet(); render(); });
     return true;
   }
+  if (a === 'nhWk') { nhSet('wk', d.k); nativeHealthSheet(); return true; }
   if (a === 'nhSync') { nativeHealthSync(true); NH.busy = true; nativeHealthSheet(); return true; }
   return false;
 }

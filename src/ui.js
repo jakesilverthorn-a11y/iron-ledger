@@ -522,6 +522,9 @@ function planHTML() {
 function viewWorkout() {
   var d = S.draft, unitL = uLabel(), totalDone = 0, vol = 0;
   d.ex.forEach(function (e) { e.sets.forEach(function (s) { if (s.done && !s.wu) { totalDone++; vol += (+s.w || 0) * (+s.r || 0); } }); });
+  // supersets: an exercise marked ss runs straight into the next one; label the runs A1, A2, B1…
+  var ssLab = [], letter = 0;
+  for (var q = 0; q < d.ex.length; q++) { if (d.ex[q].ss && q + 1 < d.ex.length) { var ssL = String.fromCharCode(65 + letter++), k2 = 1; ssLab[q] = ssL + k2; while (d.ex[q].ss && q + 1 < d.ex.length) { q++; ssLab[q] = ssL + (++k2); } } }
   var cards = d.ex.map(function (e, xi) {
     var ex = BYNAME[e.n], ls = lastSession(realWorkouts(), e.n), bw = isBW(ex);
     var tmd = isTimed(ex), li = loadInfo(ex), rows = '<div class="hd">SET</div><div class="hd">PREVIOUS</div><div class="hd">' + esc(li.h) + '</div><div class="hd">' + (tmd ? 'SEC' : 'REPS') + '</div><div class="hd"></div>';
@@ -534,8 +537,8 @@ function viewWorkout() {
         '<div class="' + (s.done ? 'done' : '') + '"><input inputmode="numeric" data-k="r" data-x="' + xi + '" data-s="' + si + '" class="' + (s.sug && !s.done ? 'sug' : '') + '" value="' + (s.r == null ? '' : s.r) + '" placeholder="0" aria-label="Set ' + (si + 1) + ' reps"></div>' +
         '<button class="ck' + (s.done ? ' on' : '') + '" data-act="toggleSet" data-x="' + xi + '" data-s="' + si + '" aria-pressed="' + !!s.done + '" aria-label="Mark set ' + (si + 1) + ' done">' + ico('check') + '</button>';
     });
-    return '<div class="xcard"><div class="xcard-head"><button class="thumb" data-act="openEx" data-n="' + esc(e.n) + '" aria-label="View ' + esc(e.n) + '">' + demoHTML(ex, false) + '</button><div class="grow"><button class="xname xlink" data-act="openEx" data-n="' + esc(e.n) + '">' + esc(e.n) + ' <span class="info-i" aria-hidden="true">i</span></button><div class="target">Target ' + e.sets.filter(function (q) { return !q.wu; }).length + ' × ' + e.lo + '–' + e.hi + ' · <button class="linkbtn" data-act="restCycle" data-x="' + xi + '" aria-label="Change rest time">rest ' + fmtDur(e.rest) + '</button>' + (isBarbell(ex) ? ' · <button class="linkbtn accent" data-act="plates" data-x="' + xi + '">Plates</button>' : '') + '</div>' + injBadge(ex) + (li.s ? '<button class="loadhint" data-act="loadInfo" data-n="' + esc(e.n) + '">⚖️ ' + esc(li.s) + '</button>' : '') + (S.settings.notes[e.n] ? '<div class="xnote">' + esc(S.settings.notes[e.n]) + '</div>' : '') + '</div><button class="icon-btn" data-act="swapEx" data-x="' + xi + '" aria-label="Swap ' + esc(e.n) + ' for a random similar exercise">' + ico('shuffle') + '</button><button class="icon-btn" data-act="altEx" data-x="' + xi + '" aria-label="Choose a different exercise">' + ico('pick') + '</button><button class="icon-btn" data-act="rmEx" data-x="' + xi + '" aria-label="Remove ' + esc(e.n) + '">' + ico('x') + '</button></div>' +
-      '<div class="sets">' + rows + '</div>' + (tmd ? '<button class="btn small block" data-act="holdGo" data-x="' + xi + '">▶ Hold timer</button>' : '') + '<div class="row"><button class="btn small ghost grow" data-act="addSet" data-x="' + xi + '" aria-label="Add a set">+ Set</button>' + (!bw && !e.sets.some(function (q) { return q.wu; }) && !e.sets.some(function (q) { return q.done; }) ? '<button class="btn small ghost grow" data-act="warmup" data-x="' + xi + '">+ Warm-up</button>' : '') + (e.sets.length > 1 ? '<button class="btn small ghost grow" data-act="rmSet" data-x="' + xi + '" aria-label="Remove a set">– Set</button>' : '') + (!tmd && ex.c !== 'stretching' ? '<button class="btn small ghost grow" data-act="tempoGo" data-x="' + xi + '" aria-label="Tempo timer">⏱ Tempo</button>' : '') + '</div></div>';
+    return (ssLab[xi] ? '<div class="sslab">Superset ' + ssLab[xi] + (e.ss ? ' · no rest, go straight to the next' : ' · then rest') + '</div>' : '') + '<div class="xcard' + (ssLab[xi] ? ' ss' : '') + '"><div class="xcard-head"><button class="thumb" data-act="openEx" data-n="' + esc(e.n) + '" aria-label="View ' + esc(e.n) + '">' + demoHTML(ex, false) + '</button><div class="grow"><button class="xname xlink" data-act="openEx" data-n="' + esc(e.n) + '">' + esc(e.n) + ' <span class="info-i" aria-hidden="true">i</span></button><div class="target">Target ' + e.sets.filter(function (q) { return !q.wu; }).length + ' × ' + e.lo + '–' + e.hi + ' · <button class="linkbtn" data-act="restCycle" data-x="' + xi + '" aria-label="Change rest time">rest ' + fmtDur(e.rest) + '</button>' + (isBarbell(ex) ? ' · <button class="linkbtn accent" data-act="plates" data-x="' + xi + '">Plates</button>' : '') + '</div>' + injBadge(ex) + (li.s ? '<button class="loadhint" data-act="loadInfo" data-n="' + esc(e.n) + '">⚖️ ' + esc(li.s) + '</button>' : '') + (S.settings.notes[e.n] ? '<div class="xnote">' + esc(S.settings.notes[e.n]) + '</div>' : '') + '</div><button class="icon-btn" data-act="swapEx" data-x="' + xi + '" aria-label="Swap ' + esc(e.n) + ' for a random similar exercise">' + ico('shuffle') + '</button><button class="icon-btn" data-act="altEx" data-x="' + xi + '" aria-label="Choose a different exercise">' + ico('pick') + '</button><button class="icon-btn" data-act="rmEx" data-x="' + xi + '" aria-label="Remove ' + esc(e.n) + '">' + ico('x') + '</button></div>' +
+      '<div class="sets">' + rows + '</div>' + (tmd ? '<button class="btn small block" data-act="holdGo" data-x="' + xi + '">▶ Hold timer</button>' : '') + '<div class="row"><button class="btn small ghost grow" data-act="addSet" data-x="' + xi + '" aria-label="Add a set">+ Set</button>' + (!bw && !e.sets.some(function (q) { return q.wu; }) && !e.sets.some(function (q) { return q.done; }) ? '<button class="btn small ghost grow" data-act="warmup" data-x="' + xi + '">+ Warm-up</button>' : '') + (e.sets.length > 1 ? '<button class="btn small ghost grow" data-act="rmSet" data-x="' + xi + '" aria-label="Remove a set">– Set</button>' : '') + (xi < d.ex.length - 1 ? '<button class="btn small ghost grow" data-act="ssToggle" data-x="' + xi + '" aria-pressed="' + !!e.ss + '">' + (e.ss ? '✓ Superset' : '⇄ Superset') + '</button>' : '') + (!tmd && ex.c !== 'stretching' ? '<button class="btn small ghost grow" data-act="tempoGo" data-x="' + xi + '" aria-label="Tempo timer">⏱ Tempo</button>' : '') + '</div></div>';
   }).join('');
   return '<div class="screen" style="gap:14px;padding-top:0"><div class="wk-top"><div><div class="clock" id="clock">0:00</div></div><div class="grow note" id="wk-stats">' + totalDone + (totalDone === 1 ? ' set' : ' sets') + ' · ' + volDisp(vol) + ' ' + unitL + '</div><button class="btn primary small" data-act="finish">Finish</button></div>' + restAlertTip() + tgBox() +
     (cards || '<div class="empty"><h3>Empty workout</h3>Add your first exercise.</div>') +
@@ -601,7 +604,7 @@ function progMuscles(W) {
     return '<button class="gcard" data-act="openGroup" data-g="' + r.g + '"><div><div class="gn">' + r.g + ' <span class="faint" style="font-weight:500;font-size:13px">· ' + tierOf(r.cur.score) + '</span></div>' + deltaHTML(r.d, ' pts') + '</div><div class="gs">' + r.cur.score + '</div>' + spark(r.ser, 50) + '</button>';
   }).join('');
   var idxLine = idx == null ? '' : '<div class="card row" style="gap:12px"><div class="grow"><div class="xname">Progress vs. your own start</div><div class="xmeta">100 is where you began on each lift</div></div><div class="num" style="font-size:30px">' + Math.round(idx) + '</div>' + deltaHTML(idx30 == null ? null : idx - idx30, '') + '</div>';
-  return hero + '<div class="section"><h2>Muscle groups</h2>' + cards + '</div>' + idxLine + '<div class="note">Rank compares your best set of the last 4 weeks with strength standards for lifters of your sex and size, then averages the lifts for each muscle. Dumbbell lifts: enter the weight of one dumbbell. It is an estimate against people who train, not the general public.</div>';
+  return hero + weeklySetsCard() + stalledCard(allHistories(realWorkouts())) + '<div class="section"><h2>Muscle groups</h2>' + cards + '</div>' + idxLine + '<div class="note">Rank compares your best set of the last 4 weeks with strength standards for lifters of your sex and size, then averages the lifts for each muscle. Dumbbell lifts: enter the weight of one dumbbell. It is an estimate against people who train, not the general public.</div>';
 }
 function progMusclesIndex(W) {
   var H = allHistories(W), now = Date.now(), ov = overallScore(H, now), ov30 = overallScore(H, now - 30 * DAY);
@@ -616,12 +619,12 @@ function progMusclesIndex(W) {
     if (!r.cur) return '<div class="gcard empty"><div class="gn">' + r.g + '</div><div class="gs">–</div><div class="note" style="grid-column:1/-1">No lifts logged yet</div></div>';
     return '<button class="gcard" data-act="openGroup" data-g="' + r.g + '"><div><div class="gn">' + r.g + '</div>' + deltaHTML(r.d, '') + '</div><div class="gs">' + Math.round(r.cur.score) + '</div>' + spark(r.ser, 100) + '</button>';
   }).join('');
-  return hero + '<div class="section"><h2>Muscle groups</h2>' + cards + '</div>';
+  return hero + weeklySetsCard() + '<div class="section"><h2>Muscle groups</h2>' + cards + '</div>';
 }
 function progLifts(W) {
   var H = allHistories(W), names = Object.keys(H).sort(function (a, b) { return H[b][H[b].length - 1].t - H[a][H[a].length - 1].t; });
   if (!names.length) return '<div class="empty"><h3>No lifts yet</h3>Your exercises show up here after your first workout.</div>';
-  return '<div class="card" style="padding:0 14px">' + names.map(function (n) {
+  return (isSample() ? '' : stalledCard(H)) + '<div class="card" style="padding:0 14px">' + names.map(function (n) {
     var h = H[n], ex = BYNAME[n], bw = isBW(ex), first = h[0].best, cur = h[h.length - 1].best, best = Math.max.apply(null, h.map(function (x) { return x.best; }));
     var pct = first ? (cur / first - 1) * 100 : 0;
     var pts = h.map(function (x) { return { t: x.t, v: x.best }; });
@@ -644,7 +647,7 @@ function liftSheet(name, metric) {
   var wtd = bw && H.some(function (x) { return x.topW > 0; });
   var fmtv = function (lb) { return bw ? (wtd ? '≈' : '') + Math.round(lb) + ' reps' : toDisp(lb, u) + ' ' + uLabel(); };
   var segs = bw ? '' : '<div class="seg" role="group"><button aria-pressed="' + (metric === 'e1rm') + '" data-act="liftMetric" data-n="' + esc(name) + '" data-k="e1rm">Est. 1RM</button><button aria-pressed="' + (metric === 'top') + '" data-act="liftMetric" data-n="' + esc(name) + '" data-k="top">Top weight</button><button aria-pressed="' + (metric === 'vol') + '" data-act="liftMetric" data-n="' + esc(name) + '" data-k="vol">Volume</button></div>';
-  var body = segs + rangeSeg() + (pts.length ? '' : '<div class="note">No sessions in this window. Your last one was ' + esc(fmtDate(H[H.length - 1].t)) + '.</div>') + lineChart(pts, { t0: rb.t0, t1: rb.t1, label: name + ' trend', fmt: function (v) { return metric === 'vol' ? (v >= 1000 ? Math.round(v / 100) / 10 + 'k' : Math.round(v)) : Math.round(v * 10) / 10; } }) +
+  var body = (isSample() ? '' : plateauBanner(name, H)) + segs + rangeSeg() + (pts.length ? '' : '<div class="note">No sessions in this window. Your last one was ' + esc(fmtDate(H[H.length - 1].t)) + '.</div>') + lineChart(pts, { t0: rb.t0, t1: rb.t1, label: name + ' trend', fmt: function (v) { return metric === 'vol' ? (v >= 1000 ? Math.round(v / 100) / 10 + 'k' : Math.round(v)) : Math.round(v * 10) / 10; } }) +
     '<div class="grid2"><div class="stat"><div class="v">' + fmtv(best) + '</div><div class="k">Best' + (bw ? '' : ' (est. 1RM)') + '</div></div><div class="stat"><div class="v">' + (H.length > 1 ? (cur >= first ? '+' : '') + Math.round((cur / first - 1) * 100) + '%' : '–') + '</div><div class="k">Since first session</div></div><div class="stat"><div class="v">' + fmtv(first) + '</div><div class="k">First session</div></div><div class="stat"><div class="v">' + H.length + '</div><div class="k">Sessions</div></div></div>' +
     '<div class="section"><h3 style="font-size:20px">Recent sessions</h3><div>' + H.slice(-6).reverse().map(function (x) { return '<div class="lrow"><span>' + fmtDateLong(x.t) + '</span><span class="num" style="font-size:18px">' + (bw && !x.topW ? x.topR + ' reps' : toDisp(x.topW, u) + ' ' + uLabel() + loadSuffix(ex) + ' × ' + x.topR) + (x.best >= best - 1e-6 && H.length > 1 ? '<span class="pr">BEST</span>' : '') + '</span></div>'; }).join('') + '</div></div>' +
     (bw ? '' : pctTable(cur)) + liftRankCard(name, H) +
@@ -882,7 +885,14 @@ function markSetDone(xi, si) {
   if (!bw && !(+s.w > 0)) { toast('Enter the weight first.'); return false; }
   s.done = true; s.sug = false;
   var nx = ex.sets[si + 1]; if (nx && !nx.done && nx.sug && (nx.w == null)) nx.w = s.w;
-  var rs = s.wu ? 45 : (ex.rest || 90); U.rest = { end: Date.now() + rs * 1000, total: rs, end0: Date.now() }; unlockAudio();
+  var rs = s.wu ? 45 : (ex.rest || 90), nxt = S.draft.ex[xi + 1];
+  if (ex.ss && !s.wu && nxt && nxt.sets.some(function (q) { return !q.done && !q.wu; })) {
+    // superset: no rest yet, go straight to the next exercise
+    U.rest = null; persist({ draft: true }); render();
+    var nc = document.querySelectorAll('.xcard')[xi + 1]; if (nc) nc.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    toast('Superset: now ' + nxt.n); if (!s.wu) livePR(ex, s); return true;
+  }
+  U.rest = { end: Date.now() + rs * 1000, total: rs, end0: Date.now() }; unlockAudio();
   if (!s.wu) livePR(ex, s);
   persist({ draft: true }); render(); return true;
 }
@@ -914,6 +924,7 @@ function finishWorkout(force) {
   S.workouts.push(w); S.workouts.sort(function (a, b) { return a.t - b.t; });
   S.draft = null; U.rest = null; U.plan = null; U.confirm = null; tick();
   persist({ draft: true, month: w.t });
+  if (typeof NATIVE !== 'undefined' && NATIVE.on) nativeSaveWorkout(w);
   try { if (wakeLock) wakeLock.release(); } catch (e) { } wakeLock = null;
   var body = '<div class="grid2"><div class="stat"><div class="v">' + Math.round(w.dur / 60) + ' min</div><div class="k">Time</div></div><div class="stat"><div class="v">' + workoutSets(w) + '</div><div class="k">Sets</div></div><div class="stat"><div class="v">' + volDisp(workoutVolume(w)) + '</div><div class="k">Volume (' + uLabel() + ')</div></div><div class="stat"><div class="v">' + prs.length + '</div><div class="k">New bests</div></div></div>' +
     (prs.length ? '<div class="section"><h3 style="font-size:20px">New bests</h3>' + prs.map(function (p) { var ex = BYNAME[p.n]; return '<div class="lrow"><span>' + esc(p.n) + '</span><span class="num up" style="color:var(--up);font-size:18px">' + (isBW(ex) ? Math.round(p.best) + ' reps' : toDisp(p.best, unit()) + ' ' + uLabel()) + '</span></div>'; }).join('') + '</div>' : '') +
@@ -932,6 +943,8 @@ document.addEventListener('click', function (ev) {
   if (a.indexOf('nh') === 0 && typeof nativeClick === 'function' && nativeClick(a, d)) return;
   if (typeof timerClick === 'function' && timerClick(a, d)) return;
   if (a === 'stretchAdd') { stretchAdd(d.k, d.w); return; }
+  if (typeof insightsClick === 'function' && insightsClick(a, d)) return;
+  if (a === 'ssToggle') { var sx = S.draft.ex[+d.x]; sx.ss = !sx.ss; persist({ draft: true }); render(); toast(sx.ss ? 'Superset: no rest between these two' : 'Superset removed'); return; }
   if ((a.indexOf('wk') === 0 || a === 'wpStart') && typeof plannerClick === 'function' && plannerClick(a, d)) return;
   if ((a === 'pushOn' || a === 'pushTipNo') && pushClick(a)) return;
   if (a === 'guestGo') { guestStart(); return; }

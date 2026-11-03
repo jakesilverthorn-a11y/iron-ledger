@@ -40,6 +40,19 @@ function hApplyWeights() {
     else { b.log.push({ t: e.at, w: w, h: 1 }); ch = true; }
   });
   if (ch) { b.log.sort(function (x, y) { return x.t - y.t; }); b.w = b.log[b.log.length - 1].w; }
+  // waist measurements from Health go into the measurements log the same way
+  if (!Array.isArray(b.meas)) b.meas = [];
+  var mgone = b.mdel || [];
+  hEntries().forEach(function (e) {
+    if (e.waist == null) return;
+    var dk = dayKey(e.at); if (mgone.indexOf(dk) >= 0) return;
+    var same = b.meas.filter(function (x) { return dayKey(x.t) === dk && x.waist != null; });
+    if (same.some(function (x) { return !x.h; })) return;
+    var v = Math.round(e.waist * 10) / 10;
+    if (same[0]) { if (Math.abs(same[0].waist - v) > 0.05) { same[0].waist = v; ch = true; } }
+    else { b.meas.push({ t: e.at, waist: v, h: 1 }); ch = true; }
+  });
+  if (ch) b.meas.sort(function (x, y) { return x.t - y.t; });
   return ch;
 }
 

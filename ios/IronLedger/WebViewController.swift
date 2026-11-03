@@ -56,6 +56,23 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
 
         NotificationCenter.default.addObserver(self, selector: #selector(appBecameActive),
                                                name: UIApplication.didBecomeActiveNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(quickAction),
+                                               name: QuickAction.notification, object: nil)
+    }
+
+    private var pageReady = false
+
+    @objc private func quickAction() { deliverQuickAction() }
+
+    /// Hands a pending Home Screen quick action to the page once it has loaded.
+    private func deliverQuickAction() {
+        guard pageReady, let action = QuickAction.pending else { return }
+        QuickAction.pending = nil
+        let safe = action.filter { $0.isLetter }
+        // give the app a moment to finish starting up (sign-in, loading your data)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+            self.webView.evaluateJavaScript("window.ILNativeEvent && window.ILNativeEvent('quick', '\(safe)')", completionHandler: nil)
+        }
     }
 
     @objc private func appBecameActive() {
@@ -121,7 +138,11 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
         return nil
     }
 
-    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { offlineView.isHidden = true }
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        offlineView.isHidden = true
+        pageReady = true
+        deliverQuickAction()
+    }
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
         showOffline(error)
     }

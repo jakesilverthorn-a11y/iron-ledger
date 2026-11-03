@@ -20,6 +20,14 @@ final class NativeBridge {
             let days = max(1, min(400, (args["days"] as? NSNumber)?.intValue ?? 7))
             health.readDays(days) { rows in self.reply(id, ["days": rows]) }
 
+        case "saveWorkout":
+            let start = Date(timeIntervalSince1970: ((args["start"] as? NSNumber)?.doubleValue ?? 0) / 1000)
+            let end = Date(timeIntervalSince1970: ((args["end"] as? NSNumber)?.doubleValue ?? 0) / 1000)
+            let kcal = (args["kcal"] as? NSNumber)?.doubleValue ?? 0
+            health.saveWorkout(start: start, end: end, kcal: kcal) { error in
+                if let error = error { self.reply(id, nil, error: error) } else { self.reply(id, ["ok": true]) }
+            }
+
         case "restStart":
             let seconds = (args["sec"] as? NSNumber)?.doubleValue ?? 90
             let body = args["body"] as? String ?? "Time for your next set."

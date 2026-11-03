@@ -13,7 +13,7 @@ final class HealthReader {
     private var readTypes: Set<HKObjectType> {
         var types = Set<HKObjectType>()
         let ids: [HKQuantityTypeIdentifier] = [.bodyMass, .bodyFatPercentage, .restingHeartRate,
-                                               .heartRateVariabilitySDNN, .stepCount, .activeEnergyBurned]
+                                               .heartRateVariabilitySDNN, .stepCount, .activeEnergyBurned, .waistCircumference]
         for id in ids {
             if let t = HKObjectType.quantityType(forIdentifier: id) { types.insert(t) }
         }
@@ -21,9 +21,16 @@ final class HealthReader {
         return types
     }
 
+    /// Written to Health: your finished workouts (strength training) and the calories they burned.
+    private var shareTypes: Set<HKSampleType> {
+        var types: Set<HKSampleType> = [HKObjectType.workoutType()]
+        if let kcal = HKObjectType.quantityType(forIdentifier: .activeEnergyBurned) { types.insert(kcal) }
+        return types
+    }
+
     func requestAuthorization(_ done: @escaping (String?) -> Void) {
         guard Self.available else { done("Apple Health isn't available on this device."); return }
-        store.requestAuthorization(toShare: nil, read: readTypes) { ok, error in
+        store.requestAuthorization(toShare: shareTypes, read: readTypes) { ok, error in
             done(ok ? nil : (error?.localizedDescription ?? "Apple Health access was not given."))
         }
     }
@@ -55,6 +62,7 @@ final class HealthReader {
         // the last reading of each day
         lastOfDay(.bodyMass, .pound(), "wlb", scale: 1, start, group)
         lastOfDay(.bodyFatPercentage, .percent(), "bf", scale: 100, start, group)
+        lastOfDay(.waistCircumference, .meterUnit(with: .centi), "waist", scale: 1, start, group)
         // sleep, counted for the morning you woke up
         sleepByNight(start, group)
 
@@ -147,5 +155,34 @@ final class HealthReader {
             group.leave()
         }
         store.execute(query)
+    }
+
+    // MARK: writing a finished workout (shows in Fitness and counts toward your Activity rings)
+
+    func saveWorkout(start: Date, end: Date, kcal: Double, done: @escaping (String?) -> Void) {
+        guard Self.available else { done("Apple Health isn't available on this device."); return }
+        guard end > start else { done("The workout has no length."); return }
+        store.requestAuthorization(toShare: shareTypes, read: readTypes) { _, _ in
+            guard self.store.authorizationStatus(for: HKObjectType.workoutType()) == .sharingAuthorized else {
+                done("Saving workouts to Apple Health is turned off. Turn it on in Settings → Health → Data Access & Devices → Iron Ledger.")
+                return
+            }
+            let config = HKWorkoutConfiguration()
+            config.activityType = .traditionalStrengthTraining
+            config.locationType = .indoor
+            let builder = HKWorkoutBuilder(healthStore: self.store, configuration: config, device: .local())
+            builder.beginCollection(withStart: start) { ok, error in
+                guard ok else { done(error?.localizedDescription ?? "Could not start the workout record."); return }
+                var samples: [HKSample] = []
+                if kcal > 0, let type = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned) {
+                    samples.append(HKQuantitySample(type: type, quantity: HKQuantity(unit: .kilocalorie(), doubleValue: kcal), start: start, end: end))
+                }
+                builder.add(samples) { _, _ in
+                    builder.endCollection(withEnd: end) { _, _ in
+                        builder.finishWorkout { _, error in done(error?.localizedDescription) }
+                    }
+                }
+            }
+        }
     }
 }

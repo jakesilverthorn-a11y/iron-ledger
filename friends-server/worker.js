@@ -104,7 +104,7 @@ function hNum(x) {
 const inR = (v, lo, hi) => v != null && v >= lo && v <= hi ? Math.round(v * 100) / 100 : null;
 /* field names as people might type them ("Weight", "Resting Heart Rate", "active_energy"…) -> w, bf, rhr, hrv, steps, kcal, sleep */
 const HALIAS = { w: 'w', weight: 'w', bodymass: 'w', bodyweight: 'w', bf: 'bf', bodyfat: 'bf', bodyfatpercentage: 'bf', fat: 'bf', rhr: 'rhr', restingheartrate: 'rhr', restinghr: 'rhr', resting: 'rhr',
-  hrv: 'hrv', heartratevariability: 'hrv', variability: 'hrv', steps: 'steps', step: 'steps', stepcount: 'steps', kcal: 'kcal', activeenergy: 'kcal', activecalories: 'kcal', calories: 'kcal', energy: 'kcal', active: 'kcal', sleep: 'sleep', sleepanalysis: 'sleep', asleep: 'sleep' };
+  hrv: 'hrv', heartratevariability: 'hrv', variability: 'hrv', steps: 'steps', step: 'steps', stepcount: 'steps', kcal: 'kcal', activeenergy: 'kcal', activecalories: 'kcal', calories: 'kcal', energy: 'kcal', active: 'kcal', sleep: 'sleep', sleepanalysis: 'sleep', asleep: 'sleep', waist: 'waist', waistcircumference: 'waist' };
 function hFields(b) {
   const o = {};
   Object.keys(b || {}).forEach(k => {
@@ -116,7 +116,8 @@ function hFields(b) {
 }
 function hParse(b) {
   const raw = {}, o = {};
-  ['w', 'bf', 'rhr', 'hrv', 'steps', 'kcal', 'sleep'].forEach(k => { if (b[k] != null && String(b[k]).trim() !== '') raw[k] = String(b[k]).slice(0, 60); });
+  ['w', 'bf', 'rhr', 'hrv', 'steps', 'kcal', 'sleep', 'waist'].forEach(k => { if (b[k] != null && String(b[k]).trim() !== '') raw[k] = String(b[k]).slice(0, 60); });
+  if (raw.waist) { let v = hNum(raw.waist); if (v != null) { if (/\bin|inch|"/i.test(raw.waist)) v *= 2.54; else if (/\bm\b/.test(raw.waist) && v < 3) v *= 100; } o.waist = inR(v, 40, 250); }
   if (raw.w) {
     let v = hNum(raw.w); const u = /kg|kilo/i.test(raw.w) ? 'kg' : /lb|pound/i.test(raw.w) ? 'lb' : /\bst\b|stone/i.test(raw.w) ? 'st' : '';
     if (u === 'st') v = v * 14;
@@ -243,6 +244,7 @@ export default {
             if (!x || typeof x !== 'object' || !/^\d{4}-\d{2}-\d{2}$/.test(String(x.d))) return;
             const f = {}; if (x.wlb != null) f.w = x.wlb + ' lb'; if (x.bf != null) f.bf = x.bf + '%';
             ['rhr', 'hrv', 'steps', 'kcal', 'sleep'].forEach(k => { if (x[k] != null) f[k] = String(x[k]); });
+            if (x.waist != null) f.waist = x.waist + ' cm';
             const { o } = hParse(f); if (!Object.keys(o).length) return;
             const t = Math.min(now + 3600e3, Math.max(now - 450 * DAYS * 1000, +x.t || now));
             add.push(Object.assign({ at: t, d: String(x.d), src: 'app' }, o));
