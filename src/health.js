@@ -94,7 +94,7 @@ function healthSettingsCard() {
   var last = hLast();
   var app = typeof NATIVE !== 'undefined' && NATIVE.on;
   var status = !healthOn() ? 'Sign in to connect Apple Health.' : last ? 'Last update ' + hAgo(last.at) + '.' : app ? 'Not connected yet. Iron Ledger can read your weight, activity, sleep and heart numbers from Health.' : 'Not connected yet. A Shortcut on your iPhone sends your weight, activity, sleep and heart numbers here once a day.';
-  return '<div class="section"><h2>Apple Health</h2><div class="card section" style="gap:10px"><div class="note">' + esc(status) + '</div>' +
+  return '<div class="section"><div class="card section" style="gap:10px"><div class="note">' + esc(status) + '</div>' +
     (healthOn() ? '<button class="btn block' + (last ? '' : ' primary') + '" data-act="hkSetup">' + (last ? 'Apple Health settings' : 'Connect Apple Health') + '</button>' : '') + '</div></div>';
 }
 function hTile(label, val, sub) { return '<div class="htile"><div class="mtag">' + label + '</div><div class="num" style="font-size:24px">' + val + '</div>' + (sub ? '<div class="xmeta">' + sub + '</div>' : '') + '</div>'; }

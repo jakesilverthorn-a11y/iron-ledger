@@ -19,7 +19,7 @@ function normSettings(st) {
   if (!Array.isArray(st.injuries)) st.injuries = [];
   if (!Array.isArray(st.saved)) st.saved = [];
   if (!(st.weekGoal >= 1 && st.weekGoal <= 7)) st.weekGoal = 3;
-  if (typeof st.lift !== 'boolean') st.lift = !!window.claude;
+  delete st.lift;
   delete st.equip;
   return st;
 }
@@ -459,7 +459,7 @@ function recoveryHTML(compact) {
   }).join('');
   return (typeof readinessNote === 'function' ? readinessNote() : '') + bodyFigure(rec, any) +
     '<div class="rleg"><span><i class="dot r-0"></i>Fresh</span><span><i class="dot r-1"></i>Recovering</span><span><i class="dot r-2"></i>Tired</span></div>' +
-    (any ? '<div class="rlist">' + rows + '</div>' : '<div class="note" style="text-align:center">Finish a workout and this map shows which muscles need rest.</div>') +
+    (any ? (compact ? '<div class="rlist">' + rows + '</div>' : '<details class="rdet"><summary>Muscle by muscle</summary><div class="rlist">' + rows + '</div></details>') : '<div class="note" style="text-align:center">Finish a workout and this map shows which muscles need rest.</div>') +
     (compact ? '' : '<div class="note">Estimated from the sets you logged: bigger muscles and harder sessions take longer to recover. The time shown is roughly when the muscle is ready to train hard again.</div>');
 }
 
@@ -490,7 +490,7 @@ function viewTrain() {
     '<div><span class="field-label">Quick picks</span><div class="chips">' + PRESETS.map(function (p) { return '<button class="chip" data-act="preset" data-i="' + PRESETS.indexOf(p) + '">' + p.n + '</button>'; }).join('') + '</div></div>' +
     '<div><span class="field-label">Muscle groups</span>' + groupChips(sel, 'toggleGroup') + '</div>' +
     '<div><span class="field-label">Goal</span><div class="seg" role="group" aria-label="Goal">' + Object.keys(GOALS).map(function (k) { return '<button aria-pressed="' + (st.goal === k) + '" data-act="goal" data-k="' + k + '">' + GOALS[k].n + '</button>'; }).join('') + '</div></div>' +
-    '<div><span class="field-label">Where are you training?</span><div class="seg" role="group" aria-label="Where you train"><button aria-pressed="' + (st.profile === 'gym') + '" data-act="profile" data-k="gym">Gym</button><button aria-pressed="' + (st.profile === 'home') + '" data-act="profile" data-k="home">Home</button></div><div class="note" style="margin-top:8px">' + gl.length + ' of ' + ITEMS.length + ' equipment types ticked · <button style="color:var(--accent-ink);font-weight:600" data-act="tab" data-t="settings">Edit gear</button></div></div>' +
+    '<div><span class="field-label">Where are you training?</span><div class="seg" role="group" aria-label="Where you train"><button aria-pressed="' + (st.profile === 'gym') + '" data-act="profile" data-k="gym">Gym</button><button aria-pressed="' + (st.profile === 'home') + '" data-act="profile" data-k="home">Home</button></div><div class="note" style="margin-top:8px">' + gl.length + ' of ' + ITEMS.length + ' equipment types ticked · <button style="color:var(--accent-ink);font-weight:600" data-act="gearEdit">Edit gear</button></div></div>' +
     (st.injuries.length ? '<div class="note">🩹 Working around: ' + st.injuries.map(function (j) { return injName(j.a).toLowerCase() + (j.s === 'avoid' ? ' (avoid)' : ' (careful)'); }).join(', ') + '. <button class="linkbtn accent" data-act="tab" data-t="settings">Edit</button></div>' : '') +
     '<button class="btn primary block" data-act="generate"' + (sel.length ? '' : ' disabled') + '>' + (U.plan ? 'Rebuild workout' : 'Build my workout') + '</button></div>';
   var recCard = '<div class="card section" style="gap:12px"><div class="row"><h2 class="grow" style="font-size:24px">Recovery</h2>' + (realWorkouts().length ? '<button class="btn small" data-act="trainFresh">Train fresh muscles</button>' : '') + '</div>' + recoveryHTML(false) + '</div>';
@@ -499,7 +499,9 @@ function viewTrain() {
   var rw = realWorkouts().slice(-3).reverse();
   if (rw.length) recent = '<div class="section"><h2>Recent</h2><div class="card" style="padding:0 14px">' + rw.map(histRow).join('') + '</div></div>';
   var nudge = (dbState === 'local' && realWorkouts().length >= 3 && Date.now() - (st.lastBackup || 0) > 14 * DAY) ? '<button class="banner" style="width:100%;text-align:left" data-act="tab" data-t="settings"><span><b>Back up your workouts</b> · they live only on this phone. Tap to save a backup file.</span></button>' : '';
-  return '<div class="screen">' + head + nudge + weekCard() + weekPlanCard() + tgJoinCard() + savedWorkoutsHTML() + recCard + builder + plan + '<button class="btn block" data-act="startEmpty">Start an empty workout</button>' + recent + '</div>';
+  var nextWk = typeof wkPlan === 'function' && wkPlan() && wkPlan().ws !== weekStart(Date.now()) ? weekPlanCard() : '';
+  return '<div class="screen">' + head + nudge + '<div class="cols"><div class="col">' + weekCard() + nextWk + tgJoinCard() + builder + plan + '<button class="btn block" data-act="startEmpty">Start an empty workout</button></div>' +
+    '<div class="col">' + recCard + savedWorkoutsHTML() + recent + '</div></div></div>';
 }
 function planHTML() {
   var p = U.plan, items = p.items;
@@ -537,11 +539,11 @@ function viewWorkout() {
         '<div class="' + (s.done ? 'done' : '') + '"><input inputmode="numeric" data-k="r" data-x="' + xi + '" data-s="' + si + '" class="' + (s.sug && !s.done ? 'sug' : '') + '" value="' + (s.r == null ? '' : s.r) + '" placeholder="0" aria-label="Set ' + (si + 1) + ' reps"></div>' +
         '<button class="ck' + (s.done ? ' on' : '') + '" data-act="toggleSet" data-x="' + xi + '" data-s="' + si + '" aria-pressed="' + !!s.done + '" aria-label="Mark set ' + (si + 1) + ' done">' + ico('check') + '</button>';
     });
-    return (ssLab[xi] ? '<div class="sslab">Superset ' + ssLab[xi] + (e.ss ? ' · no rest, go straight to the next' : ' · then rest') + '</div>' : '') + '<div class="xcard' + (ssLab[xi] ? ' ss' : '') + '"><div class="xcard-head"><button class="thumb" data-act="openEx" data-n="' + esc(e.n) + '" aria-label="View ' + esc(e.n) + '">' + demoHTML(ex, false) + '</button><div class="grow"><button class="xname xlink" data-act="openEx" data-n="' + esc(e.n) + '">' + esc(e.n) + ' <span class="info-i" aria-hidden="true">i</span></button><div class="target">Target ' + e.sets.filter(function (q) { return !q.wu; }).length + ' × ' + e.lo + '–' + e.hi + ' · <button class="linkbtn" data-act="restCycle" data-x="' + xi + '" aria-label="Change rest time">rest ' + fmtDur(e.rest) + '</button>' + (isBarbell(ex) ? ' · <button class="linkbtn accent" data-act="plates" data-x="' + xi + '">Plates</button>' : '') + '</div>' + injBadge(ex) + (li.s ? '<button class="loadhint" data-act="loadInfo" data-n="' + esc(e.n) + '">⚖️ ' + esc(li.s) + '</button>' : '') + (S.settings.notes[e.n] ? '<div class="xnote">' + esc(S.settings.notes[e.n]) + '</div>' : '') + '</div><button class="icon-btn" data-act="swapEx" data-x="' + xi + '" aria-label="Swap ' + esc(e.n) + ' for a random similar exercise">' + ico('shuffle') + '</button><button class="icon-btn" data-act="altEx" data-x="' + xi + '" aria-label="Choose a different exercise">' + ico('pick') + '</button><button class="icon-btn" data-act="rmEx" data-x="' + xi + '" aria-label="Remove ' + esc(e.n) + '">' + ico('x') + '</button></div>' +
-      '<div class="sets">' + rows + '</div>' + (tmd ? '<button class="btn small block" data-act="holdGo" data-x="' + xi + '">▶ Hold timer</button>' : '') + '<div class="row"><button class="btn small ghost grow" data-act="addSet" data-x="' + xi + '" aria-label="Add a set">+ Set</button>' + (!bw && !e.sets.some(function (q) { return q.wu; }) && !e.sets.some(function (q) { return q.done; }) ? '<button class="btn small ghost grow" data-act="warmup" data-x="' + xi + '">+ Warm-up</button>' : '') + (e.sets.length > 1 ? '<button class="btn small ghost grow" data-act="rmSet" data-x="' + xi + '" aria-label="Remove a set">– Set</button>' : '') + (xi < d.ex.length - 1 ? '<button class="btn small ghost grow" data-act="ssToggle" data-x="' + xi + '" aria-pressed="' + !!e.ss + '">' + (e.ss ? '✓ Superset' : '⇄ Superset') + '</button>' : '') + (!tmd && ex.c !== 'stretching' ? '<button class="btn small ghost grow" data-act="tempoGo" data-x="' + xi + '" aria-label="Tempo timer">⏱ Tempo</button>' : '') + '</div></div>';
+    return '<div class="wkc">' + (ssLab[xi] ? '<div class="sslab">Superset ' + ssLab[xi] + (e.ss ? ' · no rest, go straight to the next' : ' · then rest') + '</div>' : '') + '<div class="xcard' + (ssLab[xi] ? ' ss' : '') + '"><div class="xcard-head"><button class="thumb" data-act="openEx" data-n="' + esc(e.n) + '" aria-label="View ' + esc(e.n) + '">' + demoHTML(ex, false) + '</button><div class="grow"><button class="xname xlink" data-act="openEx" data-n="' + esc(e.n) + '">' + esc(e.n) + ' <span class="info-i" aria-hidden="true">i</span></button><div class="target">Target ' + e.sets.filter(function (q) { return !q.wu; }).length + ' × ' + e.lo + '–' + e.hi + ' · <button class="linkbtn" data-act="restCycle" data-x="' + xi + '" aria-label="Change rest time">rest ' + fmtDur(e.rest) + '</button>' + (isBarbell(ex) ? ' · <button class="linkbtn accent" data-act="plates" data-x="' + xi + '">Plates</button>' : '') + '</div>' + injBadge(ex) + (li.s ? '<button class="loadhint" data-act="loadInfo" data-n="' + esc(e.n) + '">⚖️ ' + esc(li.s) + '</button>' : '') + (S.settings.notes[e.n] ? '<div class="xnote">' + esc(S.settings.notes[e.n]) + '</div>' : '') + '</div><button class="icon-btn" data-act="swapEx" data-x="' + xi + '" aria-label="Swap ' + esc(e.n) + ' for a random similar exercise">' + ico('shuffle') + '</button><button class="icon-btn" data-act="altEx" data-x="' + xi + '" aria-label="Choose a different exercise">' + ico('pick') + '</button><button class="icon-btn" data-act="rmEx" data-x="' + xi + '" aria-label="Remove ' + esc(e.n) + '">' + ico('x') + '</button></div>' +
+      '<div class="sets">' + rows + '</div>' + (tmd ? '<button class="btn small block" data-act="holdGo" data-x="' + xi + '">▶ Hold timer</button>' : '') + '<div class="row"><button class="btn small ghost grow" data-act="addSet" data-x="' + xi + '" aria-label="Add a set">+ Set</button>' + (!bw && !e.sets.some(function (q) { return q.wu; }) && !e.sets.some(function (q) { return q.done; }) ? '<button class="btn small ghost grow" data-act="warmup" data-x="' + xi + '">+ Warm-up</button>' : '') + (e.sets.length > 1 ? '<button class="btn small ghost grow" data-act="rmSet" data-x="' + xi + '" aria-label="Remove a set">– Set</button>' : '') + (xi < d.ex.length - 1 ? '<button class="btn small ghost grow" data-act="ssToggle" data-x="' + xi + '" aria-pressed="' + !!e.ss + '">' + (e.ss ? '✓ Superset' : '⇄ Superset') + '</button>' : '') + (!tmd && ex.c !== 'stretching' ? '<button class="btn small ghost grow" data-act="tempoGo" data-x="' + xi + '" aria-label="Tempo timer">⏱ Tempo</button>' : '') + '</div></div></div>';
   }).join('');
   return '<div class="screen" style="gap:14px;padding-top:0"><div class="wk-top"><div><div class="clock" id="clock">0:00</div></div><div class="grow note" id="wk-stats">' + totalDone + (totalDone === 1 ? ' set' : ' sets') + ' · ' + volDisp(vol) + ' ' + unitL + '</div><button class="btn primary small" data-act="finish">Finish</button></div>' + restAlertTip() + tgBox() +
-    (cards || '<div class="empty"><h3>Empty workout</h3>Add your first exercise.</div>') +
+    (cards ? '<div class="wkgrid">' + cards + '</div>' : '<div class="empty"><h3>Empty workout</h3>Add your first exercise.</div>') +
     tgWorkoutButtons() +
     stretchButtons('draft', d.ex) +
     '<button class="btn block" data-act="pickDraft">' + ico('plus').replace('<svg', '<svg width="18" height="18"') + ' Add exercise</button>' +
@@ -604,7 +606,7 @@ function progMuscles(W) {
     return '<button class="gcard" data-act="openGroup" data-g="' + r.g + '"><div><div class="gn">' + r.g + ' <span class="faint" style="font-weight:500;font-size:13px">· ' + tierOf(r.cur.score) + '</span></div>' + deltaHTML(r.d, ' pts') + '</div><div class="gs">' + r.cur.score + '</div>' + spark(r.ser, 50) + '</button>';
   }).join('');
   var idxLine = idx == null ? '' : '<div class="card row" style="gap:12px"><div class="grow"><div class="xname">Progress vs. your own start</div><div class="xmeta">100 is where you began on each lift</div></div><div class="num" style="font-size:30px">' + Math.round(idx) + '</div>' + deltaHTML(idx30 == null ? null : idx - idx30, '') + '</div>';
-  return hero + weeklySetsCard() + stalledCard(allHistories(realWorkouts())) + '<div class="section"><h2>Muscle groups</h2>' + cards + '</div>' + idxLine + '<div class="note">Rank compares your best set of the last 4 weeks with strength standards for lifters of your sex and size, then averages the lifts for each muscle. Dumbbell lifts: enter the weight of one dumbbell. It is an estimate against people who train, not the general public.</div>';
+  return '<div class="cols"><div class="col">' + hero + weeklySetsCard() + '</div><div class="col">' + stalledCard(allHistories(realWorkouts())) + '<div class="section"><h2>Muscle groups</h2>' + cards + '</div>' + idxLine + '</div></div>' + '<div class="note">Rank compares your best set of the last 4 weeks with strength standards for lifters of your sex and size, then averages the lifts for each muscle. Dumbbell lifts: enter the weight of one dumbbell. It is an estimate against people who train, not the general public.</div>';
 }
 function progMusclesIndex(W) {
   var H = allHistories(W), now = Date.now(), ov = overallScore(H, now), ov30 = overallScore(H, now - 30 * DAY);
@@ -765,20 +767,21 @@ function viewSettings() {
   var srvAcct = dbCol && dbCol.srv;
   var status = srvAcct ? (dbState === 'synced' ? 'Saved to your account and this phone.' : dbState === 'error' ? 'Could not reach your account just now. Saved on this phone and retrying.' : 'Connecting to your account…') : dbState === 'synced' ? 'Saved to your Claude account and this device.' : dbState === 'error' ? 'Could not reach your account just now. Saved on this device and retrying.' : dbState === 'pending' ? 'Connecting…' : 'Saved on this device only. Back up regularly.';
   var acctCard = acctMode() && srvOn() ? '<div class="card section"><div class="row" style="gap:12px"><div class="grow"><div class="xname">' + esc(SRV.name) + '</div><div class="note">Signed in. Your workouts are saved to this account. Sign in with the same username on another phone to see them there.</div></div><button class="btn small" data-act="srvOut">Sign out</button></div></div>' : '';
-  return '<div class="screen"><div class="screen-head"><h1>Settings</h1></div>' + acctCard + (typeof healthSettingsCard === 'function' ? healthSettingsCard() : '') +
-    '<div class="section"><span class="field-label">Weight units</span><div class="seg" role="group"><button aria-pressed="' + (st.unit === 'lb') + '" data-act="unit" data-k="lb">Pounds</button><button aria-pressed="' + (st.unit === 'kg') + '" data-act="unit" data-k="kg">Kilograms</button></div></div>' +
-    injurySettingsHTML() + restAlertCard() +
-    '<div class="section"><span class="field-label">Rest timer chime</span><div class="seg" role="group" aria-label="Rest timer chime"><button aria-pressed="' + (st.chime !== false) + '" data-act="chimeOpt" data-k="on">On</button><button aria-pressed="' + (st.chime === false) + '" data-act="chimeOpt" data-k="off">Off</button></div><div class="note">A short chime when rest is over, through your headphones or speaker. Keep the app open on screen (it stays awake during workouts); iPhones pause web apps that are in the background.</div></div>' +
-    '<div class="section"><span class="field-label">Bottom corner</span><div class="seg" role="group" aria-label="Bottom corner space"><button aria-pressed="' + (st.lift !== false) + '" data-act="liftOpt" data-k="on">Keep clear</button><button aria-pressed="' + (st.lift === false) + '" data-act="liftOpt" data-k="off">Off</button></div><div class="note">Leaves room under the tab bar so a hosting badge (like "Powered by Netlify") cannot cover buttons.</div></div>' +
-    '<div class="section"><h2>Your body</h2>' + bodyCard() + '</div>' +
-    '<div class="section"><h2>Equipment</h2><div class="seg" role="group" aria-label="Which place to edit"><button aria-pressed="' + (st.profile === 'gym') + '" data-act="profile" data-k="gym">Gym</button><button aria-pressed="' + (st.profile === 'home') + '" data-act="profile" data-k="home">Home</button></div><div class="note">Tick what is available at your ' + profName().toLowerCase() + '. Built workouts only use ticked equipment; the Train tab switches between Gym and Home.</div>' + gearGrid() + '</div>' +
-    '<div class="section"><span class="field-label">Exercise difficulty</span><div class="seg" role="group"><button aria-pressed="' + (st.level === 'beginner') + '" data-act="level" data-k="beginner">Beginner</button><button aria-pressed="' + (st.level === 'intermediate') + '" data-act="level" data-k="intermediate">Intermediate</button><button aria-pressed="' + (st.level === 'expert') + '" data-act="level" data-k="expert">Advanced</button></div></div>' +
-    '<div class="section"><h2>Your data</h2><div class="note">' + status + '</div>' +
+  return '<div class="screen"><div class="screen-head"><h1>Settings</h1></div>' +
+    '<div class="cols"><div class="col">' +
+    (acctCard ? '<div class="sgroup"><div class="sghead"><h2>Account</h2></div>' + acctCard + '</div>' : '') +
+    '<div class="sgroup"><div class="sghead"><h2>You</h2><div class="note">Used for your strength rank and calorie targets.</div></div>' + '<div class="section">' + bodyCard() + '</div>' + '<div class="section"><span class="field-label">Weight units</span><div class="seg" role="group"><button aria-pressed="' + (st.unit === 'lb') + '" data-act="unit" data-k="lb">Pounds</button><button aria-pressed="' + (st.unit === 'kg') + '" data-act="unit" data-k="kg">Kilograms</button></div></div>' + '</div>' +
+    '<div class="sgroup"><div class="sghead"><h2>Training</h2><div class="note">What the workout builder may use.</div></div>' + '<div class="section"><h2>Equipment</h2><div class="seg" role="group" aria-label="Which place to edit"><button aria-pressed="' + (st.profile === 'gym') + '" data-act="profile" data-k="gym">Gym</button><button aria-pressed="' + (st.profile === 'home') + '" data-act="profile" data-k="home">Home</button></div><div class="note">Tick what is available at your ' + profName().toLowerCase() + '. Built workouts only use ticked equipment; the Train tab switches between Gym and Home.</div><details class="card gdet"' + (U.gearOpen ? ' open' : '') + '><summary>Edit ' + profName().toLowerCase() + ' equipment · ' + gearList().length + ' of ' + ITEMS.length + ' ticked</summary>' + gearGrid() + '</details></div>' + '<div class="section"><span class="field-label">Exercise difficulty</span><div class="seg" role="group"><button aria-pressed="' + (st.level === 'beginner') + '" data-act="level" data-k="beginner">Beginner</button><button aria-pressed="' + (st.level === 'intermediate') + '" data-act="level" data-k="intermediate">Intermediate</button><button aria-pressed="' + (st.level === 'expert') + '" data-act="level" data-k="expert">Advanced</button></div></div>' + injurySettingsHTML() + '</div>' +
+    '</div><div class="col">' +
+    '<div class="sgroup"><div class="sghead"><h2>Workout alerts</h2></div>' + '<div class="section"><span class="field-label">Rest timer chime</span><div class="seg" role="group" aria-label="Rest timer chime"><button aria-pressed="' + (st.chime !== false) + '" data-act="chimeOpt" data-k="on">On</button><button aria-pressed="' + (st.chime === false) + '" data-act="chimeOpt" data-k="off">Off</button></div><div class="note">A short chime when rest is over, through your headphones or speaker. Keep the app open on screen (it stays awake during workouts); iPhones pause web apps that are in the background.</div></div>' + restAlertCard() + '<div class="section"><span class="field-label">Voice cues for timers</span><div class="seg" role="group" aria-label="Voice cues"><button aria-pressed="' + (st.voice !== false) + '" data-act="voiceOpt" data-k="on">On</button><button aria-pressed="' + (st.voice === false) + '" data-act="voiceOpt" data-k="off">Off</button></div><div class="note">The hold and tempo timers say "go", "down" and "up" out loud.</div></div>' + '</div>' +
+    ((typeof healthSettingsCard === 'function' && healthSettingsCard()) ? '<div class="sgroup"><div class="sghead"><h2>Apple Health</h2></div>' + healthSettingsCard() + '</div>' : '') +
+    '<div class="sgroup"><div class="sghead"><h2>Your data</h2></div>' + '<div class="section"><div class="note">' + status + '</div>' +
     '<div class="card section" style="gap:10px"><div class="xname">Backup file</div><div class="note">' + (st.lastBackup ? 'Last file saved ' + fmtDateLong(st.lastBackup) + '. ' : 'No backup file saved yet. ') + 'One file with everything: workouts, equipment, body stats. On iPhone it opens the share sheet. Choose <b>Save to Files</b> (iCloud Drive, or Google Drive if you have the app), or send it to yourself.</div><button class="btn primary block" data-act="exportFile">Save backup file</button><label class="btn block" for="restorefile" style="cursor:pointer">Restore from a backup file…</label><input type="file" id="restorefile" accept=".json,application/json,text/plain" hidden></div>' +
     '<div class="card section" style="gap:10px"><div class="xname">Spreadsheet</div><div class="note">Every set you have logged, ready for Excel, Numbers or Google Sheets.</div><button class="btn block" data-act="exportCsv">Export to spreadsheet (CSV)</button></div>' +
     '<details class="card"><summary style="cursor:pointer;font-weight:600">Copy as text instead</summary><div class="section" style="gap:10px;margin-top:10px"><button class="btn block" data-act="exportCopy">Copy backup text</button><textarea class="input" id="restore" rows="3" style="padding:10px 14px;min-height:80px" placeholder="Paste backup text here to restore"></textarea><button class="btn block" data-act="restore">Restore from pasted text</button></div></details>' +
-    (U.confirm === 'wipe' ? '<div class="banner"><span>Delete every workout and setting?</span><span class="row"><button class="btn small danger" data-act="wipe2">Delete all</button><button class="btn small" data-act="noconfirm">Keep</button></span></div>' : '<button class="btn block ghost danger" data-act="wipe">Delete all data</button>') + '</div>' +
-    '<div class="note">Strength is estimated with the Epley formula: weight × (1 + reps ÷ 30). Ranks compare that with strength standards from strengthlevel.com, set a little easier (most at Beginner and Novice) because those tables come from keen lifters logging their own bests. Exercise demos come from the open Free Exercise DB (public domain).</div></div>';
+    (U.confirm === 'wipe' ? '<div class="banner"><span>Delete every workout and setting?</span><span class="row"><button class="btn small danger" data-act="wipe2">Delete all</button><button class="btn small" data-act="noconfirm">Keep</button></span></div>' : '<button class="btn block ghost danger" data-act="wipe">Delete all data</button>') + '</div>' + '</div>' +
+    '</div></div>' +
+    '<div class="note">Strength is estimated with the Epley formula: weight × (1 + reps ÷ 30). Ranks compare that with strength standards from strengthlevel.com, set a little easier (most at Beginner and Novice) because those tables come from keen lifters logging their own bests. Exercise demos come from the open Free Exercise DB (public domain).</div>'
 }
 
 /* ===== timers ===== */
@@ -943,6 +946,8 @@ document.addEventListener('click', function (ev) {
   if (a.indexOf('nh') === 0 && typeof nativeClick === 'function' && nativeClick(a, d)) return;
   if (typeof timerClick === 'function' && timerClick(a, d)) return;
   if (a === 'stretchAdd') { stretchAdd(d.k, d.w); return; }
+  if (a === 'gearEdit') { U.gearOpen = true; U.tab = 'settings'; render(); var gd = $('.gdet'); if (gd) gd.scrollIntoView({ block: 'start' }); return; }
+  if (a === 'voiceOpt') { st.voice = d.k === 'on'; persist({ settings: true }); render(); return; }
   if (typeof insightsClick === 'function' && insightsClick(a, d)) return;
   if (a === 'ssToggle') { var sx = S.draft.ex[+d.x]; sx.ss = !sx.ss; persist({ draft: true }); render(); toast(sx.ss ? 'Superset: no rest between these two' : 'Superset removed'); return; }
   if ((a.indexOf('wk') === 0 || a === 'wpStart') && typeof plannerClick === 'function' && plannerClick(a, d)) return;
@@ -1039,6 +1044,7 @@ document.addEventListener('click', function (ev) {
     st.groups = fresh.slice(); persist({ settings: true }); render(); toast('Selected ' + fresh.length + ' fresh muscle group' + (fresh.length > 1 ? 's' : '')); return;
   }
   if (a === 'profile') { st.profile = d.k; U.plan = null; persist({ settings: true }); render(); return; }
+  if (a === 'gear' || a === 'gearAll' || a === 'gearNone') U.gearOpen = true;
   if (a === 'gear') { var gl = st.gear[st.profile], q = gl.indexOf(d.k); if (q >= 0) gl.splice(q, 1); else gl.push(d.k); persist({ settings: true }); render(); return; }
   if (a === 'gearAll' || a === 'gearNone') {
     var gl2 = st.gear[st.profile], ids = ITEMS.filter(function (i) { return i.g === d.g; }).map(function (i) { return i.id; });
@@ -1056,7 +1062,6 @@ document.addEventListener('click', function (ev) {
   if (a === 'exportCopy') { copyText(backupText()); return; }
   if (a === 'exportFile') { saveBackup(); return; }
   if (a === 'exportCsv') { saveCsv(); return; }
-  if (a === 'liftOpt') { st.lift = d.k === 'on'; persist({ settings: true }); document.body.classList.toggle('lift', st.lift); render(); return; }
   if (a === 'restore') { restoreFrom($('#restore').value); return; }
   if (a === 'codeShare') { codeShare(); return; }
   if (a === 'codeCopy') { copyText(myCode()); return; }
@@ -1182,6 +1187,7 @@ document.addEventListener('focusin', function (ev) {
   }
 });
 document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && sheetOpen()) closeSheet(); });
+document.addEventListener('toggle', function (ev) { if (ev.target && ev.target.classList && ev.target.classList.contains('gdet')) U.gearOpen = ev.target.open; }, true);
 /* iPhone keyboard: hide the tab bar while typing, and when the keyboard closes put the bottom bars back at the bottom
    (Safari / Home Screen apps can leave position:fixed bars floating where the top of the keyboard was) */
 function isTyping(el) { return !!el && (el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || (el.tagName === 'INPUT' && !/^(checkbox|radio|button|submit|file|range)$/.test(el.type))); }
@@ -1334,7 +1340,7 @@ document.addEventListener('visibilitychange', function () {
   if (document.hidden) pushDb(); else if (Date.now() - ACCT.last > 60000) acctSync();   // send what's pending; pick up other phones' changes
 });
 window.addEventListener('pagehide', function () { if (dbCol && dbCol.srv) pushDb(); });
-document.body.classList.toggle('lift', S.settings.lift !== false);
+document.body.classList.toggle('lift', !!window.claude);  // room for the artifact badge
 document.querySelectorAll('#tabs button').forEach(function (b) { b.insertAdjacentHTML('afterbegin', ico({ train: 'train', lib: 'lib', prog: 'prog', body: 'body', eat: 'eat', friends: 'users', settings: 'set' }[b.dataset.t])); });
 render();
 setInterval(tick, 1000);
@@ -1347,17 +1353,26 @@ try { if (!window.claude && 'serviceWorker' in navigator && /^https?:/.test(loca
 /* ===== this week, live bests, plate math ===== */
 function weekStart(t) { var d = new Date(t); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return d.getTime(); }
 function daysTrained(W, a, b) { var c = {}; W.forEach(function (w) { if (w.t >= a && w.t < b) c[new Date(w.t).toDateString()] = 1; }); return Object.keys(c).length; }
+/* This week: days trained, your goal and streak, and the week's plan (focus under each day) in one card */
 function weekCard() {
-  var W = realWorkouts(); if (!W.length) return '';
+  var W = realWorkouts(), P = typeof wkPlan === 'function' ? wkPlan() : null;
+  if (P && P.ws !== weekStart(Date.now())) P = null;   // a plan for next week shows in its own card
+  if (!W.length && !P) return typeof weekPlanCard === 'function' ? weekPlanCard() : '';
   var goal = S.settings.weekGoal || 3, ws = weekStart(Date.now()), we = weekStart(ws + 10 * DAY), days = [0, 0, 0, 0, 0, 0, 0], sets = 0;
   W.forEach(function (w) { if (w.t >= ws && w.t < we) { days[(new Date(w.t).getDay() + 6) % 7]++; sets += workoutSets(w); } });
   var n = days.filter(Boolean).length, today = (new Date().getDay() + 6) % 7, L = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-  var dots = days.map(function (c, i) { return '<div class="wd' + (c ? ' on' : '') + (i === today ? ' today' : '') + '"><span>' + L[i] + '</span><i></i></div>'; }).join('');
+  var dots = days.map(function (c, i) {
+    var pd = P && P.days[i], tag = pd ? '<em>' + esc(pd.f === 'Full body' ? 'Full' : pd.f === 'Core & mobility' ? 'Core' : pd.f) + '</em>' : '<em class="faint">' + (P ? 'Rest' : '') + '</em>';
+    return '<' + (pd ? 'button data-act="wkDay" data-i="' + i + '"' : 'div') + ' class="wd' + (c ? ' on' : '') + (i === today ? ' today' : '') + (pd ? ' planned' : '') + '"><span>' + L[i] + '</span><i></i>' + (P ? tag : '') + '</' + (pd ? 'button' : 'div') + '>';
+  }).join('');
+  var pt = P && P.days[today] && !days[today] && !S.draft ? '<button class="btn primary block" data-act="wpStart" data-i="' + today + '">Start today\'s ' + esc(P.days[today].f) + ' workout · ~' + P.days[today].est + ' min</button>' : '';
+  var planBtn = '<button class="linkbtn accent" data-act="wkSetup">' + (P ? 'Edit plan' : 'Plan my week') + '</button>';
   var streak = 0, cur = weekStart(ws - 3 * DAY);
   for (var g = 0; g < 104 && daysTrained(W, cur, weekStart(cur + 10 * DAY)) >= goal; g++) { streak++; cur = weekStart(cur - 3 * DAY); }
   if (n >= goal) streak++;
   var msg = n >= goal ? 'Goal hit' : (goal - n) + ' more to hit your goal';
-  return '<div class="card section week"><div class="row"><div class="grow"><div class="xname">This week</div><div class="xmeta">' + msg + ' · ' + sets + ' sets' + (streak > 1 ? ' · ' + streak + '-week streak' : '') + '</div></div><button class="btn small ghost" data-act="weekGoal" aria-label="Weekly goal, tap to change">' + n + ' of ' + goal + ' days</button></div><div class="wdots">' + dots + '</div></div>';
+  return '<div class="card section week"><div class="row"><div class="grow"><div class="xname">This week</div><div class="xmeta">' + msg + ' · ' + sets + ' sets' + (streak > 1 ? ' · ' + streak + '-week streak' : '') + '</div></div><button class="btn small ghost" data-act="weekGoal" aria-label="Weekly goal, tap to change">' + n + ' of ' + goal + ' days</button></div><div class="wdots">' + dots + '</div>' + pt +
+    '<div class="note">' + (P ? 'Tap a day to see or change its workout. Each muscle gets 2–3 days of rest. ' : 'Plan the week to get a workout for each training day, spaced so every muscle rests. ') + planBtn + '</div></div>';
 }
 function livePR(dx, s) {
   var ex = BYNAME[dx.n]; if (!ex) return;
