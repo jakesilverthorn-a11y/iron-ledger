@@ -237,6 +237,55 @@ NEW2 = [
     'Bicycling, Stationary', True, None, 'cardio'),
 ]
 
+# --- round 3: more dumbbell work for home gyms, plus outdoor running and walking (logged as distance + time) ---
+NEW3 = [
+  X('Running', 'body only', 'beginner', 'compound', ['Quads'], ['Hamstrings', 'Calves', 'Glutes'], ['quadriceps'], ['bodyweight'],
+    ['Warm up with a few minutes of easy jogging or brisk walking.', 'Run tall with a slight forward lean, relaxed shoulders and arms swinging forward and back.', 'Land with your foot under your body rather than far out in front, taking short, quick steps.', 'Log the distance and time; the app works out your pace and speed. Finish with a few minutes of walking.'],
+    'Running, Treadmill', False, None, 'cardio'),
+  X('Walking', 'body only', 'beginner', 'compound', ['Quads'], ['Hamstrings', 'Calves', 'Glutes'], ['quadriceps'], ['bodyweight'],
+    ['Walk tall with your eyes ahead and shoulders relaxed.', 'Swing your arms naturally and roll from heel to toe.', 'For a workout, keep a brisk pace where talking is possible but a little effortful.', 'Log the distance and time; the app works out your pace and speed.'],
+    'Walking, Treadmill', False, None, 'cardio'),
+  X('Dumbbell Squeeze Press', 'dumbbell', 'beginner', 'compound', ['Chest'], ['Triceps', 'Shoulders'], ['chest'], ['dumbbell', 'bench'],
+    ['Lie on a flat bench holding two dumbbells over your chest, palms facing each other and the dumbbells pressed firmly together.', 'Keep squeezing them together the whole time.', 'Lower them to your mid-chest, then press back up.', 'Use lighter dumbbells than a normal press; the squeeze is what works the chest.'],
+    'Dumbbell Bench Press', False, 'sl_dumbbell_bench_press*0.75'),
+  X('Dumbbell Single-Leg Hip Thrust', 'dumbbell', 'intermediate', 'isolation', ['Glutes'], ['Hamstrings'], ['glutes'], ['dumbbell', 'bench'],
+    ['Sit with your upper back against a bench and hold one dumbbell on the hip of your working leg.', 'Plant that foot flat and lift the other foot off the floor.', 'Drive through the heel to lift your hips until your body is straight from shoulders to knee, squeezing the glute.', 'Lower under control. Finish all reps, then switch legs.'],
+    'Barbell Hip Thrust', False, 'hipthrust*0.18'),
+  X('Dumbbell Glute Bridge', 'dumbbell', 'beginner', 'isolation', ['Glutes'], ['Hamstrings'], ['glutes'], ['dumbbell'],
+    ['Lie on your back with knees bent, feet flat, and one dumbbell resting across your hips.', 'Hold the dumbbell in place with both hands.', 'Squeeze your glutes and lift your hips until your body is straight from shoulders to knees.', 'Pause at the top, then lower.'],
+    'Barbell Glute Bridge', False, 'hipthrust*0.3'),
+  X('Dumbbell Sumo Deadlift', 'dumbbell', 'beginner', 'compound', ['Glutes'], ['Hamstrings', 'Quads', 'Back'], ['glutes', 'adductors'], ['dumbbell'],
+    ['Stand with your feet wide and toes turned out, holding one heavy dumbbell by the end with both hands between your legs.', 'Push your hips back and bend your knees to lower the dumbbell toward the floor, chest up and back flat.', 'Drive through your feet and squeeze your glutes to stand tall.', 'Keep your knees pushed out in line with your toes.'],
+    'Sumo Deadlift', False, 'sl_dumbbell_deadlift*1.2'),
+  X('Dumbbell Devil Press', 'dumbbell', 'advanced', 'compound', ['Shoulders'], ['Chest', 'Quads', 'Glutes', 'Core'], ['shoulders'], ['dumbbell'],
+    ['Stand over two dumbbells. Drop into a burpee with your hands on the dumbbells and do a push-up.', 'Jump your feet in toward your hands.', 'Keeping your back flat, swing both dumbbells between your legs and drive your hips forward to bring them straight overhead in one movement.', 'Lower them back to the floor and go straight into the next rep.'],
+    'Burpee', False, 'sl_dumbbell_snatch*0.6'),
+  X('Dumbbell Russian Twist', 'dumbbell', 'beginner', 'isolation', ['Core'], [], ['abdominals'], ['dumbbell'],
+    ['Sit on the floor with knees bent, holding one dumbbell at your chest with both hands.', 'Lean back until your abs are working and lift your feet if you can.', 'Rotate your torso to bring the dumbbell beside one hip, then across to the other.', 'Each side counts as one rep.'],
+    'Russian Twist', True),
+  X('Dumbbell Woodchop', 'dumbbell', 'beginner', 'compound', ['Core'], ['Shoulders', 'Glutes'], ['abdominals'], ['dumbbell'],
+    ['Stand with feet shoulder-width apart holding one dumbbell with both hands above one shoulder.', 'Rotate and bend to bring the dumbbell diagonally down across your body to the outside of the opposite knee.', 'Pivot your back foot as you turn.', 'Return to the top under control. Finish all reps, then switch sides.'],
+    'Standing Cable Wood Chop', False),
+  X('Dumbbell Drag Curl', 'dumbbell', 'intermediate', 'isolation', ['Biceps'], ['Forearms'], ['biceps'], ['dumbbell'],
+    ['Stand holding a dumbbell in each hand at your sides.', 'Curl the dumbbells up while pulling your elbows back, so the dumbbells drag up along your body.', 'Squeeze your biceps at the top.', 'Lower slowly the same way.'],
+    'Drag Curl', False, 'sl_dumbbell_curl*0.85'),
+  X('Dumbbell Spider Curl', 'dumbbell', 'intermediate', 'isolation', ['Biceps'], [], ['biceps'], ['dumbbell', 'bench'],
+    ['Lie face down on an incline bench with your arms hanging straight down, a dumbbell in each hand.', 'Keeping your upper arms still, curl the dumbbells up.', 'Squeeze hard at the top.', 'Lower slowly all the way down.'],
+    'Spider Curl', False, 'sl_dumbbell_curl*0.75'),
+  X('Dumbbell Rear Delt Row', 'dumbbell', 'beginner', 'compound', ['Shoulders'], ['Back'], ['shoulders'], ['dumbbell'],
+    ['Hinge forward with a flat back, a dumbbell in each hand, palms facing your legs.', 'Row the dumbbells out wide toward your upper chest, elbows flared out to the sides.', 'Squeeze the backs of your shoulders at the top.', 'Lower under control.'],
+    'Bent Over Two-Dumbbell Row', False, 'sl_dumbbell_row*0.4'),
+  X('Dumbbell Curtsy Lunge', 'dumbbell', 'beginner', 'compound', ['Glutes'], ['Quads', 'Hamstrings'], ['glutes', 'quadriceps'], ['dumbbell'],
+    ['Stand holding a dumbbell in each hand at your sides.', 'Step one leg back and behind the other, as if curtsying.', 'Lower until your front thigh is about parallel to the floor.', 'Push through your front heel to stand. Alternate legs or finish one side first.'],
+    'Curtsy Lunge', True, 'sl_dumbbell_lunge*0.8'),
+  X('Single-Leg Dumbbell Calf Raise', 'dumbbell', 'beginner', 'isolation', ['Calves'], [], ['calves'], ['dumbbell'],
+    ['Stand on one foot on the edge of a step, holding a dumbbell in the hand on the same side. Hold a wall with the other hand.', 'Lower your heel below the step for a full stretch.', 'Rise up onto your toes as high as you can and pause.', 'Finish all reps, then switch legs.'],
+    'Calf Raise On A Dumbbell', False, 'sl_dumbbell_calf_raise*0.6'),
+  X('Dumbbell Z Press', 'dumbbell', 'intermediate', 'compound', ['Shoulders'], ['Triceps', 'Core'], ['shoulders'], ['dumbbell'],
+    ['Sit on the floor with your legs straight out in front, a dumbbell in each hand at your shoulders.', 'Sit tall and brace your core without leaning back.', 'Press both dumbbells straight overhead.', 'Lower them back to your shoulders.'],
+    'Seated Dumbbell Press', False, 'sl_seated_dumbbell_shoulder_press*0.85'),
+]
+
 ALIAS = {
   'Butterfly': ['Pec Deck', 'Machine Fly'], 'Reverse Machine Flyes': ['Reverse Pec Deck', 'Rear Delt Machine'],
   'Thigh Abductor': ['Hip Abduction Machine'], 'Thigh Adductor': ['Hip Adduction Machine'],
@@ -284,13 +333,14 @@ ALIAS2 = {
   'Cable Rope Overhead Triceps Extension': ['Overhead Cable Triceps Extension'], 'Standing Biceps Cable Curl': ['Cable Curl'],
   'Front Dumbbell Raise': ['Front Raise'], 'Front Cable Raise': ['Cable Front Raise'], 'Barbell Incline Bench Press - Medium Grip': ['Incline Bench Press'],
   'Thigh Abductor': ['Seated Hip Abduction'], 'Kettlebell Pistol Squat': ['Weighted Pistol Squat'],
-  'Fan Bike': ['Assault Bike', 'Echo Bike', 'Air Bike'], 'Copenhagen Plank': ['Copenhagen Adductor'], 'Belt Squat': ['Hip Belt Squat'],
+  'Fan Bike': ['Assault Bike', 'Echo Bike', 'Air Bike'], 'Running': ['Run', 'Jog', 'Outdoor Run'], 'Walking': ['Walk', 'Hike'],
+  'Lying Dumbbell Tricep Extension': ['Dumbbell Skull Crusher'], 'Dumbbell Rear Lunge': ['Dumbbell Reverse Lunge'], 'Copenhagen Plank': ['Copenhagen Adductor'], 'Belt Squat': ['Hip Belt Squat'],
 }
 
 def main():
     p = os.path.join(R, 'src', 'data.json'); d = json.load(open(p)); by = {e['n']: e for e in d['ex']}
     added = 0
-    for x in NEW + [dict(x, est=1) for x in NEW2]:
+    for x in NEW + [dict(x, est=1) for x in NEW2 + NEW3]:
         assert x['fx'] in by, ('missing donor', x['fx'])
         if x['n'] in by:   # already there: keep its standard in step with this file
             if x['k']: by[x['n']]['k'] = x['k']

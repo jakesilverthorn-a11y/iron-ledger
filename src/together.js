@@ -13,7 +13,7 @@ function tgFresh(d) { return d && d.code && !d.fin && Date.now() - (d.at || 0) <
 function tgCode(c) { return String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6); }
 function tgSig(x) { return x.map(function (r) { return r[0]; }).join('|'); }
 function tgPlan() { return S.draft.ex.map(function (e) { return [e.n, e.sets.filter(function (q) { return !q.wu; }).length || 1, e.lo, e.hi, e.rest]; }); }
-function tgLog() { return S.draft.ex.map(function (e) { return e.sets.filter(function (s) { return s.done && !s.wu && +s.r > 0; }).map(function (s) { return [+s.w || 0, +s.r || 0]; }); }); }
+function tgLog() { return S.draft.ex.map(function (e) { return e.sets.filter(function (s) { return s.done && !s.wu && +s.r > 0; }).map(function (s) { return +s.d > 0 || +s.tm > 0 ? [0, 1, +s.d || 0, +s.tm || 0] : [+s.w || 0, +s.r || 0]; }); }); }
 function tgTitle() {
   var g = []; S.draft.ex.forEach(function (e) { var x = BYNAME[e.n]; if (x && x.p[0] && g.indexOf(x.p[0]) < 0) g.push(x.p[0]); });
   return g.slice(0, 3).join(' · ') || 'Workout';
@@ -180,7 +180,7 @@ function tgNews() {
     if (s && nm) toast(d.u + ': ' + nm + ' · ' + tgSet(s, BYNAME[nm]));
   });
 }
-function tgSet(s, ex) { var w = +s[0] || 0, r = Math.round(+s[1] || 0); return (ex && isBW(ex) && !w) ? r + ' reps' : fmtW(w, unit()) + ' ' + uLabel() + ' × ' + r; }
+function tgSet(s, ex) { if (ex && isDist(ex)) return distSetTxt({ d: +s[2] || 0, tm: +s[3] || 0 }); var w = +s[0] || 0, r = Math.round(+s[1] || 0); return (ex && isBW(ex) && !w) ? r + ' reps' : fmtW(w, unit()) + ' ' + uLabel() + ' × ' + r; }
 
 /* new data from the server or the shared store */
 function tgChanged() {

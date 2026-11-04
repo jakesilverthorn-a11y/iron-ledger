@@ -54,6 +54,10 @@ function isTimed(e) {
   var k = stretchKind(e); if (k === 'static' || k === 'roll') return true;
   return TIMED_RE.test(e.n) && !/wipers|push up to side plank|plank (jacks|to push)/i.test(e.n);
 }
+/* distance cardio (running, cycling, rowing...): each set holds d (km) and tm (seconds); r is 1 so it counts as a set */
+var DIST_SKIP = /rope|stair|step mill|prowler/i, KM_MI = 1.609344;
+function isDist(e) { return !!e && e.c === 'cardio' && !DIST_SKIP.test(e.n); }
+function distTotals(sets) { var d = 0, t = 0; (sets || []).forEach(function (s) { d += +s.d || 0; t += +s.tm || 0; }); return { d: d, tm: t }; }
 function isBW(ex) { return !!ex && (ex.eq === 'Bodyweight' || ex.bwk === 1); }
 /* weighted bodyweight work: added weight is turned into "bodyweight-equivalent reps" so a vest, belt or plate counts.
    BW_FRAC is roughly how much of your bodyweight each movement moves. */
@@ -63,6 +67,7 @@ function bwFrac(ex) { var k = parseK(ex && ex.k); return (k && (BW_FRAC[k.cls] |
 function bwEqReps(ex, w, r, t) { var B = metricBW(t); if (!(w > 0) || !(B > 0)) return r; var base = bwFrac(ex) * B; return Math.min(300, 30 * w / base + r * (base + w) / base); }
 function repsAtLoad(ex, eqReps, w, t) { var B = metricBW(t); if (!(w > 0) || !(B > 0)) return eqReps; var base = bwFrac(ex) * B; return (eqReps - 30 * w / base) * base / (base + w); }
 function setMetric(ex, s, t) {
+  if (isDist(ex)) return +s.d || (+s.tm || 0) / 60;   // distance (or minutes when no distance was entered)
   var r = +s.r || 0, w = +s.w || 0;
   if (r <= 0) return 0;
   if (isBW(ex)) return w > 0 ? bwEqReps(ex, w, r, t) : r;   // bodyweight work is tracked in (equivalent) reps
@@ -76,6 +81,10 @@ function sessionBest(ex, sets, t) {
 }
 /* history: [{t, best, vol, topW, topR}] for an exercise, oldest first */
 function histEntry(ex, e, t) {
+  if (isDist(ex)) {   // runs, rides, rows: the session's totals
+    var dt = distTotals(e.sets); if (!dt.d && !dt.tm) return null;
+    return { t: t, best: dt.d || dt.tm / 60, dist: dt.d, sec: dt.tm, vol: 0, topW: 0, topR: 0 };
+  }
   var best = sessionBest(ex, e.sets, t);
   if (!best) return null;
   var vol = 0, topW = 0, topR = 0;
@@ -120,7 +129,7 @@ function exIndexAt(h, t) {
 function groupScoreAt(hists, group, t) {
   var num = 0, den = 0, cnt = 0;
   Object.keys(hists).forEach(function (n) {
-    var ex = BYNAME[n]; if (!ex) return;
+    var ex = BYNAME[n]; if (!ex || ex.c === 'cardio') return;   // cardio distance isn't strength
     var w = ex.p.indexOf(group) >= 0 ? 1 : (ex.s.indexOf(group) >= 0 ? 0.35 : 0);
     if (!w) return;
     var r = exIndexAt(hists[n], t); if (!r) return;
@@ -435,6 +444,7 @@ function stretchesFor(groups, when, gear, have, n) {
 
 /* ---------- building a live workout from a plan ---------- */
 function makeWorkoutEx(workouts, item, unit) {
+  if (isDist(BYNAME[item.n])) return { n: item.n, lo: 1, hi: 1, rest: 0, sets: [{ w: 0, r: null, d: null, tm: null, done: false }] };
   var sg = suggest(workouts, item.n, item.lo, item.hi, unit);
   var sets = [];
   for (var i = 0; i < item.sets; i++) sets.push({ w: sg.w, r: sg.r, done: false, sug: true });
@@ -449,6 +459,7 @@ function timedItem(e) {
 function defaultItem(name, goal) {
   var e = BYNAME[name], G = GOALS[goal] || GOALS.strength, comp = e && isComp(e), bw = e && isBW(e);
   if (isTimed(e)) return timedItem(e);
+  if (isDist(e)) return { n: name, sets: 1, lo: 1, hi: 1, rest: 0, comp: false, g: e.p[0] };
   if (stretchKind(e) === 'dyn') return { n: name, sets: 1, lo: 10, hi: 12, rest: 15, comp: false, g: e.p[0] };
   return { n: name, sets: comp ? G.cSets : G.aSets, lo: bw ? Math.max(10, comp ? G.cLo : G.aLo) : (comp ? G.cLo : G.aLo), hi: bw ? Math.max(15, comp ? G.cHi : G.aHi) : (comp ? G.cHi : G.aHi), rest: comp ? G.cRest : G.aRest, comp: comp, g: e && e.p[0] };
 }
@@ -457,17 +468,20 @@ function defaultItem(name, goal) {
 function finishDraft(draft, now) {
   var ex = [];
   draft.ex.forEach(function (e) {
-    var sets = e.sets.filter(function (s) { return s.done && !s.wu && (+s.r > 0); }).map(function (s) { return { w: +s.w || 0, r: +s.r || 0 }; });
+    var sets = e.sets.filter(function (s) { return s.done && !s.wu && (+s.r > 0); }).map(function (s) {
+      var o = { w: +s.w || 0, r: +s.r || 0 }; if (+s.d > 0) o.d = +s.d; if (+s.tm > 0) o.tm = +s.tm; return o;
+    });
     if (sets.length) ex.push({ n: e.n, sets: sets });
   });
   return { id: draft.id, t: draft.t, dur: Math.max(60, Math.round((now - draft.t) / 1000)), ex: ex };
 }
-function workoutVolume(w) { var v = 0; w.ex.forEach(function (e) { e.sets.forEach(function (s) { v += (+s.w || 0) * (+s.r || 0); }); }); return v; }
+function workoutVolume(w) { var v = 0; w.ex.forEach(function (e) { if (isDist(BYNAME[e.n])) return; e.sets.forEach(function (s) { v += (+s.w || 0) * (+s.r || 0); }); }); return v; }
 function workoutSets(w) { var n = 0; w.ex.forEach(function (e) { n += e.sets.length; }); return n; }
 function findPRs(prior, w) {
   var res = [], seen = {};
   w.ex.forEach(function (e) {
     if (seen[e.n]) return; seen[e.n] = 1;
+    if (isDist(BYNAME[e.n])) return;   // runs and rides have no strength best
     var ex = BYNAME[e.n], h = exHistory(prior, e.n), best = 0, prev = 0;
     w.ex.forEach(function (o) { if (o.n === e.n) best = Math.max(best, sessionBest(ex, o.sets, w.t)); });
     h.forEach(function (x) { if (x.best > prev) prev = x.best; });

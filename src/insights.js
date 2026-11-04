@@ -33,7 +33,7 @@ function weeklySetsCard() {
 
 /* ----- stalled lifts: no new best in the last 3 sessions, still training it ----- */
 function plateauOf(h) {
-  if (!h || h.length < 5) return null;
+  if (!h || h.length < 5 || h[0].dist != null || h[0].sec != null) return null;   // not for runs and rides
   var last = h[h.length - 1]; if (Date.now() - last.t > 28 * DAY) return null;
   var before = Math.max.apply(null, h.slice(0, -3).map(function (x) { return x.best; }));
   var recent = Math.max.apply(null, h.slice(-3).map(function (x) { return x.best; }));

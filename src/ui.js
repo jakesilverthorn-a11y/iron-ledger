@@ -542,7 +542,7 @@ function planHTML() {
   var p = U.plan, items = p.items;
   var rows = items.map(function (it, i) {
     var ex = BYNAME[it.n], ls = lastSession(realWorkouts(), it.n), last = '';
-    if (ls) { var top = ls.e.sets.slice().sort(function (a, b) { return (b.w - a.w) || (b.r - a.r); })[0]; last = ' · last ' + (isBW(ex) && !top.w ? top.r + ' reps' : fmtW(top.w, unit()) + '×' + top.r); }
+    if (ls) { var top = ls.e.sets.slice().sort(function (a, b) { return (b.w - a.w) || (b.r - a.r); })[0]; last = ' · last ' + (isDist(ex) ? distSetTxt(distTotals(ls.e.sets)) : isBW(ex) && !top.w ? top.r + ' reps' : fmtW(top.w, unit()) + '×' + top.r); }
     return '<div class="plan-item"><button class="thumb" data-act="openEx" data-n="' + esc(it.n) + '" aria-label="View ' + esc(it.n) + '">' + demoHTML(ex, false) + '</button><div class="grow"><div class="xname">' + esc(it.n) + '</div><div class="xmeta">' + it.sets + ' × ' + it.lo + '–' + it.hi + ' · rest ' + fmtDur(it.rest) + last + '</div></div><div class="plan-actions"><button class="icon-btn" data-act="swap" data-i="' + i + '" aria-label="Swap for a random exercise">' + ico('shuffle') + '</button><button class="icon-btn" data-act="altPlan" data-i="' + i + '" aria-label="Choose a different exercise">' + ico('pick') + '</button><button class="icon-btn" data-act="rmPlan" data-i="' + i + '" aria-label="Remove exercise">' + ico('x') + '</button></div></div>';
   }).join('');
   var short = p.short ? '<div class="banner"><span>' + (p.why === 'variety' ? 'Only a few different moves train these muscles, so this plan is under ' + S.settings.minutes + ' min. Add another muscle group, or add sets.' : 'Not enough matching exercises to fill ' + S.settings.minutes + ' min with your gear. Add equipment in Settings for more.') + '</span></div>' : '';
@@ -555,6 +555,44 @@ function planHTML() {
     '<button class="btn primary block" data-act="startPlan"' + (items.length ? '' : ' disabled') + '>Start workout</button>' + (items.length ? '<div class="row" style="gap:8px"><button class="btn grow" data-act="wkSendPlan">👥 Send to a friend</button><button class="btn grow" data-act="wkSavePlan">☆ Save</button></div>' : '') + '</div>';
 }
 
+/* ===== distance cardio (running, cycling, rowing): distance + time, pace and speed worked out ===== */
+function dU() { return unit() === 'kg' ? 'km' : 'mi'; }
+function dToDisp(km) { return Math.round(km / (dU() === 'mi' ? KM_MI : 1) * 100) / 100; }
+function dFromDisp(v) { var n = parseFloat(String(v).replace(',', '.')); return n > 0 ? n * (dU() === 'mi' ? KM_MI : 1) : null; }
+/* "25" = 25 min, "25.5" = 25 and a half min, "25:30" = 25 min 30 s, "1:05:00" = 1 h 5 min */
+function parseClock(v) {
+  v = String(v == null ? '' : v).trim().replace(',', '.'); if (!v) return null;
+  var p = v.split(':').map(Number); if (p.some(function (x) { return isNaN(x) || x < 0; }) || p.length > 3) return null;
+  var sec = p.length === 1 ? p[0] * 60 : p.length === 2 ? p[0] * 60 + p[1] : p[0] * 3600 + p[1] * 60 + p[2];
+  return sec > 0 ? Math.round(sec) : null;
+}
+function paceSec(km, sec) { return km > 0 && sec > 0 ? sec / dToDisp(km) : 0; }   // seconds per km or mile
+function paceTxt(km, sec) { var p = paceSec(km, sec); return p ? fmtDur(p) + ' /' + dU() : ''; }
+function speedVal(km, sec) { return km > 0 && sec > 0 ? Math.round(dToDisp(km) / (sec / 3600) * 10) / 10 : 0; }
+function speedTxt(km, sec) { var v = speedVal(km, sec); return v ? v + (dU() === 'mi' ? ' mph' : ' km/h') : ''; }
+function distSetTxt(s) { if (!s) return '–'; var a = []; if (+s.d > 0) a.push(dToDisp(+s.d) + ' ' + dU()); if (+s.tm > 0) a.push(fmtDur(+s.tm)); return a.join(' · ') || '–'; }
+function distSummary(sets) {
+  var t = distTotals(sets); if (!t.d && !t.tm) return '';
+  var p = paceTxt(t.d, t.tm); return distSetTxt(t) + (p ? ' · pace ' + p + ' · ' + speedTxt(t.d, t.tm) : '');
+}
+/* one logged set in words, for any exercise */
+function setTxt(ex, s) {
+  if (isDist(ex)) return distSetTxt(s);
+  return isBW(ex) && !s.w ? s.r + (isTimed(ex) ? ' s' : ' reps') : toDisp(s.w, unit()) + ' ' + uLabel() + loadSuffix(ex) + ' × ' + s.r;
+}
+function distRows(e, xi, ls) {
+  var rows = '<div class="hd">SET</div><div class="hd">PREVIOUS</div><div class="hd">' + dU().toUpperCase() + '</div><div class="hd">TIME</div><div class="hd"></div>';
+  e.sets.forEach(function (s, si) {
+    var pv = ls && ls.e.sets[si];
+    rows += '<div class="sn">' + (si + 1) + '</div><div class="prev">' + (pv ? distSetTxt(pv) : '–') + '</div>' +
+      '<div class="' + (s.done ? 'done' : '') + '"><input inputmode="decimal" data-k="d" data-x="' + xi + '" data-s="' + si + '" value="' + (+s.d > 0 ? dToDisp(+s.d) : '') + '" placeholder="0.0" aria-label="Set ' + (si + 1) + ' distance in ' + (dU() === 'mi' ? 'miles' : 'kilometres') + '"></div>' +
+      '<div class="' + (s.done ? 'done' : '') + '"><input data-k="tm" data-x="' + xi + '" data-s="' + si + '" value="' + (+s.tm > 0 ? fmtDur(+s.tm) : '') + '" placeholder="mm:ss" autocomplete="off" aria-label="Set ' + (si + 1) + ' time, minutes or minutes:seconds"></div>' +
+      '<button class="ck' + (s.done ? ' on' : '') + '" data-act="toggleSet" data-x="' + xi + '" data-s="' + si + '" aria-pressed="' + !!s.done + '" aria-label="Mark set ' + (si + 1) + ' done">' + ico('check') + '</button>';
+  });
+  return rows;
+}
+var DIST_HINT = 'Enter distance, time or both. Time can be minutes (25) or minutes:seconds (25:30).';
+
 /* --- active workout --- */
 function viewWorkout() {
   var d = S.draft, unitL = uLabel(), totalDone = 0, vol = 0;
@@ -565,8 +603,9 @@ function viewWorkout() {
   var cards = d.ex.map(function (e, xi) {
     var ex = BYNAME[e.n], ls = lastSession(realWorkouts(), e.n), bw = isBW(ex);
     var tmd = isTimed(ex), li = loadInfo(ex), rows = '<div class="hd">SET</div><div class="hd">PREVIOUS</div><div class="hd">' + esc(li.h) + '</div><div class="hd">' + (tmd ? 'SEC' : 'REPS') + '</div><div class="hd"></div>';
-    var wi = -1;
-    e.sets.forEach(function (s, si) {
+    var wi = -1, dst = isDist(ex);
+    if (dst) rows = distRows(e, xi, ls);
+    else e.sets.forEach(function (s, si) {
       if (!s.wu) wi++;
       var pv = !s.wu && ls && ls.e.sets[wi] ? ls.e.sets[wi] : null, pt = pv ? ((bw && !pv.w) ? pv.r + (tmd ? ' s' : ' reps') : fmtW(pv.w, unit()) + ' × ' + pv.r + (tmd ? ' s' : '')) : '–';
       rows += '<div class="sn' + (s.wu ? ' wu' : '') + '">' + (s.wu ? 'W' : wi + 1) + '</div><div class="prev">' + pt + '</div>' +
@@ -574,8 +613,8 @@ function viewWorkout() {
         '<div class="' + (s.done ? 'done' : '') + '"><input inputmode="numeric" data-k="r" data-x="' + xi + '" data-s="' + si + '" class="' + (s.sug && !s.done ? 'sug' : '') + '" value="' + (s.r == null ? '' : s.r) + '" placeholder="0" aria-label="Set ' + (si + 1) + ' reps"></div>' +
         '<button class="ck' + (s.done ? ' on' : '') + '" data-act="toggleSet" data-x="' + xi + '" data-s="' + si + '" aria-pressed="' + !!s.done + '" aria-label="Mark set ' + (si + 1) + ' done">' + ico('check') + '</button>';
     });
-    return '<div class="wkc">' + (ssLab[xi] ? '<div class="sslab">Superset ' + ssLab[xi] + (e.ss ? ' · no rest, go straight to the next' : ' · then rest') + '</div>' : '') + '<div class="xcard' + (ssLab[xi] ? ' ss' : '') + '"><div class="xcard-head"><button class="thumb" data-act="openEx" data-n="' + esc(e.n) + '" aria-label="View ' + esc(e.n) + '">' + demoHTML(ex, false) + '</button><div class="grow"><button class="xname xlink" data-act="openEx" data-n="' + esc(e.n) + '">' + esc(e.n) + ' <span class="info-i" aria-hidden="true">i</span></button><div class="target">Target ' + e.sets.filter(function (q) { return !q.wu; }).length + ' × ' + e.lo + '–' + e.hi + ' · <button class="linkbtn" data-act="restCycle" data-x="' + xi + '" aria-label="Change rest time">rest ' + fmtDur(e.rest) + '</button>' + (isBarbell(ex) ? ' · <button class="linkbtn accent" data-act="plates" data-x="' + xi + '">Plates</button>' : '') + '</div>' + injBadge(ex) + (li.s ? '<button class="loadhint" data-act="loadInfo" data-n="' + esc(e.n) + '">⚖️ ' + esc(li.s) + '</button>' : '') + (S.settings.notes[e.n] ? '<div class="xnote">' + esc(S.settings.notes[e.n]) + '</div>' : '') + '</div><button class="icon-btn" data-act="swapEx" data-x="' + xi + '" aria-label="Swap ' + esc(e.n) + ' for a random similar exercise">' + ico('shuffle') + '</button><button class="icon-btn" data-act="altEx" data-x="' + xi + '" aria-label="Choose a different exercise">' + ico('pick') + '</button><button class="icon-btn" data-act="rmEx" data-x="' + xi + '" aria-label="Remove ' + esc(e.n) + '">' + ico('x') + '</button></div>' +
-      '<div class="sets">' + rows + '</div>' + (tmd ? '<button class="btn small block" data-act="holdGo" data-x="' + xi + '">▶ Hold timer</button>' : '') + '<div class="row"><button class="btn small ghost grow" data-act="addSet" data-x="' + xi + '" aria-label="Add a set">+ Set</button>' + (!bw && !e.sets.some(function (q) { return q.wu; }) && !e.sets.some(function (q) { return q.done; }) ? '<button class="btn small ghost grow" data-act="warmup" data-x="' + xi + '">+ Warm-up</button>' : '') + (e.sets.length > 1 ? '<button class="btn small ghost grow" data-act="rmSet" data-x="' + xi + '" aria-label="Remove a set">– Set</button>' : '') + (xi < d.ex.length - 1 ? '<button class="btn small ghost grow" data-act="ssToggle" data-x="' + xi + '" aria-pressed="' + !!e.ss + '">' + (e.ss ? '✓ Superset' : '⇄ Superset') + '</button>' : '') + (!tmd && ex.c !== 'stretching' ? '<button class="btn small ghost grow" data-act="tempoGo" data-x="' + xi + '" aria-label="Tempo timer">⏱ Tempo</button>' : '') + '</div></div></div>';
+    return '<div class="wkc">' + (ssLab[xi] ? '<div class="sslab">Superset ' + ssLab[xi] + (e.ss ? ' · no rest, go straight to the next' : ' · then rest') + '</div>' : '') + '<div class="xcard' + (ssLab[xi] ? ' ss' : '') + '"><div class="xcard-head"><button class="thumb" data-act="openEx" data-n="' + esc(e.n) + '" aria-label="View ' + esc(e.n) + '">' + demoHTML(ex, false) + '</button><div class="grow"><button class="xname xlink" data-act="openEx" data-n="' + esc(e.n) + '">' + esc(e.n) + ' <span class="info-i" aria-hidden="true">i</span></button><div class="target">' + (dst ? 'Distance and time · pace and speed are worked out' : 'Target ' + e.sets.filter(function (q) { return !q.wu; }).length + ' × ' + e.lo + '–' + e.hi + ' · <button class="linkbtn" data-act="restCycle" data-x="' + xi + '" aria-label="Change rest time">rest ' + fmtDur(e.rest) + '</button>') + (isBarbell(ex) ? ' · <button class="linkbtn accent" data-act="plates" data-x="' + xi + '">Plates</button>' : '') + '</div>' + injBadge(ex) + (li.s ? '<button class="loadhint" data-act="loadInfo" data-n="' + esc(e.n) + '">⚖️ ' + esc(li.s) + '</button>' : '') + (S.settings.notes[e.n] ? '<div class="xnote">' + esc(S.settings.notes[e.n]) + '</div>' : '') + '</div><button class="icon-btn" data-act="swapEx" data-x="' + xi + '" aria-label="Swap ' + esc(e.n) + ' for a random similar exercise">' + ico('shuffle') + '</button><button class="icon-btn" data-act="altEx" data-x="' + xi + '" aria-label="Choose a different exercise">' + ico('pick') + '</button><button class="icon-btn" data-act="rmEx" data-x="' + xi + '" aria-label="Remove ' + esc(e.n) + '">' + ico('x') + '</button></div>' +
+      '<div class="sets">' + rows + '</div>' + (dst ? '<div class="note dsum" id="dsum' + xi + '">' + (distSummary(e.sets) || DIST_HINT) + '</div>' : '') + (tmd ? '<button class="btn small block" data-act="holdGo" data-x="' + xi + '">▶ Hold timer</button>' : '') + '<div class="row"><button class="btn small ghost grow" data-act="addSet" data-x="' + xi + '" aria-label="Add a set">+ Set</button>' + (!bw && !dst && !e.sets.some(function (q) { return q.wu; }) && !e.sets.some(function (q) { return q.done; }) ? '<button class="btn small ghost grow" data-act="warmup" data-x="' + xi + '">+ Warm-up</button>' : '') + (e.sets.length > 1 ? '<button class="btn small ghost grow" data-act="rmSet" data-x="' + xi + '" aria-label="Remove a set">– Set</button>' : '') + (xi < d.ex.length - 1 && !dst ? '<button class="btn small ghost grow" data-act="ssToggle" data-x="' + xi + '" aria-pressed="' + !!e.ss + '">' + (e.ss ? '✓ Superset' : '⇄ Superset') + '</button>' : '') + (!tmd && !dst && ex.c !== 'stretching' ? '<button class="btn small ghost grow" data-act="tempoGo" data-x="' + xi + '" aria-label="Tempo timer">⏱ Tempo</button>' : '') + '</div></div></div>';
   }).join('');
   return '<div class="screen" style="gap:14px;padding-top:0"><div class="wk-top"><div><div class="clock" id="clock">0:00</div></div><div class="grow note" id="wk-stats">' + totalDone + (totalDone === 1 ? ' set' : ' sets') + ' · ' + volDisp(vol) + ' ' + unitL + '</div><button class="btn primary small" data-act="finish">Finish</button></div>' + restAlertTip() + tgBox() +
     (cards ? '<div class="wkgrid">' + cards + '</div>' : '<div class="empty"><h3>Empty workout</h3>Add your first exercise.</div>') +
@@ -663,6 +702,10 @@ function progLifts(W) {
   if (!names.length) return '<div class="empty"><h3>No lifts yet</h3>Your exercises show up here after your first workout.</div>';
   return (isSample() ? '' : stalledCard(H)) + '<div class="card" style="padding:0 14px">' + names.map(function (n) {
     var h = H[n], ex = BYNAME[n], bw = isBW(ex), first = h[0].best, cur = h[h.length - 1].best, best = Math.max.apply(null, h.map(function (x) { return x.best; }));
+    if (isDist(ex)) {
+      var lx = h[h.length - 1], lp = paceTxt(lx.dist, lx.sec);
+      return '<button class="xrow" style="flex-wrap:wrap" data-act="openLift" data-n="' + esc(n) + '"><div class="grow"><div class="xname">' + esc(n) + '</div><div class="xmeta">Last ' + distSetTxt({ d: lx.dist, tm: lx.sec }) + (lp ? ' · ' + lp : '') + ' · ' + h.length + ' session' + (h.length > 1 ? 's' : '') + '</div></div><div style="flex-basis:100%">' + spark(h.map(function (x) { return { t: x.t, v: x.best }; }), first) + '</div></button>';
+    }
     var pct = first ? (cur / first - 1) * 100 : 0;
     var pts = h.map(function (x) { return { t: x.t, v: x.best }; });
     return '<button class="xrow" style="flex-wrap:wrap" data-act="openLift" data-n="' + esc(n) + '"><div class="grow"><div class="xname">' + esc(n) + '</div><div class="xmeta">' + (bw ? 'Best ' + Math.round(best) + ' reps' : 'Est. 1RM ' + toDisp(cur, unit()) + ' ' + uLabel()) + ' · ' + h.length + ' session' + (h.length > 1 ? 's' : '') + '</div></div>' + deltaHTML(h.length > 1 ? pct : null, '%') + '<div style="flex-basis:100%">' + spark(pts, first) + '</div></button>';
@@ -673,7 +716,39 @@ function progHistory(W) {
   var list = W.slice().reverse();
   return calendarHTML(W) + '<div class="card" style="padding:0 14px">' + list.map(histRow).join('') + '</div>';
 }
+/* runs, rides and rows: distance, pace and speed over time */
+function cardioSheet(name, metric) {
+  metric = metric === 'pace' || metric === 'speed' ? metric : 'dist';
+  var ex = BYNAME[name], H = allHistories(statWorkouts())[name]; if (!H) return;
+  U.chartRedraw = function () { cardioSheet(name, metric); };
+  var rb = rangeBounds(H[0].t), inR = H.filter(function (x) { return x.t >= rb.t0; });
+  var timed = H.filter(function (x) { return x.dist > 0 && x.sec > 0; });
+  var pts = (metric === 'dist' ? inR.filter(function (x) { return x.dist > 0; }).map(function (x) { return { t: x.t, v: dToDisp(x.dist) }; })
+    : inR.filter(function (x) { return x.dist > 0 && x.sec > 0; }).map(function (x) { return { t: x.t, v: metric === 'pace' ? paceSec(x.dist, x.sec) / 60 : speedVal(x.dist, x.sec) }; }));
+  var tot = H.reduce(function (a, x) { return a + (x.dist || 0); }, 0), totT = H.reduce(function (a, x) { return a + (x.sec || 0); }, 0);
+  var longest = Math.max.apply(null, H.map(function (x) { return x.dist || 0; }));
+  var bestPace = timed.length ? Math.min.apply(null, timed.map(function (x) { return paceSec(x.dist, x.sec); })) : 0;
+  var seg = function (k, l) { return '<button aria-pressed="' + (metric === k) + '" data-act="liftMetric" data-n="' + esc(name) + '" data-k="' + k + '">' + l + '</button>'; };
+  var spd = dU() === 'mi' ? 'mph' : 'km/h';
+  var chart = pts.length ? lineChart(pts, metric === 'pace'
+      ? { unit: ' /' + dU(), label: name + ' pace', fmt: function (v) { return fmtDur(v * 60); }, t0: rb.t0, t1: rb.t1 }
+      : { unit: metric === 'dist' ? ' ' + dU() : ' ' + spd, label: name + (metric === 'dist' ? ' distance' : ' speed'), fmt: function (v) { return Math.round(v * 10) / 10; }, t0: rb.t0, t1: rb.t1 })
+    : '<div class="note">' + (metric === 'dist' ? 'No distances' : 'No sessions with both distance and time') + ' in this window.</div>';
+  var body = '<div class="seg" role="group">' + seg('dist', 'Distance') + seg('pace', 'Pace') + seg('speed', 'Speed') + '</div>' + rangeSeg() + chart +
+    (metric === 'pace' ? '<div class="note">Minutes per ' + (dU() === 'mi' ? 'mile' : 'km') + ': lower is faster.</div>' : '') +
+    '<div class="grid2"><div class="stat"><div class="v">' + (tot ? dToDisp(tot) + ' ' + dU() : '–') + '</div><div class="k">Total distance</div></div>' +
+    '<div class="stat"><div class="v">' + (totT ? fmtDur(totT) : '–') + '</div><div class="k">Total time</div></div>' +
+    '<div class="stat"><div class="v">' + (longest ? dToDisp(longest) + ' ' + dU() : '–') + '</div><div class="k">Longest</div></div>' +
+    '<div class="stat"><div class="v">' + (bestPace ? fmtDur(bestPace) + ' /' + dU() : '–') + '</div><div class="k">Best pace</div></div></div>' +
+    '<div class="section"><h3 style="font-size:20px">Recent sessions</h3><div>' + H.slice(-8).reverse().map(function (x) {
+      var p = paceTxt(x.dist, x.sec);
+      return '<div class="lrow"><span>' + fmtDateLong(x.t) + '</span><span class="num" style="font-size:16px;text-align:right">' + distSetTxt({ d: x.dist, tm: x.sec }) + (p ? '<br><span class="faint" style="font-size:13px">' + p + ' · ' + speedTxt(x.dist, x.sec) + '</span>' : '') + '</span></div>';
+    }).join('') + '</div></div>' +
+    '<button class="btn block" data-act="openEx" data-n="' + esc(name) + '">About this exercise</button>';
+  openSheet(name, body);
+}
 function liftSheet(name, metric) {
+  if (isDist(BYNAME[name])) return cardioSheet(name, metric);
   metric = metric || 'e1rm';
   var ex = BYNAME[name], H = allHistories(statWorkouts())[name]; if (!H) return;
   var bw = isBW(ex), u = unit(), conv = function (lb) { return u === 'kg' ? lb / LB : lb; };
@@ -755,7 +830,7 @@ function histSheet(id) {
   var w = statWorkouts().filter(function (x) { return x.id === id; })[0]; if (!w) return;
   var prior = S.workouts.filter(function (x) { return x.t < w.t; }), prs = findPRs(prior, w).map(function (p) { return p.n; });
   var body = '<div class="grid2"><div class="stat"><div class="v">' + Math.round(w.dur / 60) + ' min</div><div class="k">Duration</div></div><div class="stat"><div class="v">' + volDisp(workoutVolume(w)) + ' ' + uLabel() + '</div><div class="k">Volume</div></div></div>' +
-    w.ex.map(function (e) { var ex = BYNAME[e.n]; return '<div class="section"><div class="row"><div class="thumb" style="width:64px">' + demoHTML(ex, false) + '</div><div class="xname grow">' + esc(e.n) + (prs.indexOf(e.n) >= 0 ? '<span class="pr">PR</span>' : '') + '</div></div><div>' + e.sets.map(function (s, i) { return '<div class="lrow"><span class="muted">Set ' + (i + 1) + '</span><span class="num" style="font-size:18px">' + (isBW(ex) && !s.w ? s.r + ' reps' : toDisp(s.w, unit()) + ' ' + uLabel() + loadSuffix(ex) + ' × ' + s.r) + '</span></div>'; }).join('') + '</div></div>'; }).join('') +
+    w.ex.map(function (e) { var ex = BYNAME[e.n]; return '<div class="section"><div class="row"><div class="thumb" style="width:64px">' + demoHTML(ex, false) + '</div><div class="xname grow">' + esc(e.n) + (prs.indexOf(e.n) >= 0 ? '<span class="pr">PR</span>' : '') + '</div></div><div>' + e.sets.map(function (s, i) { return '<div class="lrow"><span class="muted">Set ' + (i + 1) + '</span><span class="num" style="font-size:18px">' + setTxt(ex, s) + '</span></div>'; }).join('') + (isDist(ex) && distSummary(e.sets).indexOf('pace') > 0 ? '<div class="note">' + esc(distSummary(e.sets)) + '</div>' : '') + '</div></div>'; }).join('') +
     (w.sample ? '' : (U.confirm === 'delhist' ? '<div class="banner"><span>Delete this workout?</span><span class="row"><button class="btn small danger" data-act="delhist2" data-id="' + esc(w.id) + '">Delete</button><button class="btn small" data-act="histCancel" data-id="' + esc(w.id) + '">Keep</button></span></div>' : '<button class="btn block ghost danger" data-act="delhist" data-id="' + esc(w.id) + '">Delete workout</button>'));
   if (!S.draft) body = '<button class="btn primary block" data-act="repeatW" data-id="' + esc(w.id) + '">Do this workout again</button>' + body;
   if (!w.sample) body = body + '<div class="row" style="gap:8px"><button class="btn grow" data-act="wkSendHist" data-id="' + esc(w.id) + '">👥 Send</button><button class="btn grow" data-act="wkSaveHist" data-id="' + esc(w.id) + '">☆ Save</button></div>';
@@ -919,6 +994,12 @@ function stretchAdd(when, where) {
 /* tick a set: check it has numbers, start the rest timer, look for a new best */
 function markSetDone(xi, si) {
   var ex = S.draft.ex[xi], s = ex.sets[si], X = BYNAME[ex.n], bw = isBW(X);
+  if (isDist(X)) {   // runs and rides: no rest timer, no strength PR
+    if (!(+s.d > 0 || +s.tm > 0)) { toast('Enter the distance or time first.'); return false; }
+    s.w = 0; s.r = 1; s.done = true; s.sug = false; persist({ draft: true }); render();
+    var pc = paceTxt(+s.d, +s.tm); if (pc) toast('Pace ' + pc + ' · ' + speedTxt(+s.d, +s.tm));
+    return true;
+  }
   if (!(+s.r > 0)) { toast(isTimed(X) ? 'Enter the seconds first, or use the hold timer.' : 'Enter the reps first.'); return false; }
   if (!bw && !(+s.w > 0)) { toast('Enter the weight first.'); return false; }
   s.done = true; s.sug = false;
@@ -1031,6 +1112,7 @@ document.addEventListener('click', function (ev) {
     s.done = false;
     persist({ draft: true }); render(); return;
   }
+  if (a === 'addSet' && isDist(BYNAME[S.draft.ex[+d.x].n])) { S.draft.ex[+d.x].sets.push({ w: 0, r: null, d: null, tm: null, done: false }); persist({ draft: true }); render(); return; }
   if (a === 'addSet') { var e2 = S.draft.ex[+d.x], l = e2.sets[e2.sets.length - 1]; e2.sets.push({ w: l ? l.w : null, r: l ? l.r : e2.lo, done: false, sug: true }); persist({ draft: true }); render(); return; }
   if (a === 'rmSet') {
     var e3 = S.draft.ex[+d.x], work = e3.sets.filter(function (q) { return !q.wu; });
@@ -1129,7 +1211,7 @@ document.addEventListener('click', function (ev) {
   if (a === 'restCycle') { var rc = S.draft.ex[+d.x], opts = [45, 60, 75, 90, 120, 150, 180, 240], nxt = opts.filter(function (o) { return o > rc.rest; })[0]; rc.rest = nxt || opts[0]; persist({ draft: true }); render(); toast('Rest ' + fmtDur(rc.rest)); return; }
   if (a === 'editW') { var ew = statWorkouts().filter(function (x) { return x.id === d.id; })[0]; if (!ew) return; U.edit = JSON.parse(JSON.stringify(ew)); editSheet(); return; }
   if (a === 'editRm') { var er = U.edit.ex[+d.x]; er.sets.splice(+d.s, 1); if (!er.sets.length) U.edit.ex.splice(+d.x, 1); editSheet(); return; }
-  if (a === 'editAdd') { var ea = U.edit.ex[+d.x], la = ea.sets[ea.sets.length - 1]; ea.sets.push({ w: la ? la.w : 0, r: la ? la.r : 8 }); editSheet(); return; }
+  if (a === 'editAdd') { var ea = U.edit.ex[+d.x], la = ea.sets[ea.sets.length - 1]; ea.sets.push(isDist(BYNAME[ea.n]) ? { w: 0, r: 0 } : { w: la ? la.w : 0, r: la ? la.r : 8 }); editSheet(); return; }
   if (a === 'editSave') { saveEdit(); return; }
   if (a === 'editCancel') { var ec = U.edit && U.edit.id; U.edit = null; histSheet(ec); return; }
   if (a === 'calMove') { U.calM = (U.calM || 0) + (+d.v); render(); return; }
@@ -1194,13 +1276,19 @@ document.addEventListener('input', function (ev) {
   if (t.id === 'libq') { U.libQ = t.value; U.libShown = 40; refreshLibList(); return; }
   if (t.id === 'pickq') { U.pickQ = t.value; U.pickShown = 30; refreshPick(); return; }
   if (t.id === 'altq' && U.alt) { U.alt.q = t.value; U.alt.shown = 25; altRefresh(); return; }
-  if (t.dataset && t.dataset.ek && U.edit) { var es = U.edit.ex[+t.dataset.x].sets[+t.dataset.s]; if (t.dataset.ek === 'w') es.w = fromDisp(t.value, unit()) || 0; else es.r = Math.max(0, parseInt(t.value, 10) || 0); return; }
+  if (t.dataset && t.dataset.ek && U.edit) { var es = U.edit.ex[+t.dataset.x].sets[+t.dataset.s]; if (t.dataset.ek === 'd' || t.dataset.ek === 'tm') { if (t.dataset.ek === 'd') es.d = dFromDisp(t.value) || 0; else es.tm = parseClock(t.value) || 0; es.w = 0; es.r = (es.d > 0 || es.tm > 0) ? 1 : 0; return; } if (t.dataset.ek === 'w') es.w = fromDisp(t.value, unit()) || 0; else es.r = Math.max(0, parseInt(t.value, 10) || 0); return; }
   if (t.id === 'exnote') { var nn = t.dataset.n, nv = t.value.slice(0, 200).trim(); if (nv) S.settings.notes[nn] = nv; else delete S.settings.notes[nn]; persist({ settings: true }); return; }
   if (t.id === 'pcw') { U.pcw = t.value; var pb = $('#pcbody'); if (pb) pb.innerHTML = plateBody(); return; }
   if (t.id === 'cname') { S.settings.handle = t.value.slice(0, 16); persist({ settings: true }); var mc = $('#mycode'); if (mc) mc.value = S.settings.handle ? myCode() : 'Enter your name to get a code.'; document.querySelectorAll('[data-act="codeShare"],[data-act="codeCopy"]').forEach(function (b2) { b2.disabled = !S.settings.handle; }); return; }
   if (t.id === 'fq') { SOC.q = t.value; var pl = $('#people-list'); if (pl) pl.innerHTML = peopleList(peopleAll()); return; }
   if (t.dataset && t.dataset.k && S.draft) {
     var s = S.draft.ex[+t.dataset.x].sets[+t.dataset.s]; s.sug = false; t.classList.remove('sug');
+    if (t.dataset.k === 'd' || t.dataset.k === 'tm') {
+      if (t.dataset.k === 'd') s.d = dFromDisp(t.value); else s.tm = parseClock(t.value);
+      s.w = 0; s.r = (+s.d > 0 || +s.tm > 0) ? 1 : null;
+      var ds = $('#dsum' + t.dataset.x); if (ds) ds.textContent = distSummary(S.draft.ex[+t.dataset.x].sets) || DIST_HINT;
+      persist({ draft: true }); return;
+    }
     if (t.dataset.k === 'w') s.w = fromDisp(t.value, unit()); else s.r = t.value === '' ? null : Math.max(0, parseInt(t.value, 10) || 0);
     persist({ draft: true });
   }
@@ -1332,11 +1420,12 @@ async function saveBackup() {
 }
 function csvCell(v) { v = String(v == null ? '' : v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
 async function saveCsv() {
-  var rows = [['Date', 'Workout minutes', 'Exercise', 'Muscle', 'Set', 'Weight (' + uLabel() + ')', 'Reps', 'Est. 1RM (' + uLabel() + ')']];
+  var rows = [['Date', 'Workout minutes', 'Exercise', 'Muscle', 'Set', 'Weight (' + uLabel() + ')', 'Reps', 'Est. 1RM (' + uLabel() + ')', 'Distance (' + dU() + ')', 'Time', 'Pace (per ' + dU() + ')']];
   S.workouts.forEach(function (w) {
     var ds = localDate(w.t);
     w.ex.forEach(function (e) { var ex = BYNAME[e.n]; e.sets.forEach(function (s, i) {
-      var wt = +s.w || 0, rp = +s.r || 0; rows.push([ds, Math.round((w.dur || 0) / 60), e.n, ex ? ex.p.join('/') : '', i + 1, wt ? toDisp(wt, unit()) : '', rp, wt && rp ? toDisp(wt * (1 + rp / 30), unit()) : '']);
+      if (isDist(ex)) { rows.push([ds, Math.round((w.dur || 0) / 60), e.n, ex.p.join('/'), i + 1, '', '', '', +s.d > 0 ? dToDisp(+s.d) : '', +s.tm > 0 ? fmtDur(+s.tm) : '', paceSec(+s.d, +s.tm) ? fmtDur(paceSec(+s.d, +s.tm)) : '']); return; }
+      var wt = +s.w || 0, rp = +s.r || 0; rows.push([ds, Math.round((w.dur || 0) / 60), e.n, ex ? ex.p.join('/') : '', i + 1, wt ? toDisp(wt, unit()) : '', rp, wt && rp ? toDisp(wt * (1 + rp / 30), unit()) : '', '', '', '']);
     }); });
   });
   if (rows.length < 2) { toast('Log a workout first.'); return; }
@@ -1410,7 +1499,7 @@ function weekCard() {
     '<div class="note">' + (P ? 'Tap a day to see or change its workout. Each muscle gets 2–3 days of rest. ' : 'Plan the week to get a workout for each training day, spaced so every muscle rests. ') + planBtn + '</div></div>';
 }
 function livePR(dx, s) {
-  var ex = BYNAME[dx.n]; if (!ex) return;
+  var ex = BYNAME[dx.n]; if (!ex || isDist(ex)) return;
   var h = exHistory(realWorkouts(), dx.n), prev = 0; h.forEach(function (x) { if (x.best > prev) prev = x.best; });
   var now = sessionBest(ex, dx.sets.filter(function (q) { return q.done && !q.wu; }));
   if (prev > 0 && now > prev * 1.0001 && now > (dx.prShown || 0)) {
@@ -1465,6 +1554,13 @@ function addWarmups(e) {
 function editSheet() {
   var w = U.edit, bwOf = function (n) { return isBW(BYNAME[n]); };
   var body = w.ex.map(function (e, xi) {
+    if (isDist(BYNAME[e.n])) return '<div class="card section" style="gap:8px"><div class="xname">' + esc(e.n) + '</div><div class="esets">' +
+      '<div class="hd">SET</div><div class="hd">' + dU().toUpperCase() + '</div><div class="hd">TIME</div><div class="hd"></div>' +
+      e.sets.map(function (s, si) {
+        return '<div class="sn">' + (si + 1) + '</div><input class="input" inputmode="decimal" data-ek="d" data-x="' + xi + '" data-s="' + si + '" value="' + (+s.d > 0 ? dToDisp(+s.d) : '') + '" placeholder="0.0" aria-label="Set ' + (si + 1) + ' distance">' +
+          '<input class="input" data-ek="tm" data-x="' + xi + '" data-s="' + si + '" value="' + (+s.tm > 0 ? fmtDur(+s.tm) : '') + '" placeholder="mm:ss" aria-label="Set ' + (si + 1) + ' time">' +
+          '<button class="icon-btn" data-act="editRm" data-x="' + xi + '" data-s="' + si + '" aria-label="Remove set ' + (si + 1) + '">' + ico('x') + '</button>';
+      }).join('') + '</div><button class="btn small ghost" data-act="editAdd" data-x="' + xi + '">+ Add set</button></div>';
     return '<div class="card section" style="gap:8px"><div class="xname">' + esc(e.n) + '</div><div class="esets">' +
       '<div class="hd">SET</div><div class="hd">' + uLabel().toUpperCase() + '</div><div class="hd">REPS</div><div class="hd"></div>' +
       e.sets.map(function (s, si) {
@@ -1532,7 +1628,7 @@ function shareImage(w) {
   var yy = 600, list = w.ex.slice(0, 8);
   list.forEach(function (e) {
     var ex = BYNAME[e.n], top = e.sets.slice().sort(function (a, b) { return (b.w - a.w) || (b.r - a.r); })[0];
-    var ns = e.sets.length + (e.sets.length === 1 ? ' set' : ' sets'), val = isBW(ex) && !top.w ? ns + ' · best ' + top.r + ' reps' : ns + ' · ' + toDisp(top.w, unit()) + ' × ' + top.r;
+    var ns = e.sets.length + (e.sets.length === 1 ? ' set' : ' sets'), val = isDist(ex) ? distSummary(e.sets) : isBW(ex) && !top.w ? ns + ' · best ' + top.r + ' reps' : ns + ' · ' + toDisp(top.w, unit()) + ' × ' + top.r;
     x.fillStyle = '#eceae4'; x.font = '600 38px ' + fb; x.fillText(e.n.length > 30 ? e.n.slice(0, 29) + '…' : e.n, 100, yy, 600);
     x.fillStyle = prs.indexOf(e.n) >= 0 ? Y : '#99a0a9'; x.font = '600 36px ' + fb; x.textAlign = 'right'; x.fillText((prs.indexOf(e.n) >= 0 ? '★ ' : '') + val, W - 100, yy); x.textAlign = 'left';
     yy += 74;
@@ -1559,6 +1655,7 @@ async function shareWorkout(id) {
 /* ===== how to enter the weight for each exercise ===== */
 function loadInfo(ex) {
   if (!ex) return { h: uLabel().toUpperCase(), s: '', l: '' };
+  if (isDist(ex)) return { h: dU().toUpperCase(), s: '', l: '' };
   var n = ex.n.toLowerCase(), q = ex.q, g = ex.gear || [], u = uLabel(), U2 = u.toUpperCase(), has = function (id) { return g.indexOf(id) >= 0; };
   var bar = u === 'kg' ? '20 kg' : '45 lb';
   if (/assist/.test(n)) return { h: 'ASSIST', s: 'Assistance weight', l: 'Enter how much the machine or band helps you. More assistance = easier, so this number should go down over time.' };
@@ -1566,7 +1663,7 @@ function loadInfo(ex) {
     return { h: '+' + U2, s: 'Added weight only', l: 'Leave it at 0 for plain bodyweight. Only enter extra weight you add, like a vest, belt or dumbbell. Your reps are what get tracked.' };
   }
   if (q === 'dumbbell' || (has('dumbbell') && !has('barbell') && !has('ezbar'))) {
-    var single = /one[- ]arm|single|goblet|plie|pullover|one dumbbell|^dumbbell (?:raise|side bend)$|two-arm.*one dumbbell|^seated triceps press$|^dumbbell snatch$/.test(n) || /tricep.*extension/.test(n) && !/lying|two-arm|pronated grip|decline/.test(n);
+    var single = /one[- ]arm|single|goblet|plie|pullover|sumo deadlift|russian twist|woodchop|glute bridge|one dumbbell|^dumbbell (?:raise|side bend)$|two-arm.*one dumbbell|^seated triceps press$|^dumbbell snatch$/.test(n) || /tricep.*extension/.test(n) && !/lying|two-arm|pronated grip|decline/.test(n);
     return single
       ? { h: U2 + ' (1 DB)', s: 'Weight of the dumbbell', l: 'You use one dumbbell here. Enter its weight, e.g. 40.' }
       : { h: U2 + ' EACH', s: 'Per dumbbell', l: 'Enter the weight of ONE dumbbell. Holding two 50s? Enter 50, not 100. Strength ranks are set up this way too.' };
