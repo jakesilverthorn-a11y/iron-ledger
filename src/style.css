@@ -514,3 +514,6 @@ body.vvfix #tabs, body.vvfix .rest-pill { transform: translateZ(0); }
 .figpair .demo:last-child { aspect-ratio: 140 / 200; }
 .figpair .fig { width: 100%; height: 100%; display: block; }
 .figlab { position: absolute; left: 8px; top: 6px; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); }
+
+/* bottom bar position fix (see tabCheck in ui.js) */
+#tabs, .rest-pill { translate: 0 var(--tabfix, 0px); }

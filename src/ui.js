@@ -886,7 +886,7 @@ function viewSettings() {
     '<div class="sgroup"><div class="sghead"><h2>You</h2><div class="note">Used for your strength rank and calorie targets.</div></div>' + '<div class="section">' + bodyCard() + '</div>' + '<div class="section"><span class="field-label">Weight units</span><div class="seg" role="group"><button aria-pressed="' + (st.unit === 'lb') + '" data-act="unit" data-k="lb">Pounds</button><button aria-pressed="' + (st.unit === 'kg') + '" data-act="unit" data-k="kg">Kilograms</button></div></div>' + '</div>' +
     '<div class="sgroup"><div class="sghead"><h2>Training</h2><div class="note">What the workout builder may use.</div></div>' + '<div class="section"><h2>Equipment</h2><div class="seg" role="group" aria-label="Which place to edit"><button aria-pressed="' + (st.profile === 'gym') + '" data-act="profile" data-k="gym">Gym</button><button aria-pressed="' + (st.profile === 'home') + '" data-act="profile" data-k="home">Home</button></div><div class="note">Tick what is available at your ' + profName().toLowerCase() + '. Built workouts only use ticked equipment; the Train tab switches between Gym and Home.</div><details class="card gdet"' + (U.gearOpen ? ' open' : '') + '><summary>Edit ' + profName().toLowerCase() + ' equipment · ' + gearList().length + ' of ' + ITEMS.length + ' ticked</summary>' + gearGrid() + '</details></div>' + '<div class="section"><span class="field-label">Exercise difficulty</span><div class="seg" role="group"><button aria-pressed="' + (st.level === 'beginner') + '" data-act="level" data-k="beginner">Beginner</button><button aria-pressed="' + (st.level === 'intermediate') + '" data-act="level" data-k="intermediate">Intermediate</button><button aria-pressed="' + (st.level === 'expert') + '" data-act="level" data-k="expert">Advanced</button></div></div>' + injurySettingsHTML() + '</div>' +
     '</div><div class="col">' +
-    '<div class="sgroup"><div class="sghead"><h2>Workout alerts</h2></div>' + '<div class="section"><span class="field-label">Rest timer chime</span><div class="seg" role="group" aria-label="Rest timer chime"><button aria-pressed="' + (st.chime !== false) + '" data-act="chimeOpt" data-k="on">On</button><button aria-pressed="' + (st.chime === false) + '" data-act="chimeOpt" data-k="off">Off</button></div><div class="note">A short chime when rest is over, through your headphones or speaker. Keep the app open on screen (it stays awake during workouts); iPhones pause web apps that are in the background.</div></div>' + restAlertCard() + '<div class="section"><span class="field-label">Voice cues for timers</span><div class="seg" role="group" aria-label="Voice cues"><button aria-pressed="' + (st.voice !== false) + '" data-act="voiceOpt" data-k="on">On</button><button aria-pressed="' + (st.voice === false) + '" data-act="voiceOpt" data-k="off">Off</button></div><div class="note">The hold and tempo timers talk you through it: the tempo timer says "down" and counts the seconds down, then "up".</div></div>' + '</div>' +
+    '<div class="sgroup"><div class="sghead"><h2>Workout alerts</h2></div>' + '<div class="section"><span class="field-label">Rest timer chime</span><div class="seg" role="group" aria-label="Rest timer chime"><button aria-pressed="' + (st.chime !== false && st.chimeLoud !== false) + '" data-act="chimeOpt" data-k="loud">Even on silent</button><button aria-pressed="' + (st.chime !== false && st.chimeLoud === false) + '" data-act="chimeOpt" data-k="on">Normal</button><button aria-pressed="' + (st.chime === false) + '" data-act="chimeOpt" data-k="off">Off</button></div><div class="note">A short chime when rest is over, through your headphones or speaker. <b>Even on silent</b> plays it with the iPhone on silent too (at media volume); iPhone may pause music from another app for it. <b>Normal</b> mixes with your music but stays quiet when the phone is on silent. Keep the app open on screen (it stays awake during workouts); iPhones pause web apps that are in the background.</div></div>' + restAlertCard() + '<div class="section"><span class="field-label">Voice cues for timers</span><div class="seg" role="group" aria-label="Voice cues"><button aria-pressed="' + (st.voice !== false) + '" data-act="voiceOpt" data-k="on">On</button><button aria-pressed="' + (st.voice === false) + '" data-act="voiceOpt" data-k="off">Off</button></div><div class="note">The hold and tempo timers talk you through it: the tempo timer says "down" and counts the seconds down, then "up".</div></div>' + '</div>' +
     (foldOfferable() ? '<div class="sgroup"><div class="sghead"><h2>Screen</h2></div><div class="section"><span class="field-label">Foldable phone layout</span><div class="seg" role="group" aria-label="Foldable phone layout">' + [['auto', 'Automatic'], ['on', 'On'], ['off', 'Off']].map(function (o) { return '<button aria-pressed="' + (foldPref() === o[0]) + '" data-act="foldOpt" data-k="' + o[0] + '">' + o[1] + '</button>'; }).join('') + '</div><div class="note">For iPhone Duo. When the phone is open, screens split into two columns either side of the fold, and held sideways, pop-ups open on the right half like a book page. Closed, it looks like any iPhone. Automatic turns it on only on a foldable; this setting is for this device only.</div></div></div>' : '') +
     ((typeof healthSettingsCard === 'function' && healthSettingsCard()) ? '<div class="sgroup"><div class="sghead"><h2>Apple Health</h2></div>' + healthSettingsCard() + '</div>' : '') +
     '<div class="sgroup"><div class="sghead"><h2>Your data</h2></div>' + '<div class="section"><div class="note">' + status + '</div>' +
@@ -949,7 +949,10 @@ function unlockAudio() {
 }
 function beep() {
   if (S.settings.chime === false) return;
-  try { if (navigator.audioSession) navigator.audioSession.type = 'transient'; } catch (e) { }
+  // 'playback' is the only kind of sound iPhone lets through the silent switch; 'transient' mixes with music but obeys it
+  var loud = S.settings.chimeLoud !== false;
+  try { if (navigator.audioSession) navigator.audioSession.type = loud ? 'playback' : 'transient'; } catch (e) { }
+  if (loud) { clearTimeout(beep.rel); beep.rel = setTimeout(function () { try { if (navigator.audioSession) navigator.audioSession.type = 'transient'; } catch (e) { } }, 2500); }   // hand the audio back to your music
   var el = chimeEl();
   if (el) { try { el.muted = false; el.currentTime = 0; var pr = el.play(); if (pr && pr.catch) pr.catch(beepWA); return; } catch (e) { } }
   beepWA();
@@ -1134,7 +1137,7 @@ document.addEventListener('click', function (ev) {
   if (a === 'restAdd') { if (U.rest) { U.rest.end += +d.v * 1000; U.rest.total = Math.max(15, U.rest.total + +d.v); tick(); } return; }
   if (a === 'restSkip') { U.rest = null; tick(); return; }
   if (a === 'foldOpt') { try { if (d.k === 'auto') localStorage.removeItem('il-fold'); else localStorage.setItem('il-fold', d.k); } catch (e) { } foldApply(); render(); return; }
-  if (a === 'chimeOpt') { st.chime = d.k === 'on'; persist({ settings: true }); render(); if (st.chime) { unlockAudio(); setTimeout(beep, 120); } return; }
+  if (a === 'chimeOpt') { st.chime = d.k !== 'off'; st.chimeLoud = d.k === 'loud'; persist({ settings: true }); render(); if (st.chime) { unlockAudio(); setTimeout(beep, 120); } return; }
   if (a === 'libGroup') { var j = U.libGroups.indexOf(d.g); if (j >= 0) U.libGroups.splice(j, 1); else U.libGroups.push(d.g); U.libShown = 40; render(); return; }
   if (a === 'libGear') { U.libGear = d.k; U.libShown = 40; render(); return; }
   if (a === 'pickMore') { U.pickShown = (U.pickShown || 30) + 60; refreshPick(); return; }
@@ -1334,6 +1337,25 @@ document.addEventListener('focusin', function (ev) { if (isTyping(ev.target) && 
 document.addEventListener('focusout', function () { fixViewport(); });
 if (window.visualViewport) window.visualViewport.addEventListener('resize', function () { if (!isTyping(document.activeElement)) fixViewport(); });
 window.addEventListener('orientationchange', fixViewport);
+/* the bottom tab bar can get stuck partway up the screen on iPhone Duo (and now and then on other iPhones) after scrolling,
+   folding or unfolding: iOS keeps an old idea of where "the bottom" is. Measure where the bar really sits and move it
+   back to the bottom of what you can see. On a foldable this always runs; elsewhere only when the bar is clearly off. */
+var TABFIX = { v: 0, raf: 0, t: 0 };
+function tabFixSet(v) { TABFIX.v = v; document.documentElement.style.setProperty('--tabfix', v ? Math.round(v) + 'px' : '0px'); }
+function tabCheck() {
+  TABFIX.raf = 0;
+  var t = document.getElementById('tabs'); if (!t) return;
+  if (document.body.classList.contains('typing') || getComputedStyle(t).display === 'none') return;
+  if (t.offsetWidth < innerWidth * 0.6) { if (TABFIX.v) tabFixSet(0); return; }   // side rail on wide screens: nothing to fix
+  var vv = window.visualViewport; if (vv && Math.abs(vv.scale - 1) > 0.02) return;   // pinch-zoomed
+  var bottom = vv ? vv.offsetTop + vv.height : innerHeight, r = t.getBoundingClientRect(), off = bottom - r.bottom;
+  var duo = document.documentElement.classList.contains('duo');
+  if (Math.abs(off) > (duo ? 1.5 : 40)) tabFixSet(TABFIX.v + off);
+}
+function tabSoon() { if (!TABFIX.raf) TABFIX.raf = requestAnimationFrame(tabCheck); clearTimeout(TABFIX.t); TABFIX.t = setTimeout(tabCheck, 350); }
+window.addEventListener('scroll', tabSoon, { passive: true });
+window.addEventListener('resize', tabSoon);
+if (window.visualViewport) { window.visualViewport.addEventListener('resize', tabSoon); window.visualViewport.addEventListener('scroll', tabSoon); }
 document.addEventListener('visibilitychange', function () { if (!document.hidden) { tick(); keepAwake(); } });
 
 /* ===== picker (add exercise) ===== */

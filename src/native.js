@@ -67,7 +67,13 @@ function nativeTick() {
 }
 function haptic(k) {
   if (NATIVE.on) { nativeCall('haptic', { k: k || 'tap' }).catch(function () { }); return; }
-  try { if (navigator.vibrate) navigator.vibrate(k === 'done' ? [220, 120, 220] : 60); } catch (e) { }
+  try { if (navigator.vibrate) { navigator.vibrate(k === 'done' ? [220, 120, 220] : 60); return; } } catch (e) { }
+  // iPhone web apps have no vibrate(); flicking a hidden iOS switch control gives a small buzz, and that works on silent too
+  try {
+    var l = document.getElementById('hapt');
+    if (!l) { l = document.createElement('label'); l.id = 'hapt'; l.setAttribute('aria-hidden', 'true'); l.style.cssText = 'position:fixed;left:-200px;top:0;opacity:0;pointer-events:none'; l.innerHTML = '<input type="checkbox" switch tabindex="-1">'; document.body.appendChild(l); }
+    l.click(); if (k === 'done') { setTimeout(function () { l.click(); }, 150); setTimeout(function () { l.click(); }, 300); }
+  } catch (e) { }
 }
 
 /* ----- Apple Health, read directly by the app ----- */
@@ -181,7 +187,7 @@ function restAlertCard() {
   var body, btn = '';
   if (NATIVE.on) body = 'On. When rest is over you get a notification, even in another app or with the phone locked. You can change it in the iPhone Settings app → Notifications → Iron Ledger.';
   else if (window.claude) body = 'In this version the alert only sounds while Iron Ledger is open on screen. Use the Home Screen app (or the iPhone app) for alerts with the app closed.';
-  else if (webPushOn()) { body = 'On. When rest is over this phone plays its notification sound and shows "Rest is over", even with the app closed, the phone locked or another app open (and on your Apple Watch). No account needed.'; btn = '<button class="btn block ghost" data-act="pushTest">Send a test alert in 5 s</button><button class="btn block ghost" data-act="pushOff">Turn off</button>'; }
+  else if (webPushOn()) { body = 'On. When rest is over this phone plays its notification sound and shows "Rest is over", even with the app closed, the phone locked or another app open (and on your Apple Watch). No account needed. With the phone on silent, iPhone vibrates for notifications instead of playing a sound: make sure Settings app → Sounds & Haptics → Haptics is set to Always Play.'; btn = '<button class="btn block ghost" data-act="pushTest">Send a test alert in 5 s</button><button class="btn block ghost" data-act="pushOff">Turn off</button>'; }
   else if (webPushAvail() && !webPushNeedsInstall()) { body = 'Get the chime as a notification when rest is over, even with the app closed, the phone locked or music playing. No account needed.'; btn = '<button class="btn block primary" data-act="pushOn">Turn on rest alerts</button>'; }
   else body = 'iPhone only lets web apps alert you when they are installed. In Safari tap Share → Add to Home Screen, open Iron Ledger from the new icon, then turn rest alerts on here. (Until then the chime only plays while the app is open on screen.)';
   return '<div class="section"><span class="field-label">Rest alerts when the app is closed</span><div class="card section" style="gap:10px"><div class="note">' + body + '</div>' + btn + (NH.pushErr ? '<div class="note" style="color:var(--down)">' + esc(NH.pushErr) + '</div>' : '') + '</div></div>';
