@@ -86,7 +86,7 @@ function measCard() {
   var bf = navyBF(), wp = L.filter(function (x) { return x.waist != null; }).map(function (x) { return { t: x.t, v: unit() === 'kg' ? x.waist : x.waist / 2.54 }; });
   return '<div class="section"><div class="row"><h2 class="grow">Measurements</h2><button class="btn small" data-act="measAdd">+ Log</button></div><div class="hgrid">' + tiles + '</div>' +
     (bf ? '<div class="note">Estimated body fat from your tape measurements (US Navy method): <b>' + bf + '%</b>. Good for tracking the trend; it can be a few points off.</div>' : '') +
-    (wp.length > 1 ? '<div class="card section" style="gap:6px"><div class="xname">Waist</div>' + lineChart(wp, { label: 'Waist trend', fmt: function (v) { return Math.round(v * 10) / 10; } }) + '</div>' : '') + '</div>';
+    (wp.length > 1 ? '<div class="card section" style="gap:6px"><div class="xname">Waist</div>' + lineChart(wp, { unit: unit() === 'kg' ? ' cm' : ' in', label: 'Waist trend', fmt: function (v) { return Math.round(v * 10) / 10; } }) + '</div>' : '') + '</div>';
 }
 function measSheet() {
   var u = measUnit(), last = {};

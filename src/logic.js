@@ -95,16 +95,26 @@ function allHistories(workouts) {
   return res;
 }
 var DAY = 86400000;
-/* index of an exercise at time t: best of the 28 days up to your latest session (at or before t) / first-session strength, as a percentage */
+/* where an exercise's index starts: your first session, or your second if it came within two weeks and was better
+   (a light first day spent finding your weights shouldn't inflate everything after it) */
+function exBase(h) {
+  if (!h.length) return 0;
+  var b = h[0].best;
+  if (h.length > 1 && h[1].t - h[0].t <= 14 * DAY && h[1].best > b) b = h[1].best;
+  return b;
+}
+/* lifts you haven't done in a while count for less in the muscle and overall scores: full weight for 6 weeks, then fading to a quarter */
+function staleW(lastT, t) { var d = (t - lastT) / DAY; return d <= 42 ? 1 : Math.max(0.25, 1 - (d - 42) / 120); }
+/* index of an exercise at time t: best of the 28 days up to your latest session (at or before t) / starting strength (exBase), as a percentage */
 function exIndexAt(h, t) {
   var cur = null, i, last = -1;
   for (i = 0; i < h.length; i++) if (h[i].t <= t) last = i;
   if (last < 0) return null;
   var best = 0;
   for (i = 0; i <= last; i++) if (h[i].t >= h[last].t - 28 * DAY && h[i].best > best) best = h[i].best;
-  var base = h[0].best;
+  var base = exBase(h);
   if (!base) return null;
-  return { idx: clamp(best / base * 100, 40, 300), n: last + 1 };
+  return { idx: clamp(best / base * 100, 40, 300), n: last + 1, lt: h[last].t };
 }
 /* muscle group score at time t from histories */
 function groupScoreAt(hists, group, t) {
@@ -114,7 +124,7 @@ function groupScoreAt(hists, group, t) {
     var w = ex.p.indexOf(group) >= 0 ? 1 : (ex.s.indexOf(group) >= 0 ? 0.35 : 0);
     if (!w) return;
     var r = exIndexAt(hists[n], t); if (!r) return;
-    var ww = w * Math.min(r.n, 4);
+    var ww = w * Math.min(r.n, 4) * staleW(r.lt, t);
     num += r.idx * ww; den += ww; cnt++;
   });
   return den ? { score: num / den, n: cnt } : null;
@@ -577,7 +587,7 @@ function exerciseRank(name, h, B, t) {
   var bw = bwAt(B, t); if (!bw) return null;
   var a = stdAt(k.cls, B.sex, effBW(B.sex, B.h, bw)); if (!a) return null;
   var z = zOf(a, best / k.m);
-  return { z: z, pct: pctOfZ(z), score: scoreOfZ(z), est: !!ex.ke, cls: k.cls, n: last + 1, eq: best / k.m, anchors: a };
+  return { z: z, pct: pctOfZ(z), score: scoreOfZ(z), est: !!ex.ke, cls: k.cls, n: last + 1, eq: best / k.m, anchors: a, lt: h[last].t };
 }
 function groupRankAt(hists, group, B, t) {
   var num = 0, den = 0, cnt = 0;
@@ -585,7 +595,7 @@ function groupRankAt(hists, group, B, t) {
     var ex = BYNAME[n]; if (!ex) return;
     var w = ex.p.indexOf(group) >= 0 ? 1 : (ex.s.indexOf(group) >= 0 ? 0.35 : 0); if (!w) return;
     var r = exerciseRank(n, hists[n], B, t); if (!r) return;
-    var ww = w * Math.min(r.n, 4) * (r.est ? 0.6 : 1);
+    var ww = w * Math.min(r.n, 4) * (r.est ? 0.6 : 1) * staleW(r.lt, t);
     num += r.z * ww; den += ww; cnt++;
   });
   if (!den) return null;

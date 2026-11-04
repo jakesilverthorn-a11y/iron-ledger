@@ -114,7 +114,7 @@ function healthBodyCard() {
   var pts = (B.log || []).filter(function (x) { return x.t >= Date.now() - 182 * DAY; }).map(function (x) { return { t: x.t, v: u === 'kg' ? x.w / LB : x.w }; });
   return '<div class="section"><div class="row"><h2 class="grow">Health</h2><button class="btn small ghost" data-act="hkSetup">Settings</button></div>' + readinessNote() +
     '<div class="hgrid">' + tiles.join('') + '</div>' +
-    (pts.length > 1 ? '<div class="card section" style="gap:6px"><div class="xname">Weight, last 6 months</div>' + lineChart(pts, { label: 'Weight trend', fmt: function (v) { return Math.round(v); } }) + '</div>' : '') +
+    (pts.length > 1 ? '<div class="card section" style="gap:6px"><div class="xname">Weight, last 6 months</div>' + lineChart(pts, { unit: ' ' + (u === 'kg' ? 'kg' : 'lb'), label: 'Weight trend', fmt: function (v) { return Math.round(v); } }) + '</div>' : '') +
     '<div class="note">From Apple Health · updated ' + hAgo(e[e.length - 1].at) + '.</div></div>';
 }
 function hLink() { return HK.key ? SRV.url + '/health?k=' + encodeURIComponent(HK.key) : ''; }

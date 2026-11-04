@@ -140,6 +140,103 @@ NEW = [
     'Dumbbell Clean', False, 'dbpress*1'),
 ]
 
+# --- round 2 (Nov 2026): popular gym movements the library still lacked. Standards are estimates (marked ≈ in the app). ---
+NEW2 = [
+  X('Pendulum Squat', 'machine', 'beginner', 'compound', ['Quads'], ['Glutes'], ['quadriceps'], ['machine_other'],
+    ['Step onto the platform with your back against the pad and shoulders under the shoulder pads, feet about shoulder-width.', 'Release the safety and bend your knees to swing down, letting your knees travel forward over your toes.', 'Go as deep as you can while your lower back stays on the pad.', 'Drive through your whole foot to swing back up, stopping just short of locking your knees.'],
+    'Hack Squat', False, 'sl_hack_squat*0.8'),
+  X('Belt Squat', 'machine', 'beginner', 'compound', ['Quads'], ['Glutes', 'Hamstrings'], ['quadriceps'], ['machine_other'],
+    ['Stand on the platform and clip the belt around your hips, feet a little wider than shoulder-width.', 'Hold the handles lightly for balance and keep your chest up.', 'Squat down until your thighs are at least parallel to the floor.', 'Drive up through your feet to stand tall. Your back stays unloaded, so this is easy on the spine.'],
+    'Barbell Squat', False, 'sl_squat*0.9'),
+  X('Pause Squat', 'barbell', 'intermediate', 'compound', ['Quads'], ['Glutes', 'Hamstrings', 'Back'], ['quadriceps'], ['barbell', 'rack'],
+    ['Set up as for a normal back squat with the bar on your upper back.', 'Squat down to your usual depth and stop there.', 'Hold the bottom position still for 2 to 3 seconds while staying tight; do not relax or bounce.', 'Drive straight up out of the hole.'],
+    'Barbell Squat', True, 'sl_squat*0.85'),
+  X('Safety Bar Squat', 'barbell', 'intermediate', 'compound', ['Quads'], ['Glutes', 'Back', 'Hamstrings'], ['quadriceps'], ['rack', 'other_gear'],
+    ['Set the safety squat bar on your upper back with the pads over your shoulders and hold the handles in front.', 'Brace your core, step back and set your feet shoulder-width apart.', 'Squat down to at least parallel, keeping your chest up against the bar trying to tip you forward.', 'Drive up through your feet to stand.'],
+    'Barbell Squat', True, 'sl_squat*0.9'),
+  X('Single-Leg Leg Press', 'machine', 'beginner', 'compound', ['Quads'], ['Glutes', 'Hamstrings'], ['quadriceps'], ['leg_press'],
+    ['Sit in the leg press and place one foot in the middle of the platform. Rest the other foot on the floor or frame.', 'Release the safeties and lower the platform until your knee is bent about 90 degrees.', 'Press back up without locking the knee.', 'Finish all reps, then switch legs.'],
+    'Leg Press', True, 'sl_sled_leg_press*0.45'),
+  X('Pistol Squat', 'body only', 'advanced', 'compound', ['Quads'], ['Glutes', 'Core'], ['quadriceps'], ['bodyweight'],
+    ['Stand on one leg with the other leg held straight out in front of you, arms reaching forward for balance.', 'Squat down on the standing leg as low as you can, keeping the heel down and the free leg off the floor.', 'Push back up to standing.', 'Hold a doorframe or squat to a box to start. Finish all reps, then switch legs.'],
+    'Kettlebell Pistol Squat', True, 'sl_bodyweight_squat*0.12'),
+  X('Cossack Squat', 'body only', 'intermediate', 'compound', ['Quads'], ['Glutes', 'Hamstrings'], ['quadriceps', 'adductors'], ['bodyweight'],
+    ['Stand with your feet very wide, toes slightly out.', 'Shift your weight to one side and squat down on that leg while the other leg stays straight with its toes pointing up.', 'Go as low as you can with your heel down and chest up.', 'Push back to the middle and repeat to the other side.'],
+    'Dumbbell Lateral Lunge', False, 'sl_lunge*0.6'),
+  X('Spanish Squat', 'bands', 'beginner', 'compound', ['Quads'], ['Glutes'], ['quadriceps'], ['bands'],
+    ['Loop a heavy band around a sturdy post and step into it so it sits behind your knees.', 'Step back until the band is tight and lean back slightly into it.', 'Sit straight down, keeping your shins vertical and your weight in your heels.', 'Stand back up. The band lets you train the quads with very little knee strain.'],
+    'Bodyweight Squat', False),
+  X('Reverse Nordic', 'body only', 'advanced', 'isolation', ['Quads'], ['Core'], ['quadriceps'], ['bodyweight'],
+    ['Kneel on a soft surface with your knees hip-width apart, body upright and toes tucked or flat.', 'Keeping a straight line from knees to head, slowly lean back as far as you can control.', 'Squeeze your quads to pull yourself back up to upright.', 'Start with a small range and go deeper as you get stronger.'],
+    'Weighted Sissy Squat', False),
+  X('Landmine Row', 'barbell', 'beginner', 'compound', ['Back'], ['Biceps', 'Shoulders'], ['middle back'], ['barbell', 'landmine'],
+    ['Load one end of a barbell in a landmine and straddle the bar facing the plates.', 'Hinge forward with a flat back and grab the bar under the plates (or with a V-handle).', 'Row the plates to your chest, squeezing your shoulder blades together.', 'Lower under control and repeat.'],
+    'T-Bar Row with Handle', True, 'sl_t_bar_row*0.95'),
+  X('Meadows Row', 'barbell', 'intermediate', 'compound', ['Back'], ['Biceps', 'Forearms'], ['lats'], ['barbell', 'landmine'],
+    ['Stand side-on to a landmine barbell, staggered stance with your front leg next to the plates.', 'Hinge over and grab the fat end of the bar with an overhand grip, resting your free forearm on your front knee.', 'Row the bar up and back toward your hip, driving your elbow high.', 'Lower with a stretch. Finish all reps, then switch sides.'],
+    'One-Arm Long Bar Row', True, 'sl_t_bar_row*0.55'),
+  X('Low-to-High Cable Fly', 'cable', 'beginner', 'isolation', ['Chest'], ['Shoulders'], ['chest'], ['cable'],
+    ['Set both pulleys at the bottom and stand in the middle holding a handle in each hand.', 'With a slight bend in your elbows, sweep your hands up and together to about chin height.', 'Squeeze your upper chest at the top.', 'Lower slowly back to the start with a stretch.'],
+    'Cable Crossover', False, 'sl_cable_fly*0.8'),
+  X('Paused Bench Press', 'barbell', 'intermediate', 'compound', ['Chest'], ['Triceps', 'Shoulders'], ['chest'], ['barbell', 'bench', 'rack'],
+    ['Set up as for a normal bench press.', 'Lower the bar to your chest under control.', 'Let it settle and hold it still on your chest for 1 to 2 seconds without losing tightness.', 'Press it back up to lockout.'],
+    'Barbell Bench Press - Medium Grip', True, 'sl_bench_press*0.9'),
+  X('Spoto Press', 'barbell', 'advanced', 'compound', ['Chest'], ['Triceps', 'Shoulders'], ['chest'], ['barbell', 'bench', 'rack'],
+    ['Set up as for a bench press.', 'Lower the bar slowly and stop it about an inch above your chest.', 'Hold it there for a second without touching your chest.', 'Press back up to lockout.'],
+    'Barbell Bench Press - Medium Grip', True, 'sl_bench_press*0.88'),
+  X('Archer Push-Up', 'body only', 'intermediate', 'compound', ['Chest'], ['Triceps', 'Shoulders', 'Core'], ['chest'], ['bodyweight'],
+    ['Start in a push-up position with your hands set very wide.', 'Lower yourself toward one hand, bending that elbow while the other arm stays straight out to the side.', 'Push back up to the middle.', 'Alternate sides, or finish all reps on one side first.'],
+    'Pushups', False, 'sl_push_ups*0.4'),
+  X('Pike Push-Up', 'body only', 'beginner', 'compound', ['Shoulders'], ['Triceps', 'Chest'], ['shoulders'], ['bodyweight'],
+    ['Start in a push-up position, then walk your feet in and lift your hips high so your body makes an upside-down V.', 'Bend your elbows to lower the top of your head toward the floor between your hands.', 'Press back up until your arms are straight.', 'Raise your feet on a box to make it harder.'],
+    'Handstand Push-Ups', False, 'sl_handstand_push_ups*2.2'),
+  X('Z Press', 'barbell', 'intermediate', 'compound', ['Shoulders'], ['Triceps', 'Core'], ['shoulders'], ['barbell', 'rack'],
+    ['Sit on the floor with your legs straight out in front of you, holding a barbell at your collarbones (set it in a rack at that height).', 'Brace your core and sit tall without leaning back.', 'Press the bar straight overhead until your arms are locked.', 'Lower it back to your collarbones and repeat.'],
+    'Seated Barbell Military Press', False, 'sl_overhead_press*0.85'),
+  X('Barbell Thruster', 'barbell', 'intermediate', 'compound', ['Quads'], ['Shoulders', 'Glutes', 'Triceps'], ['quadriceps'], ['barbell'],
+    ['Hold a barbell in the front rack position at your shoulders.', 'Squat down until your thighs are about parallel.', 'Drive up hard and use that momentum to press the bar straight overhead in one movement.', 'Bring the bar back to your shoulders as you go into the next squat.'],
+    'Dumbbell Thruster', False, 'sl_overhead_press*1.05'),
+  X('Lu Raise', 'dumbbell', 'intermediate', 'isolation', ['Shoulders'], [], ['shoulders'], ['dumbbell'],
+    ['Stand holding light dumbbells at your sides with your thumbs pointing forward.', 'Raise your arms out to the sides with straight elbows, past shoulder height and all the way overhead.', 'Lower slowly the same way.', 'Use much lighter weights than a normal lateral raise.'],
+    'Side Lateral Raise', False, 'sl_dumbbell_lateral_raise*0.55'),
+  X('Cable Y-Raise', 'cable', 'intermediate', 'isolation', ['Shoulders'], ['Back'], ['shoulders'], ['cable'],
+    ['Set both pulleys low and cross the cables, holding the left handle in your right hand and the right handle in your left.', 'Lean slightly forward and raise your arms up and out into a Y shape, thumbs up.', 'Pause at the top, squeezing your shoulders and upper back.', 'Lower slowly.'],
+    'Cable Lateral Raise', False, 'sl_cable_lateral_raise*0.7'),
+  X('Frog Pump', 'body only', 'beginner', 'isolation', ['Glutes'], [], ['glutes'], ['bodyweight'],
+    ['Lie on your back and press the soles of your feet together with your knees falling out to the sides, heels close to your hips.', 'Squeeze your glutes to lift your hips off the floor.', 'Pause at the top, then lower.', 'Hold a dumbbell on your hips to make it harder.'],
+    'Butt Lift (Bridge)', True, 'sl_glute_bridge*1.3'),
+  X('Fire Hydrant', 'body only', 'beginner', 'isolation', ['Glutes'], ['Core'], ['glutes', 'abductors'], ['bodyweight'],
+    ['Start on all fours with your hands under your shoulders and knees under your hips.', 'Keeping your knee bent, lift one leg out to the side until your thigh is about level with your hip.', 'Pause, then lower without letting your hips tip.', 'Finish all reps, then switch sides. A band above your knees makes it harder.'],
+    'Glute Kickback', False),
+  X('Clamshell', 'bands', 'beginner', 'isolation', ['Glutes'], [], ['glutes', 'abductors'], ['bands'],
+    ['Lie on your side with your knees bent and stacked, a band just above your knees.', 'Keep your feet together and open your top knee as far as you can without rolling your hips back.', 'Pause, then close slowly.', 'Finish all reps, then switch sides.'],
+    'Side Leg Raises', False),
+  X('Copenhagen Plank', 'body only', 'intermediate', 'isolation', ['Core'], ['Glutes', 'Quads'], ['adductors', 'abdominals'], ['bench'],
+    ['Lie on your side next to a bench and place your top leg on it (knee for easier, ankle for harder).', 'Prop yourself up on your forearm and lift your hips so your body is in a straight line.', 'Your bottom leg can hang or lift up to the bench.', 'Hold, then switch sides.'],
+    'Side Bridge', True),
+  X('Windshield Wipers', 'body only', 'advanced', 'compound', ['Core'], ['Shoulders'], ['abdominals'], ['pullup_bar'],
+    ['Hang from a pull-up bar and raise your straight legs until your feet are near the bar.', 'Keeping your legs together, rotate them slowly down to one side.', 'Come back through the middle and down to the other side.', 'Keep your upper body as still as you can.'],
+    'Hanging Leg Raise', False, 'sl_hanging_leg_raise*0.5'),
+  X('Stir the Pot', 'exercise ball', 'intermediate', 'isolation', ['Core'], ['Shoulders'], ['abdominals'], ['stability_ball'],
+    ['Get into a plank with your forearms on a stability ball and your feet hip-width apart.', 'Keeping your hips and back still, draw small circles with your forearms.', 'Do all the circles one way, then reverse.', 'Make the circles bigger to make it harder.'],
+    'Plank', False),
+  X('Bear Crawl', 'body only', 'beginner', 'compound', ['Core'], ['Shoulders', 'Quads'], ['abdominals'], ['bodyweight'],
+    ['Start on all fours with your knees lifted an inch off the floor, back flat.', 'Move your opposite hand and foot forward a short step at the same time.', 'Keep your hips low and level and your knees just off the floor.', 'Crawl forward for the set distance or time, then back.'],
+    'Spider Crawl', False),
+  X('Suitcase Carry', 'dumbbell', 'beginner', 'compound', ['Core'], ['Forearms', 'Glutes', 'Back'], ['abdominals'], ['dumbbell'],
+    ['Hold one heavy dumbbell (or kettlebell) at your side.', 'Stand tall, brace your core and walk without leaning toward the weight.', 'Keep your shoulders level and steps steady.', 'Walk the set distance, then switch hands.'],
+    "Farmer's Walk", False),
+  X('Dead Hang', 'body only', 'beginner', 'isolation', ['Forearms'], ['Back', 'Shoulders'], ['forearms'], ['pullup_bar'],
+    ['Grab a pull-up bar with an overhand grip, hands shoulder-width apart.', 'Hang with straight arms, feet off the floor and shoulders relaxed (or gently pulled down for an active hang).', 'Breathe and hold as long as you can.', 'Great for grip strength and shoulder health.'],
+    'One Handed Hang', False),
+  X('Towel Pull-Up', 'body only', 'advanced', 'compound', ['Back'], ['Forearms', 'Biceps'], ['lats'], ['pullup_bar'],
+    ['Loop two towels over a pull-up bar and grab one with each hand.', 'Hang with straight arms.', 'Pull yourself up until your hands are at your chin.', 'Lower under control. The towels make your grip work much harder.'],
+    'Pullups', False, 'sl_pull_ups*0.5'),
+  X('Fan Bike', 'other', 'beginner', 'compound', ['Quads'], ['Shoulders', 'Hamstrings', 'Glutes'], ['quadriceps'], ['cardio'],
+    ['Sit on the fan bike (Assault Bike, Echo Bike) and set the seat so your knee is slightly bent at the bottom.', 'Push and pull the handles while you pedal.', 'Go easy to warm up, then do intervals: hard sprints with easy recovery between.', 'The harder you go, the more the fan resists.'],
+    'Bicycling, Stationary', True, None, 'cardio'),
+]
+
 ALIAS = {
   'Butterfly': ['Pec Deck', 'Machine Fly'], 'Reverse Machine Flyes': ['Reverse Pec Deck', 'Rear Delt Machine'],
   'Thigh Abductor': ['Hip Abduction Machine'], 'Thigh Adductor': ['Hip Adduction Machine'],
@@ -156,13 +253,48 @@ ALIAS = {
   'Hyperextensions (Back Extensions)': ['Back Extension'], 'Kettlebell Swing': ['Russian Swing'],
 }
 
+# more everyday names for exercises already in the library (added to any names above)
+ALIAS2 = {
+  'Leverage Chest Press': ['Machine Chest Press', 'Chest Press Machine'], 'Leverage Incline Chest Press': ['Incline Machine Press', 'Incline Chest Press Machine'],
+  'Machine Shoulder (Military) Press': ['Machine Shoulder Press'], 'Smith Machine Overhead Shoulder Press': ['Smith Machine Shoulder Press'],
+  'Lying Leg Curls': ['Lying Leg Curl', 'Hamstring Curl'], 'Leg Extensions': ['Leg Extension', 'Quad Extension'],
+  'Ab Roller': ['Ab Wheel', 'Ab Wheel Rollout'], 'T-Bar Row with Handle': ['T-Bar Row'], 'Lying T-Bar Row': ['Chest-Supported T-Bar Row'],
+  'Lying Cambered Barbell Row': ['Seal Row'], 'Seated Machine Row': ['Machine Row'], 'One Arm Lat Pulldown': ['Single-Arm Lat Pulldown'],
+  'Close-Grip Front Lat Pulldown': ['Close-Grip Lat Pulldown'], 'Machine Assisted Pull-Up': ['Assisted Pull-Up', 'Assisted Chin-Up'],
+  'Pullups': ['Pull-Up'], 'Arnold Dumbbell Press': ['Arnold Press'], 'Dumbbell Flyes': ['Dumbbell Fly', 'Chest Fly'],
+  'Decline Barbell Bench Press': ['Decline Bench Press'], 'Dips - Triceps Version': ['Dips', 'Triceps Dips'], 'Dip Machine': ['Machine Dip'],
+  'Close-Grip Barbell Bench Press': ['Close-Grip Bench Press'], 'Tricep Dumbbell Kickback': ['Dumbbell Kickback', 'Triceps Kickback'],
+  'Hammer Curls': ['Hammer Curl'], 'Concentration Curls': ['Concentration Curl'], 'Reverse Barbell Curl': ['Reverse Curl'],
+  'Seated Palm-Up Barbell Wrist Curl': ['Wrist Curl'], 'Seated Dumbbell Palms-Down Wrist Curl': ['Reverse Wrist Curl'],
+  'Barbell Shrug': ['Shrug'], 'Calf Press On The Leg Press Machine': ['Leg Press Calf Raise'], 'Pull Through': ['Cable Pull-Through'],
+  'Rack Pulls': ['Rack Pull', 'Block Pull'], 'Front Barbell Squat': ['Front Squat'], 'Zercher Squats': ['Zercher Squat'],
+  'Dumbbell Rear Lunge': ['Reverse Lunge'], 'Dumbbell Step Ups': ['Step-Up', 'Box Step-Up'], 'Dumbbell Lateral Lunge': ['Lateral Lunge', 'Side Lunge'],
+  'Dumbbell Walking Lunge': ['Walking Lunge'], 'Weighted Sissy Squat': ['Sissy Squat'], 'Standing Cable Wood Chop': ['Woodchopper', 'Cable Woodchop'],
+  'Hollow Body Hold': ['Hollow Hold'], 'Front Box Jump': ['Box Jump'], 'Freehand Jump Squat': ['Jump Squat', 'Squat Jump'],
+  'Mountain Climbers': ['Mountain Climber'], 'Battling Ropes': ['Battle Ropes'], 'Overhead Slam': ['Medicine Ball Slam', 'Ball Slam'],
+  'Kettlebell Turkish Get-Up (Squat style)': ['Turkish Get-Up'], 'Dumbbell Thruster': ['Thruster'],
+  'Rowing, Stationary': ['Rowing Machine', 'Rower', 'Erg'], 'Stairmaster': ['Stair Climber'], 'Running, Treadmill': ['Treadmill'],
+  'Rope Jumping': ['Jump Rope', 'Skipping'], 'Alternating Renegade Row': ['Renegade Row'], 'Straight-Arm Dumbbell Pullover': ['Dumbbell Pullover'],
+  'Glute Kickback': ['Donkey Kick'], 'Monster Walk': ['Banded Lateral Walk', 'Band Walk'], 'Cuban Press': ['Cuban Rotation'],
+  'Dumbbell Y-Raise': ['Y-Raise'], 'Standing Barbell Press Behind Neck': ['Behind-the-Neck Press'], 'Ab Crunch Machine': ['Machine Crunch'],
+  'Oblique Crunches': ['Oblique Crunch'], 'Donkey Calf Raises': ['Donkey Calf Raise'], 'Standing Calf Raises': ['Standing Calf Raise', 'Calf Raise'],
+  'Hyperextensions (Back Extensions)': ['45-Degree Back Extension', 'Hyperextension'], 'Lying Face Up Plate Neck Resistance': ['Neck Curl'],
+  'Lying Face Down Plate Neck Resistance': ['Neck Extension'], 'Seated Cable Rows': ['Seated Cable Row'], 'Bayesian Cable Curl': ['Bayesian Curl'],
+  'Machine Preacher Curls': ['Machine Preacher Curl'], 'One-Arm Dumbbell Row': ['Kroc Row'], 'Cable Crossover': ['High-to-Low Cable Fly'],
+  'Cable Rope Overhead Triceps Extension': ['Overhead Cable Triceps Extension'], 'Standing Biceps Cable Curl': ['Cable Curl'],
+  'Front Dumbbell Raise': ['Front Raise'], 'Front Cable Raise': ['Cable Front Raise'], 'Barbell Incline Bench Press - Medium Grip': ['Incline Bench Press'],
+  'Thigh Abductor': ['Seated Hip Abduction'], 'Kettlebell Pistol Squat': ['Weighted Pistol Squat'],
+  'Fan Bike': ['Assault Bike', 'Echo Bike', 'Air Bike'], 'Copenhagen Plank': ['Copenhagen Adductor'], 'Belt Squat': ['Hip Belt Squat'],
+}
+
 def main():
     p = os.path.join(R, 'src', 'data.json'); d = json.load(open(p)); by = {e['n']: e for e in d['ex']}
     added = 0
-    for x in NEW:
+    for x in NEW + [dict(x, est=1) for x in NEW2]:
         assert x['fx'] in by, ('missing donor', x['fx'])
         if x['n'] in by:   # already there: keep its standard in step with this file
             if x['k']: by[x['n']]['k'] = x['k']
+            if x.get('est') and x['k']: by[x['n']]['ke'] = 1
             continue
         e = {k: x[k] for k in ('n', 'q', 'l', 'm', 'c', 'p', 's', 'pm', 'i', 'e')}
         e['fx'] = x['fx']
@@ -170,10 +302,15 @@ def main():
             src = by[x['fx'] if x['ph'] is True else x['ph']]
             for k in ('a', 'r', 'a2', 'r2'): e[k] = src[k]
         if x['k']: e['k'] = x['k']
+        if x.get('est') and x['k']: e['ke'] = 1
         d['ex'].append(e); by[e['n']] = e; added += 1
     for n, al in ALIAS.items():
         assert n in by, ('alias target missing', n)
         by[n]['al'] = al
+    for n, al in ALIAS2.items():
+        assert n in by, ('alias target missing', n)
+        cur = by[n].get('al') or []
+        by[n]['al'] = cur + [a for a in al if a not in cur and a.lower() != n.lower()]
     BW = {'pullup', 'pushup', 'dip', 'situp', 'calfbw', 'hangleg'}
     for e in d['ex']:
         k = e.get('k')

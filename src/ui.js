@@ -306,8 +306,43 @@ function lineChart(pts, o) {
   g += '<circle cx="' + X(last.t).toFixed(1) + '" cy="' + Y(last.v).toFixed(1) + '" r="5" style="fill:var(--accent-ink);stroke:var(--bg)" stroke-width="2"/>';
   g += '<text x="' + pl + '" y="' + (H - 6) + '" text-anchor="start">' + esc(dl(t0)) + '</text>';
   if (t1 !== t0) { g += '<text x="' + (W - pr) + '" y="' + (H - 6) + '" text-anchor="end">' + esc(o.t1 != null && Date.now() - t1 < DAY ? 'Today' : dl(t1)) + '</text>'; if (o.t0 != null) g += '<text x="' + ((pl + W - pr) / 2) + '" y="' + (H - 6) + '" text-anchor="middle">' + esc(dl((t0 + t1) / 2)) + '</text>'; }
-  return '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(o.label || 'Trend chart') + '">' + g + '</svg>';
+  // every point, for tap-to-read (see chartTip)
+  var tipPts = pts.map(function (p) { return [+X(p.t).toFixed(1), +Y(p.v).toFixed(1), fmt(p.v) + (o.unit || ''), (o.tipDate || fmtDate)(p.t)]; });
+  return '<svg class="chart tappable" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(o.label || 'Trend chart') + '. Tap to read a point." data-w="' + W + '" data-top="' + pt + '" data-bot="' + (H - pb) + '" data-pts="' + esc(JSON.stringify(tipPts)) + '">' + g + '</svg>';
 }
+/* tap (or hover with a mouse) on a chart: shows the nearest point's value and date */
+function chartTip(svg, clientX, toggle) {
+  var pts; try { pts = JSON.parse(svg.getAttribute('data-pts')); } catch (e) { return; }
+  if (!pts || !pts.length) return;
+  var r = svg.getBoundingClientRect(), W = +svg.getAttribute('data-w') || 360;
+  var x = r.width ? (clientX - r.left) / r.width * W : 0, best = 0;
+  pts.forEach(function (p, i) { if (Math.abs(p[0] - x) < Math.abs(pts[best][0] - x)) best = i; });
+  var old = svg.querySelector('.ctip');
+  if (old) { if (toggle && old.getAttribute('data-i') === String(best)) { old.remove(); return; } old.remove(); }
+  var p = pts[best], top = +svg.getAttribute('data-top') || 12, bot = +svg.getAttribute('data-bot') || 176;
+  var v = String(p[2]), dt = String(p[3]);
+  var bw = Math.max(v.length * 8.2, dt.length * 6.2) + 18, bh = 38;
+  var bx = Math.min(Math.max(p[0] - bw / 2, 2), W - bw - 2), by = p[1] - bh - 12;
+  if (by < 0) by = p[1] + 12;
+  var NS = 'http://www.w3.org/2000/svg', gEl = document.createElementNS(NS, 'g');
+  gEl.setAttribute('class', 'ctip'); gEl.setAttribute('data-i', best);
+  gEl.innerHTML = '<line x1="' + p[0] + '" x2="' + p[0] + '" y1="' + top + '" y2="' + bot + '" class="ctip-line"/>' +
+    '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="6" class="ctip-dot"/>' +
+    '<rect x="' + bx.toFixed(1) + '" y="' + by.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + bh + '" rx="8" class="ctip-box"/>' +
+    '<text x="' + (bx + bw / 2).toFixed(1) + '" y="' + (by + 16).toFixed(1) + '" text-anchor="middle" class="ctip-v">' + esc(v) + '</text>' +
+    '<text x="' + (bx + bw / 2).toFixed(1) + '" y="' + (by + 30).toFixed(1) + '" text-anchor="middle" class="ctip-d">' + esc(dt) + '</text>';
+  svg.appendChild(gEl);
+}
+document.addEventListener('click', function (ev) {
+  var svg = ev.target.closest && ev.target.closest('svg.chart.tappable');
+  document.querySelectorAll('svg.chart .ctip').forEach(function (t) { if (!svg || t.ownerSVGElement !== svg) t.remove(); });
+  if (svg) chartTip(svg, ev.clientX, ev.pointerType !== 'mouse');   // a second tap on the same point hides it
+});
+document.addEventListener('pointermove', function (ev) {
+  if (ev.pointerType !== 'mouse') return;
+  var svg = ev.target.closest && ev.target.closest('svg.chart.tappable');
+  if (svg) chartTip(svg, ev.clientX, false);
+});
 /* ===== chart time windows ===== */
 var RANGES = [['1M', 30], ['3M', 91], ['6M', 182], ['1Y', 365], ['All', 0]];
 function curRange() {
@@ -373,7 +408,7 @@ function exerciseSheet(name, ctx) {
   var h = exHistory(realWorkouts(), name), extra = '';
   if (h.length) {
     var best = Math.max.apply(null, h.map(function (x) { return x.best; })), bw = isBW(ex);
-    extra = '<div class="section"><h3 style="font-size:20px">Your progress</h3>' + lineChart(h.map(function (x) { return { t: x.t, v: bw ? x.best : (unit() === 'kg' ? x.best / LB : x.best) }; }), { label: 'Progress for ' + name, fmt: function (v) { return Math.round(v); } }) +
+    extra = '<div class="section"><h3 style="font-size:20px">Your progress</h3>' + lineChart(h.map(function (x) { return { t: x.t, v: bw ? x.best : (unit() === 'kg' ? x.best / LB : x.best) }; }), { unit: bw ? ' reps' : ' ' + uLabel(), label: 'Progress for ' + name, fmt: function (v) { return Math.round(v); } }) +
       '<div class="note">' + (bw ? 'Best set: ' + Math.round(best) + ' reps' : 'Best estimated 1-rep max: ' + toDisp(best, unit()) + ' ' + uLabel()) + ' · ' + h.length + ' session' + (h.length > 1 ? 's' : '') + '</div></div>';
   }
   var add = '';
@@ -612,7 +647,7 @@ function progMusclesIndex(W) {
   var H = allHistories(W), now = Date.now(), ov = overallScore(H, now), ov30 = overallScore(H, now - 30 * DAY);
   if (ov == null) return '<div class="empty"><h3>No scores yet</h3>Log sets with weight and reps, and each muscle group gets a score.</div>';
   var series = []; for (var k = 12; k >= 0; k--) { var t = now - k * 7 * DAY, s = overallScore(H, t); if (s != null) series.push({ t: t, v: s }); }
-  var hero = '<div class="card section"><div class="score-hero"><div class="big">' + Math.round(ov) + '</div><div style="padding-bottom:4px"><div>' + deltaHTML(ov30 == null ? null : ov - ov30, ' pts') + '</div><div class="note">last 30 days</div></div></div><div class="note">Strength index. 100 is where you started on each lift; 120 means 20% stronger.</div>' + lineChart(series, { base: 100, min: 0, label: 'Overall strength index' }) + '</div>';
+  var hero = '<div class="card section"><div class="score-hero"><div class="big">' + Math.round(ov) + '</div><div style="padding-bottom:4px"><div>' + deltaHTML(ov30 == null ? null : ov - ov30, ' pts') + '</div><div class="note">last 30 days</div></div></div><div class="note">Strength index. 100 is where you started on each lift; 120 means 20% stronger. Lifts you have not done for 6 weeks count for less.</div>' + lineChart(series, { base: 100, min: 0, label: 'Overall strength index' }) + '</div>';
   var rows = GROUPS.map(function (g) {
     var cur = groupScoreAt(H, g, now), old = groupScoreAt(H, g, now - 30 * DAY);
     return { g: g, cur: cur, d: cur && old ? cur.score - old.score : null, ser: groupSeries(H, g, now, 12) };
@@ -649,7 +684,7 @@ function liftSheet(name, metric) {
   var wtd = bw && H.some(function (x) { return x.topW > 0; });
   var fmtv = function (lb) { return bw ? (wtd ? '≈' : '') + Math.round(lb) + ' reps' : toDisp(lb, u) + ' ' + uLabel(); };
   var segs = bw ? '' : '<div class="seg" role="group"><button aria-pressed="' + (metric === 'e1rm') + '" data-act="liftMetric" data-n="' + esc(name) + '" data-k="e1rm">Est. 1RM</button><button aria-pressed="' + (metric === 'top') + '" data-act="liftMetric" data-n="' + esc(name) + '" data-k="top">Top weight</button><button aria-pressed="' + (metric === 'vol') + '" data-act="liftMetric" data-n="' + esc(name) + '" data-k="vol">Volume</button></div>';
-  var body = (isSample() ? '' : plateauBanner(name, H)) + segs + rangeSeg() + (pts.length ? '' : '<div class="note">No sessions in this window. Your last one was ' + esc(fmtDate(H[H.length - 1].t)) + '.</div>') + lineChart(pts, { t0: rb.t0, t1: rb.t1, label: name + ' trend', fmt: function (v) { return metric === 'vol' ? (v >= 1000 ? Math.round(v / 100) / 10 + 'k' : Math.round(v)) : Math.round(v * 10) / 10; } }) +
+  var body = (isSample() ? '' : plateauBanner(name, H)) + segs + rangeSeg() + (pts.length ? '' : '<div class="note">No sessions in this window. Your last one was ' + esc(fmtDate(H[H.length - 1].t)) + '.</div>') + lineChart(pts, { unit: bw && metric !== 'vol' ? ' reps' : ' ' + uLabel(), t0: rb.t0, t1: rb.t1, label: name + ' trend', fmt: function (v) { return metric === 'vol' ? (v >= 1000 ? Math.round(v / 100) / 10 + 'k' : Math.round(v)) : Math.round(v * 10) / 10; } }) +
     '<div class="grid2"><div class="stat"><div class="v">' + fmtv(best) + '</div><div class="k">Best' + (bw ? '' : ' (est. 1RM)') + '</div></div><div class="stat"><div class="v">' + (H.length > 1 ? (cur >= first ? '+' : '') + Math.round((cur / first - 1) * 100) + '%' : '–') + '</div><div class="k">Since first session</div></div><div class="stat"><div class="v">' + fmtv(first) + '</div><div class="k">First session</div></div><div class="stat"><div class="v">' + H.length + '</div><div class="k">Sessions</div></div></div>' +
     '<div class="section"><h3 style="font-size:20px">Recent sessions</h3><div>' + H.slice(-6).reverse().map(function (x) { return '<div class="lrow"><span>' + fmtDateLong(x.t) + '</span><span class="num" style="font-size:18px">' + (bw && !x.topW ? x.topR + ' reps' : toDisp(x.topW, u) + ' ' + uLabel() + loadSuffix(ex) + ' × ' + x.topR) + (x.best >= best - 1e-6 && H.length > 1 ? '<span class="pr">BEST</span>' : '') + '</span></div>'; }).join('') + '</div></div>' +
     (bw ? '' : pctTable(cur)) + liftRankCard(name, H) +
