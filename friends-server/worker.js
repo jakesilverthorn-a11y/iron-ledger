@@ -170,6 +170,9 @@ async function vapidAuth(env, endpoint) {
   const sig = b64(await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, V.key, enc.encode(head + '.' + body)));
   return 'vapid t=' + head + '.' + body + '.' + sig + ', k=' + V.pub;
 }
+async function pushOne(env, endpoint) {
+  try { const r = await fetch(endpoint, { method: 'POST', headers: { Authorization: await vapidAuth(env, endpoint), TTL: '120', Urgency: 'high', 'Content-Length': '0' } }); return r.status; } catch (e) { return 0; }
+}
 async function pushAll(env, uid) {
   const subs = (await env.DB.get('ps:' + uid, 'json')) || [];
   const keep = [];
@@ -186,13 +189,19 @@ export class RestTimer {
   async fetch(req) {
     const b = await req.json();
     if (b.cancel) { await this.state.storage.deleteAlarm(); await this.state.storage.delete('job'); return new Response('{}'); }
-    await this.state.storage.put('job', { uid: b.uid, end: b.end });
+    await this.state.storage.put('job', { uid: b.uid, did: b.did, end: b.end });
     await this.state.storage.setAlarm(b.end);
     return new Response('{}');
   }
   async alarm() {
     const job = await this.state.storage.get('job'); if (!job) return;
     await this.state.storage.delete('job');
+    if (job.did) {   // a phone without an account
+      const rec = await this.env.DB.get('pd:' + job.did, 'json'); if (!rec) return;
+      const st = await pushOne(this.env, rec.endpoint);
+      if (st === 404 || st === 410) await this.env.DB.delete('pd:' + job.did);
+      return;
+    }
     await pushAll(this.env, job.uid);
   }
 }
@@ -226,6 +235,31 @@ export default {
         if (!rec || !same(await hashPw(pw, rec.salt), rec.h)) { await hits(env, 'lf:' + ip, 900); await hits(env, 'lu:' + un, 900); return bad('Wrong username or password.', 401); }
         await addIdx(env, un);
         return out({ token: await mkToken(env, un, rec.gen || '0'), uid: un, name: rec.name });
+      }
+      /* rest alerts without an account: each phone registers its push address once and gets an id and a secret */
+      if (path === '/push/dev' && req.method === 'POST') {
+        const b = await req.json().catch(() => ({})), sub = b && b.sub;
+        if (!sub || typeof sub.endpoint !== 'string' || !/^(https:\/\/|http:\/\/(127\.0\.0\.1|localhost)[:/])/.test(sub.endpoint) || sub.endpoint.length > 1000) return bad('Bad subscription');
+        let did = String(b.did || '').slice(0, 40), sec = String(b.sec || '').slice(0, 60);
+        const rec = did ? await env.DB.get('pd:' + did, 'json') : null;
+        if (!rec || rec.sec !== sec) {
+          const ip = req.headers.get('CF-Connecting-IP') || 'x';
+          if (await hits(env, 'pdn:' + ip, DAYS) > 20) return bad('Too many phones turned on rest alerts from this network today. Try again tomorrow.', 429);
+          did = b64(crypto.getRandomValues(new Uint8Array(12))); sec = b64(crypto.getRandomValues(new Uint8Array(18)));
+        }
+        if (!rec || rec.sec !== sec || rec.endpoint !== sub.endpoint) await env.DB.put('pd:' + did, JSON.stringify({ endpoint: sub.endpoint, sec, at: Date.now() }), { expirationTtl: 400 * DAYS });
+        return out({ ok: true, did, sec });
+      }
+      if (path === '/push/devrest' && req.method === 'POST') {
+        if (!env.REST) return bad('Rest alerts are not set up on this server.', 501);
+        const b = await req.json().catch(() => ({})), did = String(b.did || '').slice(0, 40);
+        const rec = did ? await env.DB.get('pd:' + did, 'json') : null;
+        if (!rec || rec.sec !== String(b.sec || '')) return bad('Turn rest alerts on again in Settings.', 401);
+        const stub = env.REST.get(env.REST.idFromName('d:' + did));
+        if (b.cancel) { await stub.fetch('https://rest/', { method: 'POST', body: JSON.stringify({ cancel: true }) }); return out({ ok: true }); }
+        const end = +b.end; if (!(end > Date.now() - 5000 && end < Date.now() + 3 * 3600e3)) return bad('Bad time');
+        await stub.fetch('https://rest/', { method: 'POST', body: JSON.stringify({ did, end }) });
+        return out({ ok: true });
       }
       if ((req.method === 'POST' || req.method === 'GET') && path === '/health') {
         const key = url.searchParams.get('k') || req.headers.get('X-Key') || '';

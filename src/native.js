@@ -123,17 +123,47 @@ function nativeClick(a, d) {
 /* ----- rest alerts for the web app (Home Screen app on iPhone, iOS 16.4+): the friends server sends a push
    when rest ends, so the alert comes even with the app closed or the phone locked ----- */
 var WP = { end: 0 };
-function webPushAvail() { return !NATIVE.on && !window.claude && typeof srvOn === 'function' && srvOn() && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window; }
-function webPushOn() { var on = ''; try { on = localStorage.getItem('il-push:' + SRV.uid) || ''; } catch (e) { } return webPushAvail() && on === '1' && Notification.permission === 'granted'; }
+/* no account needed: this phone registers with the server once and gets its own id (il-pushdev) */
+function webPushAvail() { return !NATIVE.on && !window.claude && typeof SRV !== 'undefined' && !!SRV.url && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window; }
+function webPushDev() { try { return JSON.parse(localStorage.getItem('il-pushdev') || 'null'); } catch (e) { return null; } }
+function webPushOn() { var d = webPushDev(); return webPushAvail() && !!(d && d.did && d.on !== false) && Notification.permission === 'granted'; }
+/* iPhone only allows notifications for web apps opened from the Home Screen, not a Safari tab */
+function webPushNeedsInstall() { return /iPhone|iPad|iPod/.test(navigator.userAgent) && !navigator.standalone && !(window.matchMedia && matchMedia('(display-mode: standalone)').matches); }
 function b64u8(s) { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; var r = atob(s), a = new Uint8Array(r.length); for (var i = 0; i < r.length; i++) a[i] = r.charCodeAt(i); return a; }
 async function webPushEnable() {
-  if (!webPushAvail()) throw new Error(window.navigator.standalone === false || !('PushManager' in window) ? 'On iPhone, rest alerts need Iron Ledger added to your Home Screen (Share → Add to Home Screen), then opened from there.' : 'Sign in first.');
+  if (!webPushAvail() || webPushNeedsInstall()) throw new Error('On iPhone, rest alerts need Iron Ledger added to your Home Screen (Share → Add to Home Screen), then opened from there.');
   var perm = await Notification.requestPermission();
   if (perm !== 'granted') throw new Error('Notifications are off for Iron Ledger. Turn them on in the iPhone Settings app → Notifications → Iron Ledger.');
   var reg = await navigator.serviceWorker.ready, key = (await srvRaw('GET', '/push/key', null, false)).key;
   var sub = (await reg.pushManager.getSubscription()) || (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u8(key) }));
-  await srvRaw('POST', '/push/sub', { sub: sub.toJSON() });
-  try { localStorage.setItem('il-push:' + SRV.uid, '1'); } catch (e) { }
+  var old = webPushDev() || {}, r;
+  try { r = await srvRaw('POST', '/push/dev', { sub: sub.toJSON(), did: old.did, sec: old.sec }, false); }
+  catch (e) {
+    // a server that has not been updated yet: fall back to alerts tied to your account
+    if (e.code !== 404 && e.code !== 401) throw e;
+    if (!(typeof srvOn === 'function' && srvOn())) throw new Error('Sign in (Friends tab) to turn on rest alerts.');
+    await srvRaw('POST', '/push/sub', { sub: sub.toJSON() });
+    try { localStorage.setItem('il-pushdev', JSON.stringify({ did: 'acct', legacy: true, on: true })); } catch (e2) { }
+    return;
+  }
+  try { localStorage.setItem('il-pushdev', JSON.stringify({ did: r.did, sec: r.sec, on: true })); } catch (e) { }
+}
+function webPushOff() { var d = webPushDev(); if (d) { d.on = false; try { localStorage.setItem('il-pushdev', JSON.stringify(d)); } catch (e) { } } }
+function webRestSend(end) {
+  var d = webPushDev(); if (!d) return;
+  if (d.legacy) { if (srvOn()) (end ? srvRaw('POST', '/push/rest', { end: end }) : srvRaw('DELETE', '/push/rest')).catch(function () { }); return; }
+  srvRaw('POST', '/push/devrest', end ? { did: d.did, sec: d.sec, end: end } : { did: d.did, sec: d.sec, cancel: true }, false).catch(function (e) { if (e && /again/.test(e.message || '')) { NH.pushErr = e.message; } });
+}
+/* the push address can change (iPhone renews it now and then): re-register quietly when the app opens */
+function webPushRefresh() {
+  // phones that turned alerts on with an account before: move them over to the no-account setup (no new prompt, permission is already given)
+  try { if (!webPushDev() && webPushAvail() && !webPushNeedsInstall() && Notification.permission === 'granted' && Object.keys(localStorage).some(function (k) { return k.indexOf('il-push:') === 0 && localStorage.getItem(k) === '1'; })) { webPushEnable().catch(function () { }); return; } } catch (e) { }
+  if (!webPushOn()) return;
+  navigator.serviceWorker.ready.then(function (reg) { return reg.pushManager.getSubscription(); }).then(function (sub) {
+    var d = webPushDev(); if (!sub || !d) return;
+    if (d.legacy) return webPushEnable();   // try again: moves to the no-account setup once the server has it
+    return srvRaw('POST', '/push/dev', { sub: sub.toJSON(), did: d.did, sec: d.sec }, false).then(function (r) { try { localStorage.setItem('il-pushdev', JSON.stringify({ did: r.did, sec: r.sec, on: true })); } catch (e) { } });
+  }).catch(function () { });
 }
 function webRestTick() {
   if (!webPushOn()) return;
@@ -142,8 +172,8 @@ function webRestTick() {
   if (end && !document.hidden && end - Date.now() < 2500) end = 0;
   if (end !== WP.end) {
     var was = WP.end; WP.end = end;
-    if (end) srvRaw('POST', '/push/rest', { end: end }).catch(function () { });
-    else if (was) srvRaw('DELETE', '/push/rest').catch(function () { });
+    if (end) webRestSend(end);
+    else if (was) webRestSend(0);
   }
 }
 /* the card in Settings, and a one-time tip during a workout */
@@ -151,15 +181,15 @@ function restAlertCard() {
   var body, btn = '';
   if (NATIVE.on) body = 'On. When rest is over you get a notification, even in another app or with the phone locked. You can change it in the iPhone Settings app → Notifications → Iron Ledger.';
   else if (window.claude) body = 'In this version the alert only sounds while Iron Ledger is open on screen. Use the Home Screen app (or the iPhone app) for alerts with the app closed.';
-  else if (webPushOn()) body = 'On. When rest is over this phone gets a notification, even with the app closed or the phone locked.';
-  else if (webPushAvail()) { body = 'Get a notification when rest is over, even with the app closed or the phone locked.'; btn = '<button class="btn block" data-act="pushOn">Turn on rest alerts</button>'; }
-  else if (!(typeof srvOn === 'function' && srvOn())) body = 'Sign in to get rest alerts with the app closed.';
-  else body = 'On iPhone, add Iron Ledger to your Home Screen (Share → Add to Home Screen) and open it from there to get rest alerts with the app closed.';
+  else if (webPushOn()) { body = 'On. When rest is over this phone plays its notification sound and shows "Rest is over", even with the app closed, the phone locked or another app open (and on your Apple Watch). No account needed.'; btn = '<button class="btn block ghost" data-act="pushTest">Send a test alert in 5 s</button><button class="btn block ghost" data-act="pushOff">Turn off</button>'; }
+  else if (webPushAvail() && !webPushNeedsInstall()) { body = 'Get the chime as a notification when rest is over, even with the app closed, the phone locked or music playing. No account needed.'; btn = '<button class="btn block primary" data-act="pushOn">Turn on rest alerts</button>'; }
+  else body = 'iPhone only lets web apps alert you when they are installed. In Safari tap Share → Add to Home Screen, open Iron Ledger from the new icon, then turn rest alerts on here. (Until then the chime only plays while the app is open on screen.)';
   return '<div class="section"><span class="field-label">Rest alerts when the app is closed</span><div class="card section" style="gap:10px"><div class="note">' + body + '</div>' + btn + (NH.pushErr ? '<div class="note" style="color:var(--down)">' + esc(NH.pushErr) + '</div>' : '') + '</div></div>';
 }
 function restAlertTip() {
   var seen = ''; try { seen = localStorage.getItem('il-push-tip') || ''; } catch (e) { }
   if (seen || !webPushAvail() || webPushOn()) return '';
+  if (webPushNeedsInstall()) return '<div class="banner"><span><b>Rest chime with the phone locked</b> · iPhone only allows it for installed web apps: in Safari tap Share → Add to Home Screen, open Iron Ledger from that icon, then turn on rest alerts.</span><span class="row" style="gap:6px"><button class="btn small" data-act="pushTipNo">Got it</button></span></div>';
   return '<div class="banner"><span><b>Rest alerts</b> · get a notification when rest is over, even with the app closed.</span><span class="row" style="gap:6px"><button class="btn small primary" data-act="pushOn">Turn on</button><button class="btn small" data-act="pushTipNo">Not now</button></span></div>';
 }
 function pushClick(a) {
@@ -168,6 +198,8 @@ function pushClick(a) {
     webPushEnable().then(function () { try { localStorage.setItem('il-push-tip', '1'); } catch (e) { } toast('Rest alerts are on'); render(); }, function (e) { NH.pushErr = e.message; toast(e.message); render(); });
     return true;
   }
+  if (a === 'pushOff') { webPushOff(); webRestSend(0); WP.end = 0; toast('Rest alerts are off'); render(); return true; }
+  if (a === 'pushTest') { webRestSend(Date.now() + 5000); toast('Lock the phone or switch apps — the alert comes in 5 seconds'); return true; }
   if (a === 'pushTipNo') { try { localStorage.setItem('il-push-tip', '1'); } catch (e) { } render(); return true; }
   return false;
 }

@@ -506,3 +506,11 @@ body.vvfix #tabs, body.vvfix .rest-pill { transform: translateZ(0); }
   html.duo .sheet .panel { width: 50%; max-width: none; max-height: none; height: 100%; border-radius: 0; border: 0; border-left: 1px solid var(--line); }
   html.duo .sheet .head { padding-top: max(14px, env(safe-area-inset-top)); }
 }
+
+/* exercise demo: side and front views together */
+.figpair { display: grid; grid-template-columns: 300fr 140fr; gap: 6px; }
+.figpair .demo { aspect-ratio: auto; }
+.figpair .demo:first-child { aspect-ratio: 3 / 2; }
+.figpair .demo:last-child { aspect-ratio: 140 / 200; }
+.figpair .fig { width: 100%; height: 100%; display: block; }
+.figlab { position: absolute; left: 8px; top: 6px; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); }

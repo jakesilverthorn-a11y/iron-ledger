@@ -521,6 +521,14 @@ body.vvfix #tabs, body.vvfix .rest-pill { transform: translateZ(0); }
   html.duo .sheet .head { padding-top: max(14px, env(safe-area-inset-top)); }
 }
 
+/* exercise demo: side and front views together */
+.figpair { display: grid; grid-template-columns: 300fr 140fr; gap: 6px; }
+.figpair .demo { aspect-ratio: auto; }
+.figpair .demo:first-child { aspect-ratio: 3 / 2; }
+.figpair .demo:last-child { aspect-ratio: 140 / 200; }
+.figpair .fig { width: 100%; height: 100%; display: block; }
+.figlab { position: absolute; left: 8px; top: 6px; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); }
+
 /* cartoon figures */
 .fig { display: block; width: 100%; height: 100%; }
 .demo.cg { background: linear-gradient(180deg, var(--surface2), var(--surface2)); }
@@ -1440,7 +1448,70 @@ var FIG = (function () {
     return s;
   }
 
-  function frame(T, k) {
+  /* ---------- a front view worked out from a side-view pose ----------
+     Heights come straight from the side view; left and right are set by the body's width. Knees and elbows
+     spread a little as they come forward, the way they do in a real squat or press. */
+  function projF(J, P) {
+    var cx = 150, F = {};
+    function sp(a, b, l, base, add) { return base + add * Math.min(1, Math.abs(b[0] - a[0]) / l); }
+    F.hip = [cx, J.hip[1]]; F.s = [cx, J.sho[1]]; F.head = [cx, J.head[1]]; F.hdAng = 0;
+    F.sl = [cx - 15, J.sho[1]]; F.sr = [cx + 15, J.sho[1]];
+    F.hl = [cx - 8, J.hip[1]]; F.hr = [cx + 8, J.hip[1]];
+    var kx = sp(J.hip, J.kn, LEN.th, 9, 7), kx2 = sp(J.hip, J.kn2, LEN.th, 9, 7);
+    F.kl = [cx - kx2, J.kn2[1]]; F.al = [cx - Math.max(9, kx2 - 2), J.an2[1]];
+    F.kr = [cx + kx, J.kn[1]]; F.ar = [cx + Math.max(9, kx - 2), J.an[1]];
+    var wx = 17 + (P.wide || 0), ex = Math.max(sp(J.sho, J.el, LEN.ua, 18, 5), wx + (P.wide ? 6 : 0));
+    F.el = [cx - ex, J.el2[1] - 1]; F.er = [cx + ex, J.el[1]];
+    F.wl = [cx - wx, J.wr2[1] - 1]; F.wrr = [cx + wx, J.wr[1]];
+    return F;
+  }
+  function frontEq(T) {
+    var out = [], A = T.A;
+    (T.eq || []).forEach(function (it) {
+      if (it.k === 'db' && (it.at === 'hand' || it.at === 'wr')) out.push({ k: 'dbF' });
+      else if (it.k === 'plate' && (it.at === 'hand' || it.at === 'wr')) out.push({ k: 'barF' });
+      else if (it.k === 'kb' || it.k === 'ball') out.push({ k: it.k === 'ball' ? 'plateMid' : 'plate', r: 7 });
+    });
+    if (A.hip && !A.stand) {   // seat (and backrest) seen from the front
+      var hy = A.hip[1];
+      if ((T.eq || []).some(function (it) { return it.k === 'padline' && (it.off || 15) > 0; })) out.unshift({ k: 'rect', x: 129, y: hy - 58, w: 42, h: 62, r: 5, c: 'pad', back: 1 });
+      out.unshift({ k: 'rect', x: 128, y: hy + 8, w: 44, h: 9, r: 3, c: 'pad', back: 1 }, { k: 'rect', x: 147, y: hy + 17, w: 6, h: FY - hy - 17, r: 1, c: 'bar', back: 1 });
+    }
+    return out;
+  }
+  function hlDrawP(F, h) {
+    var segs = { ua: [[F.sl, F.el], [F.sr, F.er]], fa: [[F.el, F.wl], [F.er, F.wrr]], th: [[F.hl, F.kl], [F.hr, F.kr]], sh: [[F.kl, F.al], [F.kr, F.ar]],
+      to: [[[F.hip[0] - 7, F.hip[1]], [F.s[0] - 7, F.s[1]]], [[F.hip[0] + 7, F.hip[1]], [F.s[0] + 7, F.s[1]]]] }[h[0] === 'hip' ? 'to' : h[0]];
+    if (!segs) return '';
+    return segs.map(function (sg) {
+      var a = sg[0], b = sg[1], c = lerp(a, b, h[1]), l = Math.max(4, Math.sqrt((b[0] - a[0]) * (b[0] - a[0]) + (b[1] - a[1]) * (b[1] - a[1])));
+      return ellipse(c, Math.min(h[3] || 8, 7), Math.min(h[4] || 8, l * .45 + 3), Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI - 90, 'hl');
+    }).join('');
+  }
+  function frontOK(T) {   // only for upright and seated moves: a lying body seen end-on tells you nothing
+    if (T.fv || T.noFront) return false;
+    function up_(P) { return Math.abs(P.t || 0) <= 50 && !P.floor; }
+    if (!up_(T.A) || !up_(T.B)) return false;
+    try { var J = solve(T.A); if (J.hip[1] > FY - 28) return false; } catch (e) { return false; }
+    return true;
+  }
+  function frameFront(T, k) {
+    var P = mix(T.A, T.B, ease(k)); if (T.wide === undefined) T.wide = (T.eq || []).some(function (it) { return it.k === 'plate' && (it.at === 'hand' || it.at === 'wr'); }) ? 12 : 0; P.wide = T.wide; var F = projF(solve(P), P), s = '',
+      barSho = (T.eq || []).some(function (it) { return it.k === 'plate' && it.at === 'sho'; });
+    if (barSho) {   // bar across the shoulders: hands wide at shoulder height, elbows down
+      F.wl = [F.sl[0] - 18, F.sl[1] - 3]; F.wrr = [F.sr[0] + 18, F.sr[1] - 3]; F.el = [F.sl[0] - 14, F.sl[1] + 14]; F.er = [F.sr[0] + 14, F.sr[1] + 14];
+    }
+    var eq = T.feq || (T.feq = frontEq(T)), i;
+    s = drawFront(F, P, { eq: eq.filter(function (q) { return q.back; }), hl: [] });
+    if (barSho) s += ln([F.s[0] - 52, F.s[1] - 4], [F.s[0] + 52, F.s[1] - 4], 3, 'bar') + rect(F.s[0] - 56, F.s[1] - 15, 6, 22, 2, 'plate') + rect(F.s[0] + 50, F.s[1] - 15, 6, 22, 2, 'plate');
+    var hl = T.hl || []; for (i = 0; i < hl.length; i++) s += hlDrawP(F, hl[i]);
+    for (i = 0; i < eq.length; i++) if (!eq[i].back) s += eqDrawF(F, eq[i]);   // weights in front of the highlight
+    var sc = (T.sc || 1) * 1.06;
+    return '<rect class="floor" x="0" y="' + FY + '" width="300" height="22"/><line class="floorl" x1="0" y1="' + FY + '" x2="300" y2="' + FY + '"/>' +
+      '<g transform="translate(150 ' + FY + ') scale(' + f1(sc) + ') translate(-150 ' + (-FY) + ')">' + s + '</g>';
+  }
+  function frame(T, k, view) {
+    if (view === 'front') return frameFront(T, k);
     var P = mix(T.A, T.B, ease(k)), J, body;
     if (T.fv) { J = solveF(P); body = drawFront(J, P, T); } else { J = solve(P); body = drawSide(J, P, T); }
     var sc = (T.sc || 1) * 1.06, pv = T.pv || [150, FY];
@@ -1468,11 +1539,31 @@ var FIG = (function () {
   }
   var B = {};
   B.curl = function (o) {
-    var eq = held(o.h), A = { stand: 1, t: 0, ua: 2, fa: 2 }, Bp = { stand: 1, t: -2, ua: 6, fa: 158 };
+    var eq = held(o.h), A = { stand: 1, t: 0, ua: 2, fa: 2 }, Bp = { stand: 1, t: -2, ua: 6, fa: 158 }, hl = [['ua', .5, 6, 10, 6]];
     if (o.h === 'cable') { eq = [{ k: 'cable', at: 'hand', to: [240, 172] }, { k: 'rect', x: 250, y: 120, w: 22, h: 58, r: 3, c: 'pad', back: 1 }]; }
     if (o.h === 'bar') eq = [{ k: 'plate', at: 'hand', r: 8 }];
     if (o.h === 'db' && o.hammer) eq = [{ k: 'db', at: 'hand', rot: 90 }];
-    return { A: A, B: Bp, eq: eq, hl: [['ua', .5, 6, 10, 6]] };
+    var b;
+    if (o.v === 'incline') {   // lying back on an incline bench, arms hanging straight down behind the body, elbows stay put
+      b = seated(150, 146, { t: -40, ft: 70 });
+      return { A: X(b, { ua: -3, fa: -3 }), B: X(b, { ua: -5, fa: 150 }), eq: seatEq(150, 146, false).concat([{ k: 'padline', off: 14, s0: -6, s1: 66, w: 9, post: 1, back: 1 }], eq), hl: hl };
+    }
+    if (o.v === 'spider') {    // chest down on an incline bench, arms hanging straight down in front
+      A = { stand: 1, ax: 128, t: 42, ua: 0, fa: 0 }; Bp = { stand: 1, ax: 128, t: 42, ua: 0, fa: 150 };
+      return { A: A, B: Bp, eq: [{ k: 'padline', off: -14, s0: 4, s1: 62, w: 9, post: 1, back: 1 }].concat(eq), hl: hl };
+    }
+    if (o.v === 'preacher') {  // seated, upper arm resting on the sloped pad
+      b = seated(122, 146, { t: 6, ft: 70 });
+      var J0 = solve(X(b, { ua: 42, fa: 50 })), d = dn(42), nr = [-d[1], d[0]];
+      var pa = pt(pt(J0.sho, d, 4), nr, -8), pb = pt(pt(J0.el, d, 6), nr, -8);
+      return { A: X(b, { ua: 42, fa: 52 }), B: X(b, { ua: 42, fa: 168 }), eq: seatEq(122, 146, false).concat([{ k: 'line', a: pa, b: pb, w: 9, c: 'pad', back: 1 }, { k: 'line', a: pb, b: [pb[0], FY], w: 4, c: 'bar', back: 1 }], eq), hl: hl };
+    }
+    if (o.v === 'conc') {      // seated, leaning over, elbow braced against the inner thigh
+      b = seated(130, 146, { t: 30, ft: 70 });
+      return { A: X(b, { ua: 6, fa: 6 }), B: X(b, { ua: 6, fa: 155 }), eq: seatEq(130, 146, false).concat(eq), hl: hl };
+    }
+    if (o.v === 'drag') { Bp = { stand: 1, t: 0, ua: -32, fa: 125 }; }   // bar drags up the body, elbows go back
+    return { A: A, B: Bp, eq: eq, hl: hl };
   };
   B.ohp = function (o) {
     var Ap = { t: 0, ua: 40, fa: 172, eb: 1 }, Bp = { t: 0, ua: 172, fa: 178 }, eq = held(o.h), back = [];
@@ -1792,7 +1883,8 @@ var FIG = (function () {
     if (T(/leg curl|hamstring curl/) && !T(/ball|band|slide/)) return ['legcurl', {}];
     if (T(/calf raise|calf press|toe press|seated calf/) && !T(/band|reverse|smith/)) return ['calf', { seated: T(/seated/), h: T(/dumbbell/) ? 'db' : 'none' }];
     if (T(/wrist curl|finger curl/) && !T(/behind/)) return ['wristcurl', {}];
-    if (T(/curl/) && !T(/leg|hamstring|wrist|nordic|ball|glute.?ham|lower back|neck|band|tricep|reverse plate|twist|crunch|knee|ab /)) return ['curl', { h: T(/dumbbell|hammer|concentration|zottman|spider|drag|machine/) ? 'db' : T(/cable|rope|pulley/) ? 'cable' : T(/barbell|ez|bar curl|e-z|bar$|preacher curl/) ? 'bar' : 'db', hammer: T(/hammer/) }];
+    if (T(/curl/) && !T(/leg|hamstring|wrist|nordic|ball|glute.?ham|lower back|neck|band|tricep|reverse plate|twist|crunch|knee|ab /)) return ['curl', { h: T(/dumbbell|hammer|concentration|zottman|spider|drag|machine/) && !T(/barbell/) ? 'db' : T(/cable|rope|pulley/) ? 'cable' : T(/barbell|ez|bar curl|e-z|bar$|preacher curl/) ? 'bar' : 'db', hammer: T(/hammer/),
+      v: T(/spider|prone|lying against an incline|chest.?supported/) ? 'spider' : T(/preacher|scott|over incline bench/) ? 'preacher' : T(/incline/) ? 'incline' : T(/concentration/) ? 'conc' : T(/drag/) ? 'drag' : '' }];
     if (T(/push-?down|press-?down|pushdown/) && !T(/shoulder/)) return ['pushdown', {}];
     if (T(/skull|lying.*(tricep|extension)|french press|incline.*tricep|decline.*tricep/) && !T(/cable|band/)) return ['skull', { h: T(/dumbbell/) ? 'db' : 'bar' }];
     if (T(/tricep/) && T(/extension|press/) && !T(/machine|band|kickback|towel|speed|chain|lying|body|reverse|sled|bent-over|bench|cable|close/)) return ['triExt', { h: T(/barbell|ez/) && !T(/dumbbell/) ? 'bar' : 'db' }];
@@ -1880,20 +1972,20 @@ var FIG = (function () {
     if (p < 2700) return 1 - ease((p - 1500) / 1200);
     return 0;
   }
-  function live(svg, T) {
+  function live(svg, T, view, t0in) {
     var still = false;
     try { still = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) { }
-    var t0 = Date.now();
+    var t0 = t0in || Date.now();
     function nextFrame(fn) { if (window.requestAnimationFrame) window.requestAnimationFrame(fn); else setTimeout(fn, 33); }
     function step() {
       if (!document.body.contains(svg)) return;
-      if (still) { svg.innerHTML = frame(T, Math.floor((Date.now() - t0) / 1300) % 2); setTimeout(step, 1300); return; }
-      svg.innerHTML = frame(T, cycle(Date.now() - t0));
+      if (still) { svg.innerHTML = frame(T, Math.floor((Date.now() - t0) / 1300) % 2, view); setTimeout(step, 1300); return; }
+      svg.innerHTML = frame(T, cycle(Date.now() - t0), view);
       nextFrame(step);
     }
     step();
   }
-  return { forEx: forEx, svgDoc: svgDoc, thumb: thumb, live: live, frame: frame, pick: pick, tpl: tpl, B: B, FY: FY };
+  return { frontOK: frontOK, forEx: forEx, svgDoc: svgDoc, thumb: thumb, live: live, frame: frame, pick: pick, tpl: tpl, B: B, FY: FY };
 })();
 
 /* ===== friends, compare & challenges =====
@@ -3883,17 +3975,47 @@ function nativeClick(a, d) {
 /* ----- rest alerts for the web app (Home Screen app on iPhone, iOS 16.4+): the friends server sends a push
    when rest ends, so the alert comes even with the app closed or the phone locked ----- */
 var WP = { end: 0 };
-function webPushAvail() { return !NATIVE.on && !window.claude && typeof srvOn === 'function' && srvOn() && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window; }
-function webPushOn() { var on = ''; try { on = localStorage.getItem('il-push:' + SRV.uid) || ''; } catch (e) { } return webPushAvail() && on === '1' && Notification.permission === 'granted'; }
+/* no account needed: this phone registers with the server once and gets its own id (il-pushdev) */
+function webPushAvail() { return !NATIVE.on && !window.claude && typeof SRV !== 'undefined' && !!SRV.url && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window; }
+function webPushDev() { try { return JSON.parse(localStorage.getItem('il-pushdev') || 'null'); } catch (e) { return null; } }
+function webPushOn() { var d = webPushDev(); return webPushAvail() && !!(d && d.did && d.on !== false) && Notification.permission === 'granted'; }
+/* iPhone only allows notifications for web apps opened from the Home Screen, not a Safari tab */
+function webPushNeedsInstall() { return /iPhone|iPad|iPod/.test(navigator.userAgent) && !navigator.standalone && !(window.matchMedia && matchMedia('(display-mode: standalone)').matches); }
 function b64u8(s) { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; var r = atob(s), a = new Uint8Array(r.length); for (var i = 0; i < r.length; i++) a[i] = r.charCodeAt(i); return a; }
 async function webPushEnable() {
-  if (!webPushAvail()) throw new Error(window.navigator.standalone === false || !('PushManager' in window) ? 'On iPhone, rest alerts need Iron Ledger added to your Home Screen (Share → Add to Home Screen), then opened from there.' : 'Sign in first.');
+  if (!webPushAvail() || webPushNeedsInstall()) throw new Error('On iPhone, rest alerts need Iron Ledger added to your Home Screen (Share → Add to Home Screen), then opened from there.');
   var perm = await Notification.requestPermission();
   if (perm !== 'granted') throw new Error('Notifications are off for Iron Ledger. Turn them on in the iPhone Settings app → Notifications → Iron Ledger.');
   var reg = await navigator.serviceWorker.ready, key = (await srvRaw('GET', '/push/key', null, false)).key;
   var sub = (await reg.pushManager.getSubscription()) || (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u8(key) }));
-  await srvRaw('POST', '/push/sub', { sub: sub.toJSON() });
-  try { localStorage.setItem('il-push:' + SRV.uid, '1'); } catch (e) { }
+  var old = webPushDev() || {}, r;
+  try { r = await srvRaw('POST', '/push/dev', { sub: sub.toJSON(), did: old.did, sec: old.sec }, false); }
+  catch (e) {
+    // a server that has not been updated yet: fall back to alerts tied to your account
+    if (e.code !== 404 && e.code !== 401) throw e;
+    if (!(typeof srvOn === 'function' && srvOn())) throw new Error('Sign in (Friends tab) to turn on rest alerts.');
+    await srvRaw('POST', '/push/sub', { sub: sub.toJSON() });
+    try { localStorage.setItem('il-pushdev', JSON.stringify({ did: 'acct', legacy: true, on: true })); } catch (e2) { }
+    return;
+  }
+  try { localStorage.setItem('il-pushdev', JSON.stringify({ did: r.did, sec: r.sec, on: true })); } catch (e) { }
+}
+function webPushOff() { var d = webPushDev(); if (d) { d.on = false; try { localStorage.setItem('il-pushdev', JSON.stringify(d)); } catch (e) { } } }
+function webRestSend(end) {
+  var d = webPushDev(); if (!d) return;
+  if (d.legacy) { if (srvOn()) (end ? srvRaw('POST', '/push/rest', { end: end }) : srvRaw('DELETE', '/push/rest')).catch(function () { }); return; }
+  srvRaw('POST', '/push/devrest', end ? { did: d.did, sec: d.sec, end: end } : { did: d.did, sec: d.sec, cancel: true }, false).catch(function (e) { if (e && /again/.test(e.message || '')) { NH.pushErr = e.message; } });
+}
+/* the push address can change (iPhone renews it now and then): re-register quietly when the app opens */
+function webPushRefresh() {
+  // phones that turned alerts on with an account before: move them over to the no-account setup (no new prompt, permission is already given)
+  try { if (!webPushDev() && webPushAvail() && !webPushNeedsInstall() && Notification.permission === 'granted' && Object.keys(localStorage).some(function (k) { return k.indexOf('il-push:') === 0 && localStorage.getItem(k) === '1'; })) { webPushEnable().catch(function () { }); return; } } catch (e) { }
+  if (!webPushOn()) return;
+  navigator.serviceWorker.ready.then(function (reg) { return reg.pushManager.getSubscription(); }).then(function (sub) {
+    var d = webPushDev(); if (!sub || !d) return;
+    if (d.legacy) return webPushEnable();   // try again: moves to the no-account setup once the server has it
+    return srvRaw('POST', '/push/dev', { sub: sub.toJSON(), did: d.did, sec: d.sec }, false).then(function (r) { try { localStorage.setItem('il-pushdev', JSON.stringify({ did: r.did, sec: r.sec, on: true })); } catch (e) { } });
+  }).catch(function () { });
 }
 function webRestTick() {
   if (!webPushOn()) return;
@@ -3902,8 +4024,8 @@ function webRestTick() {
   if (end && !document.hidden && end - Date.now() < 2500) end = 0;
   if (end !== WP.end) {
     var was = WP.end; WP.end = end;
-    if (end) srvRaw('POST', '/push/rest', { end: end }).catch(function () { });
-    else if (was) srvRaw('DELETE', '/push/rest').catch(function () { });
+    if (end) webRestSend(end);
+    else if (was) webRestSend(0);
   }
 }
 /* the card in Settings, and a one-time tip during a workout */
@@ -3911,15 +4033,15 @@ function restAlertCard() {
   var body, btn = '';
   if (NATIVE.on) body = 'On. When rest is over you get a notification, even in another app or with the phone locked. You can change it in the iPhone Settings app → Notifications → Iron Ledger.';
   else if (window.claude) body = 'In this version the alert only sounds while Iron Ledger is open on screen. Use the Home Screen app (or the iPhone app) for alerts with the app closed.';
-  else if (webPushOn()) body = 'On. When rest is over this phone gets a notification, even with the app closed or the phone locked.';
-  else if (webPushAvail()) { body = 'Get a notification when rest is over, even with the app closed or the phone locked.'; btn = '<button class="btn block" data-act="pushOn">Turn on rest alerts</button>'; }
-  else if (!(typeof srvOn === 'function' && srvOn())) body = 'Sign in to get rest alerts with the app closed.';
-  else body = 'On iPhone, add Iron Ledger to your Home Screen (Share → Add to Home Screen) and open it from there to get rest alerts with the app closed.';
+  else if (webPushOn()) { body = 'On. When rest is over this phone plays its notification sound and shows "Rest is over", even with the app closed, the phone locked or another app open (and on your Apple Watch). No account needed.'; btn = '<button class="btn block ghost" data-act="pushTest">Send a test alert in 5 s</button><button class="btn block ghost" data-act="pushOff">Turn off</button>'; }
+  else if (webPushAvail() && !webPushNeedsInstall()) { body = 'Get the chime as a notification when rest is over, even with the app closed, the phone locked or music playing. No account needed.'; btn = '<button class="btn block primary" data-act="pushOn">Turn on rest alerts</button>'; }
+  else body = 'iPhone only lets web apps alert you when they are installed. In Safari tap Share → Add to Home Screen, open Iron Ledger from the new icon, then turn rest alerts on here. (Until then the chime only plays while the app is open on screen.)';
   return '<div class="section"><span class="field-label">Rest alerts when the app is closed</span><div class="card section" style="gap:10px"><div class="note">' + body + '</div>' + btn + (NH.pushErr ? '<div class="note" style="color:var(--down)">' + esc(NH.pushErr) + '</div>' : '') + '</div></div>';
 }
 function restAlertTip() {
   var seen = ''; try { seen = localStorage.getItem('il-push-tip') || ''; } catch (e) { }
   if (seen || !webPushAvail() || webPushOn()) return '';
+  if (webPushNeedsInstall()) return '<div class="banner"><span><b>Rest chime with the phone locked</b> · iPhone only allows it for installed web apps: in Safari tap Share → Add to Home Screen, open Iron Ledger from that icon, then turn on rest alerts.</span><span class="row" style="gap:6px"><button class="btn small" data-act="pushTipNo">Got it</button></span></div>';
   return '<div class="banner"><span><b>Rest alerts</b> · get a notification when rest is over, even with the app closed.</span><span class="row" style="gap:6px"><button class="btn small primary" data-act="pushOn">Turn on</button><button class="btn small" data-act="pushTipNo">Not now</button></span></div>';
 }
 function pushClick(a) {
@@ -3928,6 +4050,8 @@ function pushClick(a) {
     webPushEnable().then(function () { try { localStorage.setItem('il-push-tip', '1'); } catch (e) { } toast('Rest alerts are on'); render(); }, function (e) { NH.pushErr = e.message; toast(e.message); render(); });
     return true;
   }
+  if (a === 'pushOff') { webPushOff(); webRestSend(0); WP.end = 0; toast('Rest alerts are off'); render(); return true; }
+  if (a === 'pushTest') { webRestSend(Date.now() + 5000); toast('Lock the phone or switch apps — the alert comes in 5 seconds'); return true; }
   if (a === 'pushTipNo') { try { localStorage.setItem('il-push-tip', '1'); } catch (e) { } render(); return true; }
   return false;
 }
@@ -4061,7 +4185,10 @@ function tempoTick() {
   var into = el - rep * TM.per, i = 0, acc = 0;
   while (i < TM.ph.length - 1 && into >= acc + TM.ph[i][1]) { acc += TM.ph[i][1]; i++; }
   var p = TM.ph[i], left = p[1] - (into - acc), key = rep + ':' + i;
-  if (TM.last !== key) { TM.last = key; tmTone(p[2], 140); if (p[0] !== 'Hold') tmSay(p[0].toLowerCase()); else tmSay('hold'); if (i === 0) haptic('tap'); }
+  // each phase starts with its word ("down", "up", "hold"), then counts the seconds left out loud: "down… 2… 1… up"
+  var sec = Math.floor(into - acc), ck = key + ':' + sec;
+  if (TM.last !== key && TM.lastC !== ck) { TM.last = key; TM.lastC = ck; tmTone(p[2], 140); tmSay(p[0].toLowerCase()); if (i === 0) haptic('tap'); }
+  else if (TM.lastC !== ck) { TM.lastC = ck; var n = Math.round(p[1] - sec); if (n >= 1) { tmTone(p[2], 50, 0.12); tmSay(['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'][n] || String(n)); } }
   TM.done = rep;
   tmUpdate(p[0], fmtSec(Math.ceil(left)) + ' s', 'Rep ' + (rep + 1) + ' of ' + TM.reps, (into - acc) / p[1], p[0] === 'Up' ? 'var(--up)' : p[0] === 'Down' ? 'var(--accent)' : 'var(--muted)');
   var rr = $('#tmreps'); if (rr) rr.textContent = rep + ' of ' + TM.reps + ' reps done';
@@ -4917,13 +5044,16 @@ function demoHTML(ex, anim, extra) {
 function demoInner(ex) {
   var T = FIG.forEx(ex), mode = T && (U.demoMode !== 'photo' || !hasPhoto(ex)) ? 'cartoon' : 'photo';
   var tog = T && hasPhoto(ex) ? '<div class="seg" role="group" aria-label="Demo style"><button aria-pressed="' + (mode === 'cartoon') + '" data-act="demoMode" data-m="cartoon" data-n="' + esc(ex.n) + '">Cartoon</button><button aria-pressed="' + (mode === 'photo') + '" data-act="demoMode" data-m="photo" data-n="' + esc(ex.n) + '">Photos</button></div>' : '';
-  var pic = mode === 'cartoon' ? '<div class="demo cg big" role="img" aria-label="' + esc(ex.n) + ' animated demonstration"><svg class="fig" id="figlive" viewBox="0 0 300 200" aria-hidden="true"></svg></div><div class="note">Red marks the muscles doing the work.</div>' : photoHTML(ex, true, 'big') + '<div class="note">' + (T ? 'Photos flip between the start and end of the move.' : 'Photos flip between the start and end of the move. No cartoon for this one yet.') + '</div>';
+  var two = mode === 'cartoon' && FIG.frontOK(T);
+  var pic = mode === 'cartoon' ? (two
+      ? '<div class="figpair" role="img" aria-label="' + esc(ex.n) + ' animated demonstration, side and front"><div class="demo cg"><svg class="fig" id="figlive" viewBox="0 0 300 200" aria-hidden="true"></svg><span class="figlab">Side</span></div><div class="demo cg"><svg class="fig" id="figfront" viewBox="80 0 140 200" aria-hidden="true"></svg><span class="figlab">Front</span></div></div>'
+      : '<div class="demo cg big" role="img" aria-label="' + esc(ex.n) + ' animated demonstration"><svg class="fig" id="figlive" viewBox="0 0 300 200" aria-hidden="true"></svg></div>') + '<div class="note">Red marks the muscles doing the work.</div>' : photoHTML(ex, true, 'big') + '<div class="note">' + (T ? 'Photos flip between the start and end of the move.' : 'Photos flip between the start and end of the move. No cartoon for this one yet.') + '</div>';
   return pic + tog;
 }
 function startDemo(ex) {
   var T = FIG.forEx(ex), s = $('#figlive');
   // same rule as demoInner: the cartoon shows when chosen, or when there is no photo to show instead
-  if (T && s && (U.demoMode !== 'photo' || !hasPhoto(ex))) FIG.live(s, T);
+  if (T && s && (U.demoMode !== 'photo' || !hasPhoto(ex))) { var t0 = Date.now(), f = $('#figfront'); FIG.live(s, T, 'side', t0); if (f) FIG.live(f, T, 'front', t0); }
 }
 function tagsHTML(ex) {
   return ex.p.map(function (g) { return '<span class="tag p">' + esc(g) + '</span>'; }).join('') + ex.s.map(function (g) { return '<span class="tag">' + esc(g) + '</span>'; }).join('');
@@ -5562,7 +5692,7 @@ function viewSettings() {
     '<div class="sgroup"><div class="sghead"><h2>You</h2><div class="note">Used for your strength rank and calorie targets.</div></div>' + '<div class="section">' + bodyCard() + '</div>' + '<div class="section"><span class="field-label">Weight units</span><div class="seg" role="group"><button aria-pressed="' + (st.unit === 'lb') + '" data-act="unit" data-k="lb">Pounds</button><button aria-pressed="' + (st.unit === 'kg') + '" data-act="unit" data-k="kg">Kilograms</button></div></div>' + '</div>' +
     '<div class="sgroup"><div class="sghead"><h2>Training</h2><div class="note">What the workout builder may use.</div></div>' + '<div class="section"><h2>Equipment</h2><div class="seg" role="group" aria-label="Which place to edit"><button aria-pressed="' + (st.profile === 'gym') + '" data-act="profile" data-k="gym">Gym</button><button aria-pressed="' + (st.profile === 'home') + '" data-act="profile" data-k="home">Home</button></div><div class="note">Tick what is available at your ' + profName().toLowerCase() + '. Built workouts only use ticked equipment; the Train tab switches between Gym and Home.</div><details class="card gdet"' + (U.gearOpen ? ' open' : '') + '><summary>Edit ' + profName().toLowerCase() + ' equipment · ' + gearList().length + ' of ' + ITEMS.length + ' ticked</summary>' + gearGrid() + '</details></div>' + '<div class="section"><span class="field-label">Exercise difficulty</span><div class="seg" role="group"><button aria-pressed="' + (st.level === 'beginner') + '" data-act="level" data-k="beginner">Beginner</button><button aria-pressed="' + (st.level === 'intermediate') + '" data-act="level" data-k="intermediate">Intermediate</button><button aria-pressed="' + (st.level === 'expert') + '" data-act="level" data-k="expert">Advanced</button></div></div>' + injurySettingsHTML() + '</div>' +
     '</div><div class="col">' +
-    '<div class="sgroup"><div class="sghead"><h2>Workout alerts</h2></div>' + '<div class="section"><span class="field-label">Rest timer chime</span><div class="seg" role="group" aria-label="Rest timer chime"><button aria-pressed="' + (st.chime !== false) + '" data-act="chimeOpt" data-k="on">On</button><button aria-pressed="' + (st.chime === false) + '" data-act="chimeOpt" data-k="off">Off</button></div><div class="note">A short chime when rest is over, through your headphones or speaker. Keep the app open on screen (it stays awake during workouts); iPhones pause web apps that are in the background.</div></div>' + restAlertCard() + '<div class="section"><span class="field-label">Voice cues for timers</span><div class="seg" role="group" aria-label="Voice cues"><button aria-pressed="' + (st.voice !== false) + '" data-act="voiceOpt" data-k="on">On</button><button aria-pressed="' + (st.voice === false) + '" data-act="voiceOpt" data-k="off">Off</button></div><div class="note">The hold and tempo timers say "go", "down" and "up" out loud.</div></div>' + '</div>' +
+    '<div class="sgroup"><div class="sghead"><h2>Workout alerts</h2></div>' + '<div class="section"><span class="field-label">Rest timer chime</span><div class="seg" role="group" aria-label="Rest timer chime"><button aria-pressed="' + (st.chime !== false) + '" data-act="chimeOpt" data-k="on">On</button><button aria-pressed="' + (st.chime === false) + '" data-act="chimeOpt" data-k="off">Off</button></div><div class="note">A short chime when rest is over, through your headphones or speaker. Keep the app open on screen (it stays awake during workouts); iPhones pause web apps that are in the background.</div></div>' + restAlertCard() + '<div class="section"><span class="field-label">Voice cues for timers</span><div class="seg" role="group" aria-label="Voice cues"><button aria-pressed="' + (st.voice !== false) + '" data-act="voiceOpt" data-k="on">On</button><button aria-pressed="' + (st.voice === false) + '" data-act="voiceOpt" data-k="off">Off</button></div><div class="note">The hold and tempo timers talk you through it: the tempo timer says "down" and counts the seconds down, then "up".</div></div>' + '</div>' +
     (foldOfferable() ? '<div class="sgroup"><div class="sghead"><h2>Screen</h2></div><div class="section"><span class="field-label">Foldable phone layout</span><div class="seg" role="group" aria-label="Foldable phone layout">' + [['auto', 'Automatic'], ['on', 'On'], ['off', 'Off']].map(function (o) { return '<button aria-pressed="' + (foldPref() === o[0]) + '" data-act="foldOpt" data-k="' + o[0] + '">' + o[1] + '</button>'; }).join('') + '</div><div class="note">For iPhone Duo. When the phone is open, screens split into two columns either side of the fold, and held sideways, pop-ups open on the right half like a book page. Closed, it looks like any iPhone. Automatic turns it on only on a foldable; this setting is for this device only.</div></div></div>' : '') +
     ((typeof healthSettingsCard === 'function' && healthSettingsCard()) ? '<div class="sgroup"><div class="sghead"><h2>Apple Health</h2></div>' + healthSettingsCard() + '</div>' : '') +
     '<div class="sgroup"><div class="sghead"><h2>Your data</h2></div>' + '<div class="section"><div class="note">' + status + '</div>' +
@@ -5747,7 +5877,7 @@ document.addEventListener('click', function (ev) {
   if (typeof insightsClick === 'function' && insightsClick(a, d)) return;
   if (a === 'ssToggle') { var sx = S.draft.ex[+d.x]; sx.ss = !sx.ss; persist({ draft: true }); render(); toast(sx.ss ? 'Superset: no rest between these two' : 'Superset removed'); return; }
   if ((a.indexOf('wk') === 0 || a === 'wpStart') && typeof plannerClick === 'function' && plannerClick(a, d)) return;
-  if ((a === 'pushOn' || a === 'pushTipNo') && pushClick(a)) return;
+  if (/^push(On|Off|Test|TipNo)$/.test(a) && pushClick(a)) return;
   if (a === 'guestGo') { guestStart(); return; }
   if (a === 'guestOut') { guestLeave(); return; }
   if (a === 'close') { closeSheet(); U.confirm = null; return; }
@@ -6169,6 +6299,7 @@ setInterval(tick, 1000);
 keepAwake();
 initDb();
 if (typeof photosInit === 'function') photosInit();
+if (typeof webPushRefresh === 'function') setTimeout(webPushRefresh, 1500);
 setTimeout(function () { aiDetect().then(function () { if (U.tab === 'body') render(); }); }, 50);
 try { if (!window.claude && 'serviceWorker' in navigator && /^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js'); } catch (e) { }
 

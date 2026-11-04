@@ -201,7 +201,70 @@ var FIG = (function () {
     return s;
   }
 
-  function frame(T, k) {
+  /* ---------- a front view worked out from a side-view pose ----------
+     Heights come straight from the side view; left and right are set by the body's width. Knees and elbows
+     spread a little as they come forward, the way they do in a real squat or press. */
+  function projF(J, P) {
+    var cx = 150, F = {};
+    function sp(a, b, l, base, add) { return base + add * Math.min(1, Math.abs(b[0] - a[0]) / l); }
+    F.hip = [cx, J.hip[1]]; F.s = [cx, J.sho[1]]; F.head = [cx, J.head[1]]; F.hdAng = 0;
+    F.sl = [cx - 15, J.sho[1]]; F.sr = [cx + 15, J.sho[1]];
+    F.hl = [cx - 8, J.hip[1]]; F.hr = [cx + 8, J.hip[1]];
+    var kx = sp(J.hip, J.kn, LEN.th, 9, 7), kx2 = sp(J.hip, J.kn2, LEN.th, 9, 7);
+    F.kl = [cx - kx2, J.kn2[1]]; F.al = [cx - Math.max(9, kx2 - 2), J.an2[1]];
+    F.kr = [cx + kx, J.kn[1]]; F.ar = [cx + Math.max(9, kx - 2), J.an[1]];
+    var wx = 17 + (P.wide || 0), ex = Math.max(sp(J.sho, J.el, LEN.ua, 18, 5), wx + (P.wide ? 6 : 0));
+    F.el = [cx - ex, J.el2[1] - 1]; F.er = [cx + ex, J.el[1]];
+    F.wl = [cx - wx, J.wr2[1] - 1]; F.wrr = [cx + wx, J.wr[1]];
+    return F;
+  }
+  function frontEq(T) {
+    var out = [], A = T.A;
+    (T.eq || []).forEach(function (it) {
+      if (it.k === 'db' && (it.at === 'hand' || it.at === 'wr')) out.push({ k: 'dbF' });
+      else if (it.k === 'plate' && (it.at === 'hand' || it.at === 'wr')) out.push({ k: 'barF' });
+      else if (it.k === 'kb' || it.k === 'ball') out.push({ k: it.k === 'ball' ? 'plateMid' : 'plate', r: 7 });
+    });
+    if (A.hip && !A.stand) {   // seat (and backrest) seen from the front
+      var hy = A.hip[1];
+      if ((T.eq || []).some(function (it) { return it.k === 'padline' && (it.off || 15) > 0; })) out.unshift({ k: 'rect', x: 129, y: hy - 58, w: 42, h: 62, r: 5, c: 'pad', back: 1 });
+      out.unshift({ k: 'rect', x: 128, y: hy + 8, w: 44, h: 9, r: 3, c: 'pad', back: 1 }, { k: 'rect', x: 147, y: hy + 17, w: 6, h: FY - hy - 17, r: 1, c: 'bar', back: 1 });
+    }
+    return out;
+  }
+  function hlDrawP(F, h) {
+    var segs = { ua: [[F.sl, F.el], [F.sr, F.er]], fa: [[F.el, F.wl], [F.er, F.wrr]], th: [[F.hl, F.kl], [F.hr, F.kr]], sh: [[F.kl, F.al], [F.kr, F.ar]],
+      to: [[[F.hip[0] - 7, F.hip[1]], [F.s[0] - 7, F.s[1]]], [[F.hip[0] + 7, F.hip[1]], [F.s[0] + 7, F.s[1]]]] }[h[0] === 'hip' ? 'to' : h[0]];
+    if (!segs) return '';
+    return segs.map(function (sg) {
+      var a = sg[0], b = sg[1], c = lerp(a, b, h[1]), l = Math.max(4, Math.sqrt((b[0] - a[0]) * (b[0] - a[0]) + (b[1] - a[1]) * (b[1] - a[1])));
+      return ellipse(c, Math.min(h[3] || 8, 7), Math.min(h[4] || 8, l * .45 + 3), Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI - 90, 'hl');
+    }).join('');
+  }
+  function frontOK(T) {   // only for upright and seated moves: a lying body seen end-on tells you nothing
+    if (T.fv || T.noFront) return false;
+    function up_(P) { return Math.abs(P.t || 0) <= 50 && !P.floor; }
+    if (!up_(T.A) || !up_(T.B)) return false;
+    try { var J = solve(T.A); if (J.hip[1] > FY - 28) return false; } catch (e) { return false; }
+    return true;
+  }
+  function frameFront(T, k) {
+    var P = mix(T.A, T.B, ease(k)); if (T.wide === undefined) T.wide = (T.eq || []).some(function (it) { return it.k === 'plate' && (it.at === 'hand' || it.at === 'wr'); }) ? 12 : 0; P.wide = T.wide; var F = projF(solve(P), P), s = '',
+      barSho = (T.eq || []).some(function (it) { return it.k === 'plate' && it.at === 'sho'; });
+    if (barSho) {   // bar across the shoulders: hands wide at shoulder height, elbows down
+      F.wl = [F.sl[0] - 18, F.sl[1] - 3]; F.wrr = [F.sr[0] + 18, F.sr[1] - 3]; F.el = [F.sl[0] - 14, F.sl[1] + 14]; F.er = [F.sr[0] + 14, F.sr[1] + 14];
+    }
+    var eq = T.feq || (T.feq = frontEq(T)), i;
+    s = drawFront(F, P, { eq: eq.filter(function (q) { return q.back; }), hl: [] });
+    if (barSho) s += ln([F.s[0] - 52, F.s[1] - 4], [F.s[0] + 52, F.s[1] - 4], 3, 'bar') + rect(F.s[0] - 56, F.s[1] - 15, 6, 22, 2, 'plate') + rect(F.s[0] + 50, F.s[1] - 15, 6, 22, 2, 'plate');
+    var hl = T.hl || []; for (i = 0; i < hl.length; i++) s += hlDrawP(F, hl[i]);
+    for (i = 0; i < eq.length; i++) if (!eq[i].back) s += eqDrawF(F, eq[i]);   // weights in front of the highlight
+    var sc = (T.sc || 1) * 1.06;
+    return '<rect class="floor" x="0" y="' + FY + '" width="300" height="22"/><line class="floorl" x1="0" y1="' + FY + '" x2="300" y2="' + FY + '"/>' +
+      '<g transform="translate(150 ' + FY + ') scale(' + f1(sc) + ') translate(-150 ' + (-FY) + ')">' + s + '</g>';
+  }
+  function frame(T, k, view) {
+    if (view === 'front') return frameFront(T, k);
     var P = mix(T.A, T.B, ease(k)), J, body;
     if (T.fv) { J = solveF(P); body = drawFront(J, P, T); } else { J = solve(P); body = drawSide(J, P, T); }
     var sc = (T.sc || 1) * 1.06, pv = T.pv || [150, FY];
@@ -229,11 +292,31 @@ var FIG = (function () {
   }
   var B = {};
   B.curl = function (o) {
-    var eq = held(o.h), A = { stand: 1, t: 0, ua: 2, fa: 2 }, Bp = { stand: 1, t: -2, ua: 6, fa: 158 };
+    var eq = held(o.h), A = { stand: 1, t: 0, ua: 2, fa: 2 }, Bp = { stand: 1, t: -2, ua: 6, fa: 158 }, hl = [['ua', .5, 6, 10, 6]];
     if (o.h === 'cable') { eq = [{ k: 'cable', at: 'hand', to: [240, 172] }, { k: 'rect', x: 250, y: 120, w: 22, h: 58, r: 3, c: 'pad', back: 1 }]; }
     if (o.h === 'bar') eq = [{ k: 'plate', at: 'hand', r: 8 }];
     if (o.h === 'db' && o.hammer) eq = [{ k: 'db', at: 'hand', rot: 90 }];
-    return { A: A, B: Bp, eq: eq, hl: [['ua', .5, 6, 10, 6]] };
+    var b;
+    if (o.v === 'incline') {   // lying back on an incline bench, arms hanging straight down behind the body, elbows stay put
+      b = seated(150, 146, { t: -40, ft: 70 });
+      return { A: X(b, { ua: -3, fa: -3 }), B: X(b, { ua: -5, fa: 150 }), eq: seatEq(150, 146, false).concat([{ k: 'padline', off: 14, s0: -6, s1: 66, w: 9, post: 1, back: 1 }], eq), hl: hl };
+    }
+    if (o.v === 'spider') {    // chest down on an incline bench, arms hanging straight down in front
+      A = { stand: 1, ax: 128, t: 42, ua: 0, fa: 0 }; Bp = { stand: 1, ax: 128, t: 42, ua: 0, fa: 150 };
+      return { A: A, B: Bp, eq: [{ k: 'padline', off: -14, s0: 4, s1: 62, w: 9, post: 1, back: 1 }].concat(eq), hl: hl };
+    }
+    if (o.v === 'preacher') {  // seated, upper arm resting on the sloped pad
+      b = seated(122, 146, { t: 6, ft: 70 });
+      var J0 = solve(X(b, { ua: 42, fa: 50 })), d = dn(42), nr = [-d[1], d[0]];
+      var pa = pt(pt(J0.sho, d, 4), nr, -8), pb = pt(pt(J0.el, d, 6), nr, -8);
+      return { A: X(b, { ua: 42, fa: 52 }), B: X(b, { ua: 42, fa: 168 }), eq: seatEq(122, 146, false).concat([{ k: 'line', a: pa, b: pb, w: 9, c: 'pad', back: 1 }, { k: 'line', a: pb, b: [pb[0], FY], w: 4, c: 'bar', back: 1 }], eq), hl: hl };
+    }
+    if (o.v === 'conc') {      // seated, leaning over, elbow braced against the inner thigh
+      b = seated(130, 146, { t: 30, ft: 70 });
+      return { A: X(b, { ua: 6, fa: 6 }), B: X(b, { ua: 6, fa: 155 }), eq: seatEq(130, 146, false).concat(eq), hl: hl };
+    }
+    if (o.v === 'drag') { Bp = { stand: 1, t: 0, ua: -32, fa: 125 }; }   // bar drags up the body, elbows go back
+    return { A: A, B: Bp, eq: eq, hl: hl };
   };
   B.ohp = function (o) {
     var Ap = { t: 0, ua: 40, fa: 172, eb: 1 }, Bp = { t: 0, ua: 172, fa: 178 }, eq = held(o.h), back = [];
@@ -553,7 +636,8 @@ var FIG = (function () {
     if (T(/leg curl|hamstring curl/) && !T(/ball|band|slide/)) return ['legcurl', {}];
     if (T(/calf raise|calf press|toe press|seated calf/) && !T(/band|reverse|smith/)) return ['calf', { seated: T(/seated/), h: T(/dumbbell/) ? 'db' : 'none' }];
     if (T(/wrist curl|finger curl/) && !T(/behind/)) return ['wristcurl', {}];
-    if (T(/curl/) && !T(/leg|hamstring|wrist|nordic|ball|glute.?ham|lower back|neck|band|tricep|reverse plate|twist|crunch|knee|ab /)) return ['curl', { h: T(/dumbbell|hammer|concentration|zottman|spider|drag|machine/) ? 'db' : T(/cable|rope|pulley/) ? 'cable' : T(/barbell|ez|bar curl|e-z|bar$|preacher curl/) ? 'bar' : 'db', hammer: T(/hammer/) }];
+    if (T(/curl/) && !T(/leg|hamstring|wrist|nordic|ball|glute.?ham|lower back|neck|band|tricep|reverse plate|twist|crunch|knee|ab /)) return ['curl', { h: T(/dumbbell|hammer|concentration|zottman|spider|drag|machine/) && !T(/barbell/) ? 'db' : T(/cable|rope|pulley/) ? 'cable' : T(/barbell|ez|bar curl|e-z|bar$|preacher curl/) ? 'bar' : 'db', hammer: T(/hammer/),
+      v: T(/spider|prone|lying against an incline|chest.?supported/) ? 'spider' : T(/preacher|scott|over incline bench/) ? 'preacher' : T(/incline/) ? 'incline' : T(/concentration/) ? 'conc' : T(/drag/) ? 'drag' : '' }];
     if (T(/push-?down|press-?down|pushdown/) && !T(/shoulder/)) return ['pushdown', {}];
     if (T(/skull|lying.*(tricep|extension)|french press|incline.*tricep|decline.*tricep/) && !T(/cable|band/)) return ['skull', { h: T(/dumbbell/) ? 'db' : 'bar' }];
     if (T(/tricep/) && T(/extension|press/) && !T(/machine|band|kickback|towel|speed|chain|lying|body|reverse|sled|bent-over|bench|cable|close/)) return ['triExt', { h: T(/barbell|ez/) && !T(/dumbbell/) ? 'bar' : 'db' }];
@@ -641,18 +725,18 @@ var FIG = (function () {
     if (p < 2700) return 1 - ease((p - 1500) / 1200);
     return 0;
   }
-  function live(svg, T) {
+  function live(svg, T, view, t0in) {
     var still = false;
     try { still = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) { }
-    var t0 = Date.now();
+    var t0 = t0in || Date.now();
     function nextFrame(fn) { if (window.requestAnimationFrame) window.requestAnimationFrame(fn); else setTimeout(fn, 33); }
     function step() {
       if (!document.body.contains(svg)) return;
-      if (still) { svg.innerHTML = frame(T, Math.floor((Date.now() - t0) / 1300) % 2); setTimeout(step, 1300); return; }
-      svg.innerHTML = frame(T, cycle(Date.now() - t0));
+      if (still) { svg.innerHTML = frame(T, Math.floor((Date.now() - t0) / 1300) % 2, view); setTimeout(step, 1300); return; }
+      svg.innerHTML = frame(T, cycle(Date.now() - t0), view);
       nextFrame(step);
     }
     step();
   }
-  return { forEx: forEx, svgDoc: svgDoc, thumb: thumb, live: live, frame: frame, pick: pick, tpl: tpl, B: B, FY: FY };
+  return { frontOK: frontOK, forEx: forEx, svgDoc: svgDoc, thumb: thumb, live: live, frame: frame, pick: pick, tpl: tpl, B: B, FY: FY };
 })();

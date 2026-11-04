@@ -127,7 +127,10 @@ function tempoTick() {
   var into = el - rep * TM.per, i = 0, acc = 0;
   while (i < TM.ph.length - 1 && into >= acc + TM.ph[i][1]) { acc += TM.ph[i][1]; i++; }
   var p = TM.ph[i], left = p[1] - (into - acc), key = rep + ':' + i;
-  if (TM.last !== key) { TM.last = key; tmTone(p[2], 140); if (p[0] !== 'Hold') tmSay(p[0].toLowerCase()); else tmSay('hold'); if (i === 0) haptic('tap'); }
+  // each phase starts with its word ("down", "up", "hold"), then counts the seconds left out loud: "down… 2… 1… up"
+  var sec = Math.floor(into - acc), ck = key + ':' + sec;
+  if (TM.last !== key && TM.lastC !== ck) { TM.last = key; TM.lastC = ck; tmTone(p[2], 140); tmSay(p[0].toLowerCase()); if (i === 0) haptic('tap'); }
+  else if (TM.lastC !== ck) { TM.lastC = ck; var n = Math.round(p[1] - sec); if (n >= 1) { tmTone(p[2], 50, 0.12); tmSay(['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'][n] || String(n)); } }
   TM.done = rep;
   tmUpdate(p[0], fmtSec(Math.ceil(left)) + ' s', 'Rep ' + (rep + 1) + ' of ' + TM.reps, (into - acc) / p[1], p[0] === 'Up' ? 'var(--up)' : p[0] === 'Down' ? 'var(--accent)' : 'var(--muted)');
   var rr = $('#tmreps'); if (rr) rr.textContent = rep + ' of ' + TM.reps + ' reps done';
