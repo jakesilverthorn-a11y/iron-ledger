@@ -884,6 +884,7 @@ function viewSettings() {
     '<div class="sgroup"><div class="sghead"><h2>Training</h2><div class="note">What the workout builder may use.</div></div>' + '<div class="section"><h2>Equipment</h2><div class="seg" role="group" aria-label="Which place to edit"><button aria-pressed="' + (st.profile === 'gym') + '" data-act="profile" data-k="gym">Gym</button><button aria-pressed="' + (st.profile === 'home') + '" data-act="profile" data-k="home">Home</button></div><div class="note">Tick what is available at your ' + profName().toLowerCase() + '. Built workouts only use ticked equipment; the Train tab switches between Gym and Home.</div><details class="card gdet"' + (U.gearOpen ? ' open' : '') + '><summary>Edit ' + profName().toLowerCase() + ' equipment · ' + gearList().length + ' of ' + ITEMS.length + ' ticked</summary>' + gearGrid() + '</details></div>' + '<div class="section"><span class="field-label">Exercise difficulty</span><div class="seg" role="group"><button aria-pressed="' + (st.level === 'beginner') + '" data-act="level" data-k="beginner">Beginner</button><button aria-pressed="' + (st.level === 'intermediate') + '" data-act="level" data-k="intermediate">Intermediate</button><button aria-pressed="' + (st.level === 'expert') + '" data-act="level" data-k="expert">Advanced</button></div></div>' + injurySettingsHTML() + '</div>' +
     '</div><div class="col">' +
     '<div class="sgroup"><div class="sghead"><h2>Workout alerts</h2></div>' + '<div class="section"><span class="field-label">Rest timer chime</span><div class="seg" role="group" aria-label="Rest timer chime"><button aria-pressed="' + (st.chime !== false) + '" data-act="chimeOpt" data-k="on">On</button><button aria-pressed="' + (st.chime === false) + '" data-act="chimeOpt" data-k="off">Off</button></div><div class="note">A short chime when rest is over, through your headphones or speaker. Keep the app open on screen (it stays awake during workouts); iPhones pause web apps that are in the background.</div></div>' + restAlertCard() + '<div class="section"><span class="field-label">Voice cues for timers</span><div class="seg" role="group" aria-label="Voice cues"><button aria-pressed="' + (st.voice !== false) + '" data-act="voiceOpt" data-k="on">On</button><button aria-pressed="' + (st.voice === false) + '" data-act="voiceOpt" data-k="off">Off</button></div><div class="note">The hold and tempo timers say "go", "down" and "up" out loud.</div></div>' + '</div>' +
+    (foldOfferable() ? '<div class="sgroup"><div class="sghead"><h2>Screen</h2></div><div class="section"><span class="field-label">Foldable phone layout</span><div class="seg" role="group" aria-label="Foldable phone layout">' + [['auto', 'Automatic'], ['on', 'On'], ['off', 'Off']].map(function (o) { return '<button aria-pressed="' + (foldPref() === o[0]) + '" data-act="foldOpt" data-k="' + o[0] + '">' + o[1] + '</button>'; }).join('') + '</div><div class="note">For iPhone Duo. When the phone is open, screens split into two columns either side of the fold, and held sideways, pop-ups open on the right half like a book page. Closed, it looks like any iPhone. Automatic turns it on only on a foldable; this setting is for this device only.</div></div></div>' : '') +
     ((typeof healthSettingsCard === 'function' && healthSettingsCard()) ? '<div class="sgroup"><div class="sghead"><h2>Apple Health</h2></div>' + healthSettingsCard() + '</div>' : '') +
     '<div class="sgroup"><div class="sghead"><h2>Your data</h2></div>' + '<div class="section"><div class="note">' + status + '</div>' +
     '<div class="card section" style="gap:10px"><div class="xname">Backup file</div><div class="note">' + (st.lastBackup ? 'Last file saved ' + fmtDateLong(st.lastBackup) + '. ' : 'No backup file saved yet. ') + 'One file with everything: workouts, equipment, body stats. On iPhone it opens the share sheet. Choose <b>Save to Files</b> (iCloud Drive, or Google Drive if you have the app), or send it to yourself.</div><button class="btn primary block" data-act="exportFile">Save backup file</button><label class="btn block" for="restorefile" style="cursor:pointer">Restore from a backup file…</label><input type="file" id="restorefile" accept=".json,application/json,text/plain" hidden></div>' +
@@ -1129,6 +1130,7 @@ document.addEventListener('click', function (ev) {
   if (a === 'discard2') { endSession(); S.draft = null; U.confirm = null; persist({ draft: true }); render(); tick(); return; }
   if (a === 'restAdd') { if (U.rest) { U.rest.end += +d.v * 1000; U.rest.total = Math.max(15, U.rest.total + +d.v); tick(); } return; }
   if (a === 'restSkip') { U.rest = null; tick(); return; }
+  if (a === 'foldOpt') { try { if (d.k === 'auto') localStorage.removeItem('il-fold'); else localStorage.setItem('il-fold', d.k); } catch (e) { } foldApply(); render(); return; }
   if (a === 'chimeOpt') { st.chime = d.k === 'on'; persist({ settings: true }); render(); if (st.chime) { unlockAudio(); setTimeout(beep, 120); } return; }
   if (a === 'libGroup') { var j = U.libGroups.indexOf(d.g); if (j >= 0) U.libGroups.splice(j, 1); else U.libGroups.push(d.g); U.libShown = 40; render(); return; }
   if (a === 'libGear') { U.libGear = d.k; U.libShown = 40; render(); return; }
@@ -1465,6 +1467,23 @@ document.addEventListener('visibilitychange', function () {
 });
 window.addEventListener('pagehide', function () { if (dbCol && dbCol.srv) pushDb(); });
 document.body.classList.toggle('lift', !!window.claude);  // room for the artifact badge
+/* foldable iPhones (iPhone Duo): a squarer, wider screen when open. Other phones, iPads and computers keep their layout.
+   Detected from the screen's shape (a near-square touch screen under 520 points wide); Settings can force it on or off on this device. */
+function foldPref() { try { return localStorage.getItem('il-fold') || 'auto'; } catch (e) { return 'auto'; } }
+function foldDetected() {
+  var a = Math.min(screen.width, screen.height), b = Math.max(screen.width, screen.height);
+  var touch = window.matchMedia && matchMedia('(any-pointer: coarse)').matches;
+  return !!(touch && a > 0 && a < 520 && b / a < 1.6);
+}
+function foldApply() {
+  var p = foldPref(), on = p === 'on' || (p === 'auto' && foldDetected());
+  document.documentElement.classList.toggle('duo', on);
+  document.documentElement.classList.toggle('duo-open', on && innerWidth >= 600);
+}
+function foldOfferable() { return foldDetected() || foldPref() !== 'auto' || (window.matchMedia && matchMedia('(any-pointer: coarse)').matches && innerWidth >= 600); }
+foldApply();
+window.addEventListener('resize', foldApply);
+window.addEventListener('orientationchange', function () { setTimeout(foldApply, 120); });
 document.querySelectorAll('#tabs button').forEach(function (b) { b.insertAdjacentHTML('afterbegin', ico({ train: 'train', lib: 'lib', prog: 'prog', body: 'body', eat: 'eat', friends: 'users', settings: 'set' }[b.dataset.t])); });
 render();
 setInterval(tick, 1000);
