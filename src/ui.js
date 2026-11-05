@@ -951,6 +951,8 @@ function beep() {
   if (S.settings.chime === false) return;
   // 'playback' is the only kind of sound iPhone lets through the silent switch; 'transient' mixes with music but obeys it
   var loud = S.settings.chimeLoud !== false;
+  // the iPhone app (1.2+) plays the chime itself: through the silent switch AND alongside your music (it only dips it)
+  if (typeof NATIVE !== 'undefined' && NATIVE.on && !beep.noNative) { nativeCall('chime', { loud: loud }).catch(function () { beep.noNative = true; beep(); }); return; }
   try { if (navigator.audioSession) navigator.audioSession.type = loud ? 'playback' : 'transient'; } catch (e) { }
   if (loud) { clearTimeout(beep.rel); beep.rel = setTimeout(function () { try { if (navigator.audioSession) navigator.audioSession.type = 'transient'; } catch (e) { } }, 2500); }   // hand the audio back to your music
   var el = chimeEl();

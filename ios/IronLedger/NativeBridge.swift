@@ -1,3 +1,4 @@
+import AVFoundation
 import UIKit
 import UserNotifications
 
@@ -53,6 +54,12 @@ final class NativeBridge {
             } else {
                 UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             }
+            reply(id, ["ok": true])
+
+        case "chime":
+            // rest is over: plays on silent (loud) and mixes with music, which only dips for a moment
+            let loud = (args["loud"] as? Bool) ?? true
+            DispatchQueue.main.async { Chime.shared.play(loud: loud) }
             reply(id, ["ok": true])
 
         case "awake":
@@ -124,5 +131,63 @@ final class NativeBridge {
         content.interruptionLevel = .timeSensitive   // gets through Focus modes, like a timer would
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: max(1, seconds), repeats: false)
         center.add(UNNotificationRequest(identifier: "rest", content: content, trigger: trigger))
+    }
+}
+
+/// The rest-over chime, played by the app itself. A web page on iPhone has to choose between sounding on silent
+/// (and pausing your music) or mixing with music (and staying quiet on silent); the app can do both at once.
+final class Chime {
+    static let shared = Chime()
+    private var player: AVAudioPlayer?
+    private lazy var sound: Data = Chime.makeWav()
+
+    func play(loud: Bool) {
+        let session = AVAudioSession.sharedInstance()
+        do {
+            if loud {
+                try session.setCategory(.playback, mode: .default, options: [.mixWithOthers, .duckOthers])
+            } else {
+                try session.setCategory(.ambient, mode: .default, options: [.mixWithOthers])
+            }
+            try session.setActive(true)
+        } catch { }
+        player = try? AVAudioPlayer(data: sound)
+        player?.volume = 1
+        player?.play()
+        let length = (player?.duration ?? 0.8) + 0.3
+        DispatchQueue.main.asyncAfter(deadline: .now() + length) { [weak self] in
+            if self?.player?.isPlaying == true { return }
+            // let your music come back up to full volume
+            try? session.setActive(false, options: .notifyOthersOnDeactivation)
+        }
+    }
+
+    /// Three rising notes (E6, A6, C7), the same chime as the web version, as a small WAV file in memory.
+    private static func makeWav() -> Data {
+        let rate = 44100.0
+        let notes: [(Double, Double)] = [(0, 1318.5), (0.14, 1760), (0.28, 2093)]
+        let count = Int(rate * 0.95)
+        var samples = [Double](repeating: 0, count: count)
+        for (start, freq) in notes {
+            let first = Int(start * rate)
+            let length = Int(0.6 * rate)
+            for i in 0..<length where first + i < count {
+                let t = Double(i) / rate
+                let envelope = min(1.0, t / 0.008) * exp(-t * 7.0)
+                samples[first + i] += sin(2.0 * Double.pi * freq * t) * envelope * 0.3
+            }
+        }
+        var pcm = Data(capacity: count * 2)
+        for value in samples {
+            var x = Int16(max(-1.0, min(1.0, value)) * 32767.0).littleEndian
+            withUnsafeBytes(of: &x) { pcm.append(contentsOf: $0) }
+        }
+        var wav = Data()
+        func u32(_ v: UInt32) { var x = v.littleEndian; withUnsafeBytes(of: &x) { wav.append(contentsOf: $0) } }
+        func u16(_ v: UInt16) { var x = v.littleEndian; withUnsafeBytes(of: &x) { wav.append(contentsOf: $0) } }
+        wav.append(contentsOf: Array("RIFF".utf8)); u32(UInt32(36 + pcm.count)); wav.append(contentsOf: Array("WAVE".utf8))
+        wav.append(contentsOf: Array("fmt ".utf8)); u32(16); u16(1); u16(1); u32(44100); u32(88200); u16(2); u16(16)
+        wav.append(contentsOf: Array("data".utf8)); u32(UInt32(pcm.count)); wav.append(pcm)
+        return wav
     }
 }
