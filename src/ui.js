@@ -886,7 +886,7 @@ function viewSettings() {
     '<div class="sgroup"><div class="sghead"><h2>You</h2><div class="note">Used for your strength rank and calorie targets.</div></div>' + '<div class="section">' + bodyCard() + '</div>' + '<div class="section"><span class="field-label">Weight units</span><div class="seg" role="group"><button aria-pressed="' + (st.unit === 'lb') + '" data-act="unit" data-k="lb">Pounds</button><button aria-pressed="' + (st.unit === 'kg') + '" data-act="unit" data-k="kg">Kilograms</button></div></div>' + '</div>' +
     '<div class="sgroup"><div class="sghead"><h2>Training</h2><div class="note">What the workout builder may use.</div></div>' + '<div class="section"><h2>Equipment</h2><div class="seg" role="group" aria-label="Which place to edit"><button aria-pressed="' + (st.profile === 'gym') + '" data-act="profile" data-k="gym">Gym</button><button aria-pressed="' + (st.profile === 'home') + '" data-act="profile" data-k="home">Home</button></div><div class="note">Tick what is available at your ' + profName().toLowerCase() + '. Built workouts only use ticked equipment; the Train tab switches between Gym and Home.</div><details class="card gdet"' + (U.gearOpen ? ' open' : '') + '><summary>Edit ' + profName().toLowerCase() + ' equipment · ' + gearList().length + ' of ' + ITEMS.length + ' ticked</summary>' + gearGrid() + '</details></div>' + '<div class="section"><span class="field-label">Exercise difficulty</span><div class="seg" role="group"><button aria-pressed="' + (st.level === 'beginner') + '" data-act="level" data-k="beginner">Beginner</button><button aria-pressed="' + (st.level === 'intermediate') + '" data-act="level" data-k="intermediate">Intermediate</button><button aria-pressed="' + (st.level === 'expert') + '" data-act="level" data-k="expert">Advanced</button></div></div>' + injurySettingsHTML() + '</div>' +
     '</div><div class="col">' +
-    '<div class="sgroup"><div class="sghead"><h2>Workout alerts</h2></div>' + '<div class="section"><span class="field-label">Rest timer chime</span><div class="seg" role="group" aria-label="Rest timer chime"><button aria-pressed="' + (st.chime !== false && st.chimeLoud !== false) + '" data-act="chimeOpt" data-k="loud">Even on silent</button><button aria-pressed="' + (st.chime !== false && st.chimeLoud === false) + '" data-act="chimeOpt" data-k="on">Normal</button><button aria-pressed="' + (st.chime === false) + '" data-act="chimeOpt" data-k="off">Off</button></div><div class="note">A short chime when rest is over, through your headphones or speaker. <b>Even on silent</b> plays it with the iPhone on silent too (at media volume); iPhone may pause music from another app for it. <b>Normal</b> mixes with your music but stays quiet when the phone is on silent. Keep the app open on screen (it stays awake during workouts); iPhones pause web apps that are in the background.</div></div>' + restAlertCard() + '<div class="section"><span class="field-label">Voice cues for timers</span><div class="seg" role="group" aria-label="Voice cues"><button aria-pressed="' + (st.voice !== false) + '" data-act="voiceOpt" data-k="on">On</button><button aria-pressed="' + (st.voice === false) + '" data-act="voiceOpt" data-k="off">Off</button></div><div class="note">The hold and tempo timers talk you through it: the tempo timer says "down" and counts the seconds down, then "up".</div></div>' + '</div>' +
+    '<div class="sgroup"><div class="sghead"><h2>Workout alerts</h2></div>' + '<div class="section"><span class="field-label">Rest timer chime</span><div class="seg" role="group" aria-label="Rest timer chime"><button aria-pressed="' + (st.chime !== false && !chimeLoud()) + '" data-act="chimeOpt" data-k="on">With my music</button><button aria-pressed="' + (st.chime !== false && chimeLoud()) + '" data-act="chimeOpt" data-k="loud">Even on silent</button><button aria-pressed="' + (st.chime === false) + '" data-act="chimeOpt" data-k="off">Off</button></div><div class="note">A short chime when rest is over, through your headphones or speaker. ' + (typeof NATIVE !== 'undefined' && NATIVE.on ? 'In the iPhone app both choices keep your music playing; <b>Even on silent</b> also sounds with the ring switch on silent.' : '<b>With my music</b> plays over your music without stopping it, but stays quiet when the phone is on silent. <b>Even on silent</b> sounds on silent too, but iPhone pauses your music for it (the iPhone app can do both). ') + 'Keep the app open on screen (it stays awake during workouts); iPhones pause web apps that are in the background.</div></div>' + restAlertCard() + '<div class="section"><span class="field-label">Voice cues for timers</span><div class="seg" role="group" aria-label="Voice cues"><button aria-pressed="' + (st.voice !== false) + '" data-act="voiceOpt" data-k="on">On</button><button aria-pressed="' + (st.voice === false) + '" data-act="voiceOpt" data-k="off">Off</button></div><div class="note">The hold and tempo timers talk you through it: the tempo timer says "down" and counts the seconds down, then "up".</div></div>' + '</div>' +
     (foldOfferable() ? '<div class="sgroup"><div class="sghead"><h2>Screen</h2></div><div class="section"><span class="field-label">Foldable phone layout</span><div class="seg" role="group" aria-label="Foldable phone layout">' + [['auto', 'Automatic'], ['on', 'On'], ['off', 'Off']].map(function (o) { return '<button aria-pressed="' + (foldPref() === o[0]) + '" data-act="foldOpt" data-k="' + o[0] + '">' + o[1] + '</button>'; }).join('') + '</div><div class="note">For iPhone Duo. When the phone is open, screens split into two columns either side of the fold, and held sideways, pop-ups open on the right half like a book page. Closed, it looks like any iPhone. Automatic turns it on only on a foldable; this setting is for this device only.</div></div></div>' : '') +
     ((typeof healthSettingsCard === 'function' && healthSettingsCard()) ? '<div class="sgroup"><div class="sghead"><h2>Apple Health</h2></div>' + healthSettingsCard() + '</div>' : '') +
     '<div class="sgroup"><div class="sghead"><h2>Your data</h2></div>' + '<div class="section"><div class="note">' + status + '</div>' +
@@ -944,17 +944,28 @@ function chimeEl() { if (!CHIME.el) { try { CHIME.el = new Audio(chimeURL()); CH
 function unlockAudio() {
   // called from a tap: lets the chime play later without a tap (iOS rule)
   if (S.settings.chime === false) return;
+  // Web Audio (mixes with your music) also needs a tap before it may play
+  try { var AC = window.AudioContext || window.webkitAudioContext; if (AC && !(typeof NATIVE !== 'undefined' && NATIVE.on)) { if (navigator.audioSession && !chimeLoud()) navigator.audioSession.type = 'ambient'; beep.ctx = beep.ctx || new AC(); if (beep.ctx.state === 'suspended') beep.ctx.resume(); } } catch (e) { }
+  if (!chimeLoud()) return;   // the <audio> element is only for "Even on silent"
   var el = chimeEl(); if (!el || CHIME.unlocked) return;
   try { el.muted = true; var pr = el.play(); if (pr && pr.then) pr.then(function () { el.pause(); el.currentTime = 0; el.muted = false; CHIME.unlocked = true; }, function () { el.muted = false; }); } catch (e) { }
+}
+/* sound through the silent switch? On the web that means iPhone pauses your music for it, so it is off unless chosen.
+   The iPhone app can do both at once (sounds on silent and keeps your music playing), so there it is on unless turned off. */
+function chimeLoud() {
+  var st = S.settings, nat = typeof NATIVE !== 'undefined' && NATIVE.on;
+  return nat ? st.chimeSilent !== false : st.chimeSilent === true;
 }
 function beep() {
   if (S.settings.chime === false) return;
   // 'playback' is the only kind of sound iPhone lets through the silent switch; 'transient' mixes with music but obeys it
-  var loud = S.settings.chimeLoud !== false;
-  // the iPhone app (1.2+) plays the chime itself: through the silent switch AND alongside your music (it only dips it)
+  var loud = chimeLoud();
+  // the iPhone app (1.2+) plays the chime itself: through the silent switch AND alongside your music
   if (typeof NATIVE !== 'undefined' && NATIVE.on && !beep.noNative) { nativeCall('chime', { loud: loud }).catch(function () { beep.noNative = true; beep(); }); return; }
-  try { if (navigator.audioSession) navigator.audioSession.type = loud ? 'playback' : 'transient'; } catch (e) { }
-  if (loud) { clearTimeout(beep.rel); beep.rel = setTimeout(function () { try { if (navigator.audioSession) navigator.audioSession.type = 'transient'; } catch (e) { } }, 2500); }   // hand the audio back to your music
+  // With my music: Web Audio mixes with other apps; an <audio> element would take over and pause Spotify / Apple Music
+  if (!loud) { try { if (navigator.audioSession) navigator.audioSession.type = 'ambient'; } catch (e) { } beepWA(); return; }
+  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { }
+  if (loud) { clearTimeout(beep.rel); beep.rel = setTimeout(function () { try { if (navigator.audioSession) navigator.audioSession.type = 'ambient'; } catch (e) { } }, 2500); }   // hand the audio back to your music
   var el = chimeEl();
   if (el) { try { el.muted = false; el.currentTime = 0; var pr = el.play(); if (pr && pr.catch) pr.catch(beepWA); return; } catch (e) { } }
   beepWA();
@@ -962,7 +973,7 @@ function beep() {
 function beepWA() {
   try {
     var AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
-    beep.ctx = beep.ctx || new AC(); var c = beep.ctx;
+    beep.ctx = beep.ctx || new AC(); var c = beep.ctx; if (c.state === 'suspended') c.resume();
     [[0, 1318.5], [0.14, 1760], [0.28, 2093]].forEach(function (nt) { var o = c.createOscillator(), g = c.createGain(), t0 = c.currentTime + nt[0]; o.frequency.value = nt[1]; g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.25, t0 + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.7); o.connect(g); g.connect(c.destination); o.start(t0); o.stop(t0 + 0.75); });
   } catch (e) { }
 }
@@ -1139,7 +1150,7 @@ document.addEventListener('click', function (ev) {
   if (a === 'restAdd') { if (U.rest) { U.rest.end += +d.v * 1000; U.rest.total = Math.max(15, U.rest.total + +d.v); tick(); } return; }
   if (a === 'restSkip') { U.rest = null; tick(); return; }
   if (a === 'foldOpt') { try { if (d.k === 'auto') localStorage.removeItem('il-fold'); else localStorage.setItem('il-fold', d.k); } catch (e) { } foldApply(); render(); return; }
-  if (a === 'chimeOpt') { st.chime = d.k !== 'off'; st.chimeLoud = d.k === 'loud'; persist({ settings: true }); render(); if (st.chime) { unlockAudio(); setTimeout(beep, 120); } return; }
+  if (a === 'chimeOpt') { st.chime = d.k !== 'off'; st.chimeSilent = d.k === 'loud'; delete st.chimeLoud; persist({ settings: true }); render(); if (st.chime) { unlockAudio(); setTimeout(beep, 120); } return; }
   if (a === 'libGroup') { var j = U.libGroups.indexOf(d.g); if (j >= 0) U.libGroups.splice(j, 1); else U.libGroups.push(d.g); U.libShown = 40; render(); return; }
   if (a === 'libGear') { U.libGear = d.k; U.libShown = 40; render(); return; }
   if (a === 'pickMore') { U.pickShown = (U.pickShown || 30) + 60; refreshPick(); return; }

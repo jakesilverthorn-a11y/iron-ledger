@@ -11,9 +11,31 @@ function tmTone(freq, ms, vol) {
     g.gain.exponentialRampToValueAtTime(0.0001, t0 + (ms || 120) / 1000); o.connect(g); g.connect(c.destination); o.start(t0); o.stop(t0 + (ms || 120) / 1000 + 0.02);
   } catch (e) { }
 }
+/* spoken cues. The iPhone app (1.3+) speaks them itself, so they come through on silent and over music.
+   On the web, iPhone only lets a page talk after it has spoken once during a tap (tmVoiceUnlock), and
+   cancel() right before speak() can make Safari drop the new phrase, so only cancel when something is still talking. */
 function tmSay(t) {
-  if (S.settings.voice === false || !window.speechSynthesis) return;
-  try { speechSynthesis.cancel(); var u = new SpeechSynthesisUtterance(t); u.rate = 1.15; u.volume = 1; speechSynthesis.speak(u); } catch (e) { }
+  if (S.settings.voice === false) return;
+  var loud = chimeLoud();
+  if (typeof NATIVE !== 'undefined' && NATIVE.on && !tmSay.noNative) { nativeCall('speak', { text: t, loud: loud }).catch(function () { tmSay.noNative = true; tmSay(t); }); return; }
+  if (!window.speechSynthesis) return;
+  try {
+    if (speechSynthesis.speaking || speechSynthesis.pending) speechSynthesis.cancel();
+    var u = new SpeechSynthesisUtterance(t); u.rate = 1.15; u.volume = 1; u.lang = 'en-US';
+    if (tmSay.voice) u.voice = tmSay.voice;
+    speechSynthesis.speak(u);
+    if (speechSynthesis.paused) speechSynthesis.resume();   // iOS can leave the queue paused after the app was in the background
+  } catch (e) { }
+}
+/* call from a tap that starts a timer */
+function tmVoiceUnlock() {
+  // sound through the silent switch while a timer runs, the same as the rest chime setting
+  try { if (navigator.audioSession && !(typeof NATIVE !== 'undefined' && NATIVE.on)) navigator.audioSession.type = chimeLoud() ? 'playback' : 'ambient'; } catch (e) { }
+  if (S.settings.voice === false || (typeof NATIVE !== 'undefined' && NATIVE.on) || !window.speechSynthesis) return;
+  try {
+    if (!tmSay.voice && speechSynthesis.getVoices) { var vs = speechSynthesis.getVoices().filter(function (v) { return /^en(-|_)/i.test(v.lang); }); tmSay.voice = vs.filter(function (v) { return v.localService; })[0] || vs[0] || null; }
+    var u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u);
+  } catch (e) { }
 }
 /* the set a timer fills: the first working set not ticked yet (adds one if all are done) */
 function tmSetIndex(e) {
@@ -21,7 +43,11 @@ function tmSetIndex(e) {
   var last = e.sets[e.sets.length - 1] || {}; e.sets.push({ w: last.w == null ? null : last.w, r: last.r || e.lo, done: false, sug: true });
   return e.sets.length - 1;
 }
-function tmStop() { if (TM) { clearInterval(TM.iv); TM = null; } try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (e) { } }
+function tmStop() {
+  if (TM) { clearInterval(TM.iv); TM = null; }
+  try { if (window.speechSynthesis && (speechSynthesis.speaking || speechSynthesis.pending)) speechSynthesis.cancel(); } catch (e) { }
+  try { if (navigator.audioSession && !(typeof NATIVE !== 'undefined' && NATIVE.on)) navigator.audioSession.type = 'ambient'; } catch (e) { }
+}
 function tmRing(frac, color) {
   var R = 92, C = 2 * Math.PI * R, f = Math.max(0, Math.min(1, frac));
   return '<svg viewBox="0 0 220 220" class="tmring" aria-hidden="true"><circle cx="110" cy="110" r="' + R + '" fill="none" style="stroke:var(--line2)" stroke-width="12"/>' +
@@ -41,7 +67,7 @@ function fmtSec(s) { s = Math.max(0, Math.round(s)); return s >= 60 ? Math.floor
 /* ----- hold timer ----- */
 function holdSheet(xi) {
   var e = S.draft.ex[xi], si = tmSetIndex(e), st = e.sets[si], target = +st.r || e.lo || 30;
-  tmStop(); unlockAudio(); tmTone(660, 1, 0.0001);
+  tmStop(); unlockAudio(); tmTone(660, 1, 0.0001); tmVoiceUnlock();
   TM = { kind: 'hold', x: xi, s: si, target: target, t0: Date.now() + 3000, last: null };
   openSheet(e.n, '<div class="note">Set ' + (si + 1) + ' · target ' + fmtSec(target) + ' s. Get in position; it starts after 3, 2, 1.</div>' +
     tmFace('3', 'get ready', 'Starting', 0) +
@@ -54,7 +80,7 @@ function holdTick() {
   var now = Date.now();
   if (now < TM.t0) {
     var c = Math.ceil((TM.t0 - now) / 1000);
-    if (TM.last !== 'r' + c) { TM.last = 'r' + c; tmTone(660, 120); }
+    if (TM.last !== 'r' + c) { TM.last = 'r' + c; tmTone(660, 120); tmSay(['', 'one', 'two', 'three'][c] || String(c)); }
     tmUpdate(String(c), 'get ready', 'Starting', 1 - (TM.t0 - now) / 3000); return;
   }
   var el = (now - TM.t0) / 1000, left = TM.target - el;
@@ -101,7 +127,7 @@ function tempoSetupSheet() {
 function tempoGo() {
   var T = U.tempo, e = S.draft.ex[T.x];
   S.settings.tempo = S.settings.tempo || {}; S.settings.tempo[e.n] = { d: T.d, b: T.b, u: T.u, t: T.t }; persist({ settings: true });
-  unlockAudio(); tmTone(660, 1, 0.0001);
+  unlockAudio(); tmTone(660, 1, 0.0001); tmVoiceUnlock();
   var ph = [['Down', T.d, 440], ['Hold', T.b, 660], ['Up', T.u, 880], ['Hold', T.t, 660]].filter(function (p) { return p[1] > 0; });
   if (!ph.length) ph = [['Down', 2, 440], ['Up', 1, 880]];
   var per = ph.reduce(function (a, p) { return a + p[1]; }, 0);
@@ -116,7 +142,7 @@ function tempoTick() {
   var now = Date.now();
   if (now < TM.t0) {
     var c = Math.ceil((TM.t0 - now) / 1000);
-    if (TM.last !== 'r' + c) { TM.last = 'r' + c; tmTone(660, 120); }
+    if (TM.last !== 'r' + c) { TM.last = 'r' + c; tmTone(660, 120); tmSay(['', 'one', 'two', 'three'][c] || String(c)); }
     tmUpdate(String(c), 'get ready', 'Starting', 1 - (TM.t0 - now) / 3000); return;
   }
   var el = (now - TM.t0) / 1000, rep = Math.floor(el / TM.per);

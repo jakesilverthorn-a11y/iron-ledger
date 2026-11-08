@@ -7,7 +7,7 @@ A native iPhone app that shows the live Iron Ledger web app
   No Shortcut needed. The first time it reads two months of history; after that it reads a few days each
   time you open the app (at most every 3 hours).
 - **Rest-over notification** (time-sensitive, gets through Focus) when the rest timer ends while you're in another app or the phone is locked.
-- **Rest chime that works on silent** (1.2): the app plays the chime itself, so it sounds with the ring switch on silent and mixes with your music (the music dips for a moment instead of stopping). The *Normal* chime setting keeps it quiet on silent.
+- **Rest chime that works on silent** (1.2): the app plays the chime itself, so it sounds with the ring switch on silent and your music keeps playing.
 - **Haptics** on ticking a set and when rest is over.
 - **Screen stays on** during a workout.
 - **Share sheet** for backups, workout pictures and the timeline video.
@@ -66,6 +66,8 @@ or to renew).
 - Web side of the bridge: `src/native.js` in the main project.
 
 ## Versions
+
+- **1.3 (build 4)**: the app speaks the tempo and hold timer cues itself ("down… two… one… up"), on silent and over music.
 
 - **1.2 (build 3)**: rest chime played by the app (sounds on silent, mixes with music). Rebuild with Xcode 27.1+ for the full iPhone Duo inner screen.
 - **1.1 (build 2)**: Apple Health read directly, workouts saved to Health, quick actions, waist size.

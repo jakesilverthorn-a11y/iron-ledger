@@ -56,8 +56,15 @@ final class NativeBridge {
             }
             reply(id, ["ok": true])
 
+        case "speak":
+            // tempo and hold timer cues ("down", "two", "one", "up"): spoken by the app so they work on silent and over music
+            let text = (args["text"] as? String) ?? ""
+            let loud = (args["loud"] as? Bool) ?? true
+            DispatchQueue.main.async { Speaker.shared.say(text, loud: loud) }
+            reply(id, ["ok": true])
+
         case "chime":
-            // rest is over: plays on silent (loud) and mixes with music, which only dips for a moment
+            // rest is over: plays on silent (loud) and keeps your music playing
             let loud = (args["loud"] as? Bool) ?? true
             DispatchQueue.main.async { Chime.shared.play(loud: loud) }
             reply(id, ["ok": true])
@@ -145,7 +152,7 @@ final class Chime {
         let session = AVAudioSession.sharedInstance()
         do {
             if loud {
-                try session.setCategory(.playback, mode: .default, options: [.mixWithOthers, .duckOthers])
+                try session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
             } else {
                 try session.setCategory(.ambient, mode: .default, options: [.mixWithOthers])
             }
@@ -189,5 +196,46 @@ final class Chime {
         wav.append(contentsOf: Array("fmt ".utf8)); u32(16); u16(1); u16(1); u32(44100); u32(88200); u16(2); u16(16)
         wav.append(contentsOf: Array("data".utf8)); u32(UInt32(pcm.count)); wav.append(pcm)
         return wav
+    }
+}
+
+/// Spoken timer cues. Uses the playback audio category (so it sounds with the ring switch on silent) and mixes with
+/// your music without pausing or lowering it.
+final class Speaker: NSObject, AVSpeechSynthesizerDelegate {
+    static let shared = Speaker()
+    private let synth = AVSpeechSynthesizer()
+    private let voice = AVSpeechSynthesisVoice(language: "en-US")
+
+    override init() {
+        super.init()
+        synth.delegate = self
+    }
+
+    func say(_ text: String, loud: Bool) {
+        let trimmed = text.trimmingCharacters(in: .whitespaces)
+        if trimmed.isEmpty { return }
+        let session = AVAudioSession.sharedInstance()
+        do {
+            if loud {
+                try session.setCategory(.playback, mode: .voicePrompt, options: [.mixWithOthers])
+            } else {
+                try session.setCategory(.ambient, mode: .default, options: [.mixWithOthers])
+            }
+            try session.setActive(true)
+        } catch { }
+        if synth.isSpeaking { synth.stopSpeaking(at: .immediate) }
+        let utterance = AVSpeechUtterance(string: trimmed)
+        utterance.voice = voice
+        utterance.rate = 0.56
+        utterance.volume = 1
+        synth.speak(utterance)
+    }
+
+    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
+        // wait a moment: the next count is usually less than a second away
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
+            guard let self = self, !self.synth.isSpeaking else { return }
+            try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        }
     }
 }
