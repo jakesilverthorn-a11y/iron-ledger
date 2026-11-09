@@ -3,6 +3,8 @@
 var TM = null;   // the running timer
 function tmTone(freq, ms, vol) {
   if (S.settings.chime === false) return;
+  // the iPhone app (1.4+) plays the beeps itself, so they mix with your music; the web view's own sound can stop it
+  if (typeof NATIVE !== 'undefined' && NATIVE.on && !tmTone.noNative) { if ((ms || 120) >= 5) nativeCall('tone', { f: freq, ms: ms || 120, vol: vol || 0.3, loud: chimeLoud() }).catch(function () { tmTone.noNative = true; }); if (!tmTone.noNative) return; }
   try {
     var AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
     tmTone.ctx = tmTone.ctx || new AC(); var c = tmTone.ctx; if (c.state === 'suspended') c.resume();
@@ -30,7 +32,7 @@ function tmSay(t) {
 /* call from a tap that starts a timer */
 function tmVoiceUnlock() {
   // sound through the silent switch while a timer runs, the same as the rest chime setting
-  try { if (navigator.audioSession && !(typeof NATIVE !== 'undefined' && NATIVE.on)) navigator.audioSession.type = chimeLoud() ? 'playback' : 'ambient'; } catch (e) { }
+  try { if (navigator.audioSession) navigator.audioSession.type = (chimeLoud() && !(typeof NATIVE !== 'undefined' && NATIVE.on)) ? 'playback' : 'ambient'; } catch (e) { }
   if (S.settings.voice === false || (typeof NATIVE !== 'undefined' && NATIVE.on) || !window.speechSynthesis) return;
   try {
     if (!tmSay.voice && speechSynthesis.getVoices) { var vs = speechSynthesis.getVoices().filter(function (v) { return /^en(-|_)/i.test(v.lang); }); tmSay.voice = vs.filter(function (v) { return v.localService; })[0] || vs[0] || null; }

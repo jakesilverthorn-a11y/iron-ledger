@@ -67,6 +67,8 @@ or to renew).
 
 ## Versions
 
+- **1.4 (build 5)**: timer beeps (wall sits, planks, tempo) are played by the app and mix with your music; nothing in the app stops your music any more.
+
 - **1.3 (build 4)**: the app speaks the tempo and hold timer cues itself ("down… two… one… up"), on silent and over music.
 
 - **1.2 (build 3)**: rest chime played by the app (sounds on silent, mixes with music). Rebuild with Xcode 27.1+ for the full iPhone Duo inner screen.

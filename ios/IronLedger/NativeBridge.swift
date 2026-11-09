@@ -56,6 +56,15 @@ final class NativeBridge {
             }
             reply(id, ["ok": true])
 
+        case "tone":
+            // timer beeps (countdown, "go", each rep): played by the app so they never stop your music
+            let freq = (args["f"] as? Double) ?? 880
+            let ms = (args["ms"] as? Double) ?? 120
+            let vol = (args["vol"] as? Double) ?? 0.3
+            let loud = (args["loud"] as? Bool) ?? true
+            DispatchQueue.main.async { Tones.shared.play(freq: freq, ms: ms, volume: vol, loud: loud) }
+            reply(id, ["ok": true])
+
         case "speak":
             // tempo and hold timer cues ("down", "two", "one", "up"): spoken by the app so they work on silent and over music
             let text = (args["text"] as? String) ?? ""
@@ -237,5 +246,62 @@ final class Speaker: NSObject, AVSpeechSynthesizerDelegate {
             guard let self = self, !self.synth.isSpeaking else { return }
             try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
         }
+    }
+}
+
+/// Sets the app's sound to mix with other apps (music keeps playing at full volume).
+/// loud: also sound when the ring switch is on silent.
+enum SoundSession {
+    static func activate(loud: Bool) {
+        let session = AVAudioSession.sharedInstance()
+        do {
+            if loud {
+                try session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
+            } else {
+                try session.setCategory(.ambient, mode: .default, options: [.mixWithOthers])
+            }
+            try session.setActive(true)
+        } catch { }
+    }
+}
+
+/// Short sine beeps for the hold (wall sit, plank) and tempo timers.
+final class Tones {
+    static let shared = Tones()
+    private var cache: [String: Data] = [:]
+    private var players: [AVAudioPlayer] = []
+
+    func play(freq: Double, ms: Double, volume: Double, loud: Bool) {
+        if ms < 5 { return }
+        SoundSession.activate(loud: loud)
+        let key = "\(Int(freq))-\(Int(ms))"
+        let data = cache[key] ?? Tones.makeWav(freq: freq, ms: ms)
+        cache[key] = data
+        guard let player = try? AVAudioPlayer(data: data) else { return }
+        player.volume = Float(max(0.05, min(1.0, volume / 0.3)))
+        players.removeAll { !$0.isPlaying }
+        players.append(player)
+        player.play()
+    }
+
+    private static func makeWav(freq: Double, ms: Double) -> Data {
+        let rate = 44100.0
+        let count = Int(rate * (ms / 1000.0 + 0.02))
+        var pcm = Data(capacity: count * 2)
+        for i in 0..<count {
+            let t = Double(i) / rate
+            let attack = min(1.0, t / 0.01)
+            let release = min(1.0, max(0.0, (ms / 1000.0 + 0.02 - t) / 0.03))
+            let value = sin(2.0 * Double.pi * freq * t) * attack * release * 0.45
+            var x = Int16(max(-1.0, min(1.0, value)) * 32767.0).littleEndian
+            withUnsafeBytes(of: &x) { pcm.append(contentsOf: $0) }
+        }
+        var wav = Data()
+        func u32(_ v: UInt32) { var x = v.littleEndian; withUnsafeBytes(of: &x) { wav.append(contentsOf: $0) } }
+        func u16(_ v: UInt16) { var x = v.littleEndian; withUnsafeBytes(of: &x) { wav.append(contentsOf: $0) } }
+        wav.append(contentsOf: Array("RIFF".utf8)); u32(UInt32(36 + pcm.count)); wav.append(contentsOf: Array("WAVE".utf8))
+        wav.append(contentsOf: Array("fmt ".utf8)); u32(16); u16(1); u16(1); u32(44100); u32(88200); u16(2); u16(16)
+        wav.append(contentsOf: Array("data".utf8)); u32(UInt32(pcm.count)); wav.append(pcm)
+        return wav
     }
 }
