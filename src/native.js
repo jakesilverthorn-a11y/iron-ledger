@@ -173,15 +173,12 @@ function webPushRefresh() {
 }
 /* Rest ended while the app is open on screen: show the notification as well. A web page cannot make a sound on a silenced
    iPhone without stopping the music, but a notification makes the phone buzz (and taps an Apple Watch) and the music plays on. */
-function webFgOn() { try { return localStorage.getItem('il-fgalert') !== '0'; } catch (e) { return true; } }
+function webFgOn() { try { return localStorage.getItem('il-fgalert') === '1'; } catch (e) { return false; } }   // off unless turned on
 function webRestFg() {
   if (!webPushOn() || !webFgOn() || document.hidden) return;
   try {
     navigator.serviceWorker.ready.then(function (reg) {
-      return reg.showNotification('Rest is over', { body: 'Time for your next set.', tag: 'rest', renotify: true, icon: 'icon-192.png', badge: 'icon-192.png' }).then(function () {
-        // clear the banner after a few seconds: you are already looking at the app
-        setTimeout(function () { try { reg.getNotifications({ tag: 'rest' }).then(function (ns) { ns.forEach(function (n) { n.close(); }); }).catch(function () { }); } catch (e) { } }, 6000);
-      });
+      return reg.showNotification('Rest is over', { body: 'Time for your next set.', tag: 'rest', renotify: true, icon: 'icon-192.png', badge: 'icon-192.png' });
     }).catch(function () { });
   } catch (e) { }
 }
@@ -201,7 +198,7 @@ function restAlertCard() {
   var body, btn = '';
   if (NATIVE.on) body = 'On. When rest is over you get a notification, even in another app or with the phone locked. You can change it in the iPhone Settings app → Notifications → Iron Ledger.';
   else if (window.claude) body = 'In this version the alert only sounds while Iron Ledger is open on screen. Use the Home Screen app (or the iPhone app) for alerts with the app closed.';
-  else if (webPushOn()) { body = 'On. When rest is over this phone plays its notification sound and shows "Rest is over", even with the app closed, the phone locked or another app open (and on your Apple Watch). No account needed. With the phone on silent, iPhone vibrates for notifications instead of playing a sound: make sure Settings app → Sounds & Haptics → Haptics is set to Always Play.'; btn = '<span class="field-label">Alert me while the app is open too</span><div class="seg" role="group" aria-label="Alert while the app is open"><button aria-pressed="' + webFgOn() + '" data-act="pushFg" data-k="on">On</button><button aria-pressed="' + !webFgOn() + '" data-act="pushFg" data-k="off">Off</button></div><div class="note">On: when rest ends the notification shows even while you are looking at the app, so a phone on silent buzzes and your music keeps playing.</div>' + '<button class="btn block ghost" data-act="pushTest">Send a test alert in 5 s</button><button class="btn block ghost" data-act="pushOff">Turn off</button>'; }
+  else if (webPushOn()) { body = 'On. When rest is over this phone plays its notification sound and shows "Rest is over", even with the app closed, the phone locked or another app open (and on your Apple Watch). No account needed. With the phone on silent, iPhone vibrates for notifications instead of playing a sound: make sure Settings app → Sounds & Haptics → Haptics is set to Always Play.'; btn = '<span class="field-label">Alert me while the app is open too</span><div class="seg" role="group" aria-label="Alert while the app is open"><button aria-pressed="' + webFgOn() + '" data-act="pushFg" data-k="on">On</button><button aria-pressed="' + !webFgOn() + '" data-act="pushFg" data-k="off">Off</button></div><div class="note">Off by default. On: when rest ends the notification shows even while you are looking at the app, so a phone on silent buzzes and your music keeps playing. If the app ever closes itself at the end of a rest, turn this off.</div>' + '<button class="btn block ghost" data-act="pushTest">Send a test alert in 5 s</button><button class="btn block ghost" data-act="pushOff">Turn off</button>'; }
   else if (webPushAvail() && !webPushNeedsInstall()) { body = 'Get the chime as a notification when rest is over, even with the app closed, the phone locked or music playing. No account needed.'; btn = '<button class="btn block primary" data-act="pushOn">Turn on rest alerts</button>'; }
   else body = 'iPhone only lets web apps alert you when they are installed. In Safari tap Share → Add to Home Screen, open Iron Ledger from the new icon, then turn rest alerts on here. (Until then the chime only plays while the app is open on screen.)';
   return '<div class="section"><span class="field-label">Rest alerts (notifications)</span><div class="card section" style="gap:10px"><div class="note">' + body + '</div>' + btn + (NH.pushErr ? '<div class="note" style="color:var(--down)">' + esc(NH.pushErr) + '</div>' : '') + '</div></div>';
@@ -218,7 +215,7 @@ function pushClick(a, d) {
     webPushEnable().then(function () { try { localStorage.setItem('il-push-tip', '1'); } catch (e) { } toast('Rest alerts are on'); render(); }, function (e) { NH.pushErr = e.message; toast(e.message); render(); });
     return true;
   }
-  if (a === 'pushFg') { try { if (d && d.k === 'off') localStorage.setItem('il-fgalert', '0'); else localStorage.removeItem('il-fgalert'); } catch (e) { } render(); return true; }
+  if (a === 'pushFg') { try { if (d && d.k === 'on') localStorage.setItem('il-fgalert', '1'); else localStorage.removeItem('il-fgalert'); } catch (e) { } render(); return true; }
   if (a === 'pushOff') { webPushOff(); webRestSend(0); WP.end = 0; toast('Rest alerts are off'); render(); return true; }
   if (a === 'pushTest') { webRestSend(Date.now() + 5000); toast('Lock the phone or switch apps — the alert comes in 5 seconds'); return true; }
   if (a === 'pushTipNo') { try { localStorage.setItem('il-push-tip', '1'); } catch (e) { } render(); return true; }
