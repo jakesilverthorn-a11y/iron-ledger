@@ -5393,7 +5393,8 @@ function viewTrain() {
   if (rw.length) recent = '<div class="section"><h2>Recent</h2><div class="card" style="padding:0 14px">' + rw.map(histRow).join('') + '</div></div>';
   var nudge = (dbState === 'local' && realWorkouts().length >= 3 && Date.now() - (st.lastBackup || 0) > 14 * DAY) ? '<button class="banner" style="width:100%;text-align:left" data-act="tab" data-t="settings"><span><b>Back up your workouts</b> · they live only on this phone. Tap to save a backup file.</span></button>' : '';
   var nextWk = typeof wkPlan === 'function' && wkPlan() && wkPlan().ws !== weekStart(Date.now()) ? weekPlanCard() : '';
-  return '<div class="screen">' + head + nudge + '<div class="cols"><div class="col">' + weekCard() + nextWk + tgJoinCard() + builder + plan + '<button class="btn block" data-act="startEmpty">Start an empty workout</button></div>' +
+  return '<div class="screen">' + head + nudge + '<div class="cols"><div class="col">' + weekCard() + nextWk + tgJoinCard() + builder + plan + '<button class="btn block" data-act="startEmpty">Start an empty workout</button>' +
+    '<div class="card section" style="gap:10px"><div><h2 style="font-size:20px">Stretch session</h2><div class="note">Head-to-toe held stretches with a timer, no weights. Good for rest days or after training.</div></div><div class="row" style="gap:8px">' + [10, 15, 20].map(function (m) { return '<button class="btn small grow" data-act="stretchGo" data-m="' + m + '">' + m + ' min</button>'; }).join('') + '</div></div></div>' +
     '<div class="col">' + recCard + savedWorkoutsHTML() + recent + '</div></div></div>';
 }
 function planHTML() {
@@ -5979,6 +5980,14 @@ document.addEventListener('click', function (ev) {
   if (a === 'demoMode') { U.demoMode = d.m; var dw = $('#demowrap'), dx = BYNAME[d.n]; if (dw && dx) { dw.innerHTML = demoInner(dx); startDemo(dx); } return; }
   if (a === 'rmPlan') { U.plan.items.splice(+d.i, 1); render(); return; }
   if (a === 'startPlan') { newDraft(U.plan.items); U.plan = null; render(); window.scrollTo(0, 0); return; }
+  if (a === 'stretchGo') {
+    if (S.draft) { toast('Finish or discard your current workout first.'); return; }
+    // about 1.6 minutes a stretch (2 holds of 30 s plus changeover); skip what the last stretch session used so it varies
+    var sn = Math.max(4, Math.round((+d.m || 10) / 1.65)), lastS = realWorkouts().slice().reverse().filter(function (w) { return w.ex.length && w.ex.every(function (x) { return BYNAME[x.n] && BYNAME[x.n].c === 'stretching'; }); })[0];
+    var sl = stretchesFor(['Hamstrings', 'Glutes', 'Back', 'Shoulders', 'Quads', 'Chest', 'Calves', 'Core', 'Triceps', 'Biceps', 'Forearms'], 'post', gearList(), lastS ? lastS.ex.map(function (x) { return x.n; }) : [], sn);
+    if (!sl.length) { toast('No stretches found for your equipment.'); return; }
+    newDraft(sl.map(function (e) { return defaultItem(e.n, st.goal); })); render(); window.scrollTo(0, 0); toast(sl.length + ' stretches · tap the timer on each one'); return;
+  }
   if (a === 'startEmpty') { newDraft([]); render(); window.scrollTo(0, 0); openPicker('draft'); return; }
   if (a === 'pickPlan') { openPicker('plan'); return; }
   if (a === 'pickDraft') { openPicker('draft'); return; }
