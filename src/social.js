@@ -15,7 +15,8 @@ var CHAL_DAYS = [3, 7, 14, 30];
 
 function socRef() { return SOC.db && SOC.uid ? SOC : null; }
 function socMe() { return SOC.people[SOC.uid] || null; }
-function socFriends() { var f = S.settings.friends || []; return f.filter(function (id) { return id !== SOC.uid; }); }
+function socBlocked() { return S.settings.blocked || []; }
+function socFriends() { var f = S.settings.friends || [], bl = socBlocked(); return f.filter(function (id) { return id !== SOC.uid && bl.indexOf(id) < 0; }); }
 function socName(id) { var p = SOC.people[id]; return p ? p.u : 'Someone'; }
 function socAgo(t) {
   if (!t) return 'no workouts yet';
@@ -148,6 +149,7 @@ function chalList() {
   var out = [], me = SOC.uid, fr = socFriends();
   Object.keys(SOC.ch).forEach(function (uid) {
     ((SOC.ch[uid] && SOC.ch[uid].list) || []).forEach(function (c) {
+      if (socBlocked().indexOf(uid) >= 0) return;   // nothing from people you blocked
       var mine = uid === me, invited = (c.inv || []).indexOf(me) >= 0, fromFriend = fr.indexOf(uid) >= 0 && !(c.inv && c.inv.length);
       var joined = !!(SOC.cp[me] && SOC.cp[me].c && SOC.cp[me].c[c.id]);
       if (mine || invited || joined || fromFriend) out.push(Object.assign({}, c, { by: uid, mine: mine, invited: invited, joined: joined }));
@@ -324,7 +326,9 @@ function cmpSheet(id) {
   openSheet(p.u, '<div class="cmp-top"><div><div class="faint" style="font-size:13px">You</div><div class="num" style="font-size:40px">' + (me.ov == null ? '–' : Math.round(me.ov)) + '</div></div><div class="vs">vs</div><div style="text-align:right"><div class="faint" style="font-size:13px">' + esc(p.u) + '</div><div class="num" style="font-size:40px;color:var(--cmp-b)">' + (p.ov == null ? '–' : Math.round(p.ov)) + '</div></div></div>' +
     '<div class="note">' + verdict + ' Scores are 1–100 against lifters of the same bodyweight and sex, so this is a fair comparison.</div>' +
     (cm ? '<div class="note">Snapshot from ' + fmtDate(p.at) + '. Ask ' + esc(p.u) + ' for a fresh code to update it.</div>' : '<button class="btn primary block" data-act="socNewChal" data-id="' + esc(id) + '">Challenge ' + esc(p.u) + '</button>') + rows + lifts +
-    '<button class="btn block ghost danger" data-act="socUnfriend" data-id="' + esc(id) + '">Remove friend</button>');
+    '<button class="btn block ghost danger" data-act="socUnfriend" data-id="' + esc(id) + '">Remove friend</button>' +
+    '<div class="row" style="gap:8px"><button class="btn small ghost grow" data-act="socReport" data-id="' + esc(id) + '" data-n="' + esc(p.u) + '">Report ' + esc(p.u) + '</button><button class="btn small ghost danger grow" data-act="socBlock" data-id="' + esc(id) + '" data-n="' + esc(p.u) + '">Block ' + esc(p.u) + '</button></div>' +
+    '<div class="note">Blocking removes them and hides their name, scores and challenges from you. Reporting sends their username and your reason to us; we review reports within 24 hours and remove accounts that break the rules.</div>');
 }
 function socNewSheet(pre) {
   var st = U.nc || (U.nc = { ty: 'workouts', days: 7, g: '', ex: '', inv: pre ? [pre] : socFriends().slice(), name: '' });

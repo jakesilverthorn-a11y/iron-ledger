@@ -393,6 +393,13 @@ export default {
         await env.DB.put('u:' + uid, JSON.stringify(rec));
         return out({ ok: true, token: await mkToken(env, uid, rec.gen) });
       }
+      if (req.method === 'POST' && path === '/report') {   // report a profile: kept for review, the reporter is told it was sent
+        const b = await req.json().catch(() => ({})), who = String(b.who || '').slice(0, 40);
+        if (!/^[a-z0-9_]{3,16}$/.test(who)) return bad('Bad user');
+        if (await hits(env, 'rp:' + uid, DAYS) > 30) return bad('Too many reports today.', 429);
+        await env.DB.put('report:' + Date.now() + ':' + uid, JSON.stringify({ by: uid, who, why: String(b.why || '').slice(0, 500), at: Date.now() }), { expirationTtl: 90 * DAYS });
+        return out({ ok: true });
+      }
       if (req.method === 'POST' && path === '/delete-account') {
         const b = await req.json().catch(() => ({})), rec = await env.DB.get('u:' + uid, 'json');
         if (!rec || (rec.gen || '0') !== tok.gen) return bad('Sign in again.', 401);

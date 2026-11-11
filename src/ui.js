@@ -1270,6 +1270,28 @@ document.addEventListener('click', function (ev) {
     el.disabled = true; socClaim(hv.trim()).then(function (m) { el.disabled = false; if (m) { var e5 = $('#h-err'); if (e5) e5.textContent = m; else toast(m); } else { toast('Welcome, ' + S.settings.handle); render(); } }); return;
   }
   if (a === 'socAdd') { if (st.friends.indexOf(d.id) < 0) st.friends.push(d.id); persist({ settings: true }); SOC.q = ''; render(); toast('Added ' + socName(d.id)); return; }
+  if (a === 'socBlock') {
+    if (U.confirm !== 'block:' + d.id) { U.confirm = 'block:' + d.id; toast('Tap Block again to block ' + (d.n || 'them')); return; }
+    U.confirm = null; st.blocked = (st.blocked || []).concat([d.id]); st.friends = (st.friends || []).filter(function (x) { return x !== d.id; }); st.cfriends = codeFriends().filter(function (x) { return x.i !== d.id; });
+    persist({ settings: true }); closeSheet(); toast((d.n || 'They') + ' is blocked'); render(); return;
+  }
+  if (a === 'socReport') {
+    U.rep = { id: d.id, n: d.n || 'this person', why: '' };
+    openSheet('Report ' + (d.n || ''), '<div class="note">Tell us what is wrong. We review every report within 24 hours and remove accounts that break the rules.</div>' +
+      '<div class="chips">' + ['Offensive name', 'Harassment', 'Spam or fake account', 'Something else'].map(function (r) { return '<button class="chip" data-act="socRepWhy" data-k="' + r + '">' + r + '</button>'; }).join('') + '</div>' +
+      '<textarea class="input" id="repwhy" rows="3" style="padding:10px" placeholder="Details (optional)"></textarea>' +
+      '<button class="btn primary block" data-act="socRepSend">Send report</button><button class="btn block ghost danger" data-act="socBlock" data-id="' + esc(d.id) + '" data-n="' + esc(d.n || '') + '">Also block them</button>');
+    return;
+  }
+  if (a === 'socRepWhy') { if (U.rep) U.rep.why = d.k; document.querySelectorAll('[data-act="socRepWhy"]').forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.k === d.k); }); return; }
+  if (a === 'socRepSend') {
+    var R = U.rep; if (!R) return;
+    var txt = (R.why ? R.why + '. ' : '') + (($('#repwhy') || {}).value || '');
+    var gh = function () { window.open('https://github.com/jakesilverthorn-a11y/iron-ledger/issues/new?title=' + encodeURIComponent('Report: ' + R.n) + '&body=' + encodeURIComponent(txt), '_blank'); };
+    if (typeof srvOn === 'function' && srvOn()) srvRaw('POST', '/report', { who: R.id, why: txt.slice(0, 500) }).then(function () { closeSheet(); toast('Report sent. We will review it within 24 hours.'); }, function () { gh(); });
+    else { gh(); closeSheet(); }
+    return;
+  }
   if (a === 'socUnfriend') { st.friends = st.friends.filter(function (x) { return x !== d.id; }); st.cfriends = codeFriends().filter(function (x) { return x.i !== d.id; }); persist({ settings: true }); closeSheet(); render(); return; }
   if (a === 'socCompare') { cmpSheet(d.id); return; }
   if (a === 'socManage') { U.confirm = null; manageSheet(); return; }
@@ -1363,6 +1385,24 @@ document.addEventListener('focusin', function (ev) { if (isTyping(ev.target) && 
 document.addEventListener('focusout', function () { fixViewport(); });
 if (window.visualViewport) window.visualViewport.addEventListener('resize', function () { if (!isTyping(document.activeElement)) fixViewport(); });
 window.addEventListener('orientationchange', fixViewport);
+/* In the iPhone app and the Home Screen app there is no browser toolbar, so the page scrolls inside <body> instead of
+   the window. The window then never scrolls, and the fixed tab bar cannot drift up the screen (iOS kept losing track of
+   "the bottom" while the window scrolled). Window scrolling calls are pointed at <body> so the rest of the app is unchanged. */
+(function () {
+  var standalone = window.navigator.standalone || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+  var shell = !window.claude && (NATIVE.on || standalone);
+  if (!shell) return;
+  document.documentElement.classList.add('shell');
+  var B = function () { return document.scrollingElement === document.body ? document.body : (document.body || document.documentElement); };
+  try {
+    window.scrollTo = function (x, y) { var b = document.body; if (!b) return; if (typeof x === 'object' && x) b.scrollTo(x); else b.scrollTo(x || 0, y || 0); };
+    window.scrollBy = function (x, y) { var b = document.body; if (!b) return; if (typeof x === 'object' && x) b.scrollBy(x); else b.scrollBy(x || 0, y || 0); };
+    Object.defineProperty(window, 'scrollY', { configurable: true, get: function () { return document.body ? document.body.scrollTop : 0; } });
+    Object.defineProperty(window, 'pageYOffset', { configurable: true, get: function () { return document.body ? document.body.scrollTop : 0; } });
+  } catch (e) { }
+  var hook = function () { document.body.addEventListener('scroll', function () { window.dispatchEvent(new Event('scroll')); }, { passive: true }); };
+  if (document.body) hook(); else document.addEventListener('DOMContentLoaded', hook);
+})();
 /* the bottom tab bar can get stuck partway up the screen on iPhone Duo (and now and then on other iPhones) after scrolling,
    folding or unfolding: iOS keeps an old idea of where "the bottom" is. Measure where the bar really sits and move it
    back to the bottom of what you can see. On a foldable this always runs; elsewhere only when the bar is clearly off. */

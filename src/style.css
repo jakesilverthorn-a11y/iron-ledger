@@ -517,3 +517,8 @@ body.vvfix #tabs, body.vvfix .rest-pill { transform: translateZ(0); }
 
 /* bottom bar position fix (see tabCheck in ui.js) */
 #tabs, .rest-pill { translate: 0 var(--tabfix, 0px); }
+
+/* app shell (iPhone app, Home Screen app): the body scrolls, the window does not, so the tab bar stays put */
+html.shell { height: 100%; overflow: hidden; }
+html.shell body { height: 100%; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; overscroll-behavior-y: none; box-sizing: border-box; }
+html.shell #tabs, html.shell .rest-pill { translate: none; }
