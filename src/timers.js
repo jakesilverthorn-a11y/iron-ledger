@@ -122,7 +122,7 @@ function tempoSetupSheet() {
   var per = T.d + T.b + T.u + T.t;
   openSheet('Tempo · ' + e.n, '<div class="note">Paces each rep with beeps and voice cues, counts them, and logs the set when you finish. Lowering slowly (3 s or more) is a good way to build muscle with lighter weights.</div>' +
     '<div class="card" style="padding:0 14px">' + step('reps', 'Reps') + step('d', 'Down (lowering)', ' s') + step('b', 'Pause at the bottom', ' s') + step('u', 'Up (lifting)', ' s') + step('t', 'Pause at the top', ' s') + '</div>' +
-    '<div class="note">About ' + Math.round(per * T.reps + 3) + ' s for this set · ' + T.d + '-' + T.b + '-' + T.u + '-' + T.t + ' tempo · set ' + (T.s + 1) + '</div>' +
+    '<div class="note">Tempo reps count for more in your strength score: at ' + per + ' s a rep, each rep counts as ' + (Math.round(tempoF(per) * 100) / 100) + (tempoF(per) >= 1.6 ? ' (the most)' : '') + '. Slower tempo, more credit.</div>' + '<div class="note">About ' + Math.round(per * T.reps + 3) + ' s for this set · ' + T.d + '-' + T.b + '-' + T.u + '-' + T.t + ' tempo · set ' + (T.s + 1) + '</div>' +
     '<label class="row" style="gap:8px;align-items:center"><input type="checkbox" id="tpvoice"' + (S.settings.voice === false ? '' : ' checked') + '> <span class="note" style="color:var(--fg)">Say "down" and "up" out loud</span></label>' +
     '<button class="btn primary block" data-act="tpGo">Start</button><button class="btn block ghost" data-act="close">Cancel</button>');
 }
@@ -165,11 +165,12 @@ function tempoTick() {
 }
 function holdDoneTempo() {
   if (!TM || TM.kind !== 'tempo') return;
-  var reps = TM.done || 0, x = TM.x, s = TM.s;
+  var reps = TM.done || 0, x = TM.x, s = TM.s, tp = TM.per;
   tmStop(); closeSheet();
   if (reps < 1) { toast('No reps logged.'); return; }
-  var st = S.draft.ex[x].sets[s]; st.r = reps; st.sug = false;
-  if (markSetDone(x, s)) toast('Logged ' + reps + ' reps');
+  var st = S.draft.ex[x].sets[s]; st.r = reps; st.sug = false; st.tp = Math.round(tp * 10) / 10;
+  var f = tempoF(st.tp);
+  if (markSetDone(x, s)) toast('Logged ' + reps + ' tempo reps' + (f > 1 ? ' · count as ' + Math.round(reps * f * 10) / 10 + ' for your score' : ''));
   else render();
 }
 function timerClick(a, d) {

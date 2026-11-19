@@ -522,3 +522,6 @@ body.vvfix #tabs, body.vvfix .rest-pill { transform: translateZ(0); }
 html.shell { height: 100%; overflow: hidden; }
 html.shell body { height: 100%; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; overscroll-behavior-y: none; box-sizing: border-box; }
 html.shell #tabs, html.shell .rest-pill { translate: none; }
+
+.muscles { font-size: 13.5px; color: var(--muted); margin-top: 3px; line-height: 1.35; }
+.muscles b { color: var(--fg); font-weight: 600; }

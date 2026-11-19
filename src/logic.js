@@ -66,9 +66,12 @@ var metricBW = function (t) { return 0; };   // the UI points this at your body 
 function bwFrac(ex) { var k = parseK(ex && ex.k); return (k && (BW_FRAC[k.cls] || (DATA.std[k.cls] && DATA.std[k.cls].bf))) || 0.6; }
 function bwEqReps(ex, w, r, t) { var B = metricBW(t); if (!(w > 0) || !(B > 0)) return r; var base = bwFrac(ex) * B; return Math.min(300, 30 * w / base + r * (base + w) / base); }
 function repsAtLoad(ex, eqReps, w, t) { var B = metricBW(t); if (!(w > 0) || !(B > 0)) return eqReps; var base = bwFrac(ex) * B; return (eqReps - 30 * w / base) * base / (base + w); }
+/* tempo reps count for more: a slow, controlled rep is harder than a normal one (about 2.5 s).
+   Each rep counts as sqrt(seconds per rep / 2.5) reps, from 1x up to 1.6x: 3-0-1-0 (4 s) = 1.26 reps, 4-1-2-0 (7 s) = 1.6. */
+function tempoF(tp) { tp = +tp || 0; return tp > 2.5 ? Math.min(1.6, Math.sqrt(tp / 2.5)) : 1; }
 function setMetric(ex, s, t) {
   if (isDist(ex)) return +s.d || (+s.tm || 0) / 60;   // distance (or minutes when no distance was entered)
-  var r = +s.r || 0, w = +s.w || 0;
+  var r = (+s.r || 0) * tempoF(s.tp), w = +s.w || 0;
   if (r <= 0) return 0;
   if (isBW(ex)) return w > 0 ? bwEqReps(ex, w, r, t) : r;   // bodyweight work is tracked in (equivalent) reps
   if (w <= 0) return 0;
@@ -469,7 +472,7 @@ function finishDraft(draft, now) {
   var ex = [];
   draft.ex.forEach(function (e) {
     var sets = e.sets.filter(function (s) { return s.done && !s.wu && (+s.r > 0); }).map(function (s) {
-      var o = { w: +s.w || 0, r: +s.r || 0 }; if (+s.d > 0) o.d = +s.d; if (+s.tm > 0) o.tm = +s.tm; return o;
+      var o = { w: +s.w || 0, r: +s.r || 0 }; if (+s.d > 0) o.d = +s.d; if (+s.tm > 0) o.tm = +s.tm; if (+s.tp > 0) o.tp = +s.tp; return o;
     });
     if (sets.length) ex.push({ n: e.n, sets: sets });
   });
