@@ -241,7 +241,7 @@ function demoInner(ex) {
   var two = mode === 'cartoon' && FIG.frontOK(T);
   var pic = mode === 'cartoon' ? (two
       ? '<div class="figpair" role="img" aria-label="' + esc(ex.n) + ' animated demonstration, side and front"><div class="demo cg"><svg class="fig" id="figlive" viewBox="0 0 300 200" aria-hidden="true"></svg><span class="figlab">Side</span></div><div class="demo cg"><svg class="fig" id="figfront" viewBox="80 0 140 200" aria-hidden="true"></svg><span class="figlab">Front</span></div></div>'
-      : '<div class="demo cg big" role="img" aria-label="' + esc(ex.n) + ' animated demonstration"><svg class="fig" id="figlive" viewBox="0 0 300 200" aria-hidden="true"></svg></div>') + '<div class="note">Red marks the muscles doing the work.</div>' : photoHTML(ex, true, 'big') + '<div class="note">' + (T ? 'Photos flip between the start and end of the move.' : 'Photos flip between the start and end of the move. No cartoon for this one yet.') + '</div>';
+      : '<div class="demo cg big" role="img" aria-label="' + esc(ex.n) + ' animated demonstration"><svg class="fig" id="figlive" viewBox="0 0 300 200" aria-hidden="true"></svg></div>') + '<div class="note">' + (T.top ? 'Seen from above, lying on the bench. ' : '') + 'Red marks the muscles doing the work.</div>' : photoHTML(ex, true, 'big') + '<div class="note">' + (T ? 'Photos flip between the start and end of the move.' : 'Photos flip between the start and end of the move. No cartoon for this one yet.') + '</div>';
   return pic + tog;
 }
 function startDemo(ex) {
