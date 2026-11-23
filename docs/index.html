@@ -542,21 +542,33 @@ html.shell #tabs, html.shell .rest-pill { translate: none; }
 
 /* cartoon figures */
 .fig { display: block; width: 100%; height: 100%; }
-.demo.cg { background: linear-gradient(180deg, var(--surface2), var(--surface2)); }
-.fig .floor { fill: rgba(128,128,128,.14); }
-.fig .floorl { stroke: var(--line2); stroke-width: 1.5; }
+.demo.cg { background: #fff; }
+.fig .floor { fill: #eef0f2; }
+.fig .floorl { stroke: #e1e4e8; stroke-width: 1.2; }
 .fig line { stroke-linecap: round; fill: none; }
 .fig line.o { stroke: #231c2b; }
 .fig line.sk { stroke: #f0c09a; } .fig line.skf { stroke: #c4926d; }
 .fig line.shirt { stroke: #4f7cc0; } .fig line.shorts { stroke: #2e3646; } .fig line.shoe { stroke: #f4f1ea; }
-.fig line.bar { stroke: #aab2bb; } .fig line.cab { stroke: #7f8994; } .fig line.pad { stroke: #46505c; }
+.fig line.bar { stroke: #aeb4bb; } .fig line.cab { stroke: #9aa0a6; } .fig line.pad { stroke: #262626; }
 .fig circle.sk, .fig circle.skin { fill: #f0c09a; } .fig circle.hair { fill: #3a2a22; } .fig circle.eye { fill: #231c2b; }
-.fig circle.plate { fill: #4a525d; stroke: #1b1f25; stroke-width: 1.3; } .fig circle.hub { fill: #a7afba; }
-.fig rect.plate { fill: #4a525d; stroke: #1b1f25; stroke-width: 1; }
-.fig rect.bar { fill: #7d8791; } .fig rect.pad { fill: #46505c; stroke: #262d36; stroke-width: 1; } .fig rect.cab { fill: #7f8994; }
-.fig .kbh { fill: none; stroke: #1b1f25; stroke-width: 3; stroke-linecap: round; }
+.fig circle.plate { fill: url(#ilPl); stroke: #050505; stroke-width: 1; } .fig circle.hub { fill: url(#ilMet); stroke: #6b7076; stroke-width: .6; }
+.fig rect.plate { fill: url(#ilPl); stroke: #050505; stroke-width: .8; }
+.fig rect.bar { fill: url(#ilMet); stroke: #7d838a; stroke-width: .5; } .fig rect.pad { fill: url(#ilPad); stroke: #0c0c0c; stroke-width: .8; } .fig rect.cab { fill: #9aa0a6; }
+.fig circle.pad { fill: url(#ilPad); stroke: #0c0c0c; stroke-width: .8; }
+.fig .kbh { fill: none; stroke: #111; stroke-width: 3; stroke-linecap: round; }
 .fig .mouth { fill: none; stroke: #231c2b; stroke-width: 1.4; stroke-linecap: round; }
-.fig .hl { fill: #ff5436; opacity: .62; }
+.fig .hl { fill: url(#ilHl); stroke: #9c2d16; stroke-width: .7; opacity: .93; }
+/* anatomy-illustration body */
+.fig path.m, .fig ellipse.m { fill: url(#ilSk); }
+.fig path.mo, .fig ellipse.mo { fill: #6d7074; stroke: #6d7074; stroke-width: 1.8; stroke-linejoin: round; }
+.fig path.mfo { fill: #6d7074; stroke: #6d7074; stroke-width: 1.8; stroke-linejoin: round; }
+.fig path.mf { fill: url(#ilSkF); }
+.fig .mdef { fill: none; stroke: #8b8e92; stroke-width: .7; stroke-linecap: round; opacity: .75; }
+.fig .mdk { fill: #b9b9b9; stroke: #7a7d81; stroke-width: .6; }
+.fig path.hair { fill: #3b3b3b; stroke: #1f1f1f; stroke-width: .6; }
+.fig path.shorts { fill: #2a2a2a; }
+.fig path.shortso { fill: #0d0d0d; stroke: #0d0d0d; stroke-width: 1.6; stroke-linejoin: round; }
+.fig circle.eye { fill: #2a2a2a; }
 .fig-toggle { display: flex; gap: 6px; }
 
 </style>
@@ -1331,6 +1343,7 @@ var FIG = (function () {
   function anchor(J, a) {
     if (a === 'hand') return J.hand ? lerp(J.wr, J.hand, .55) : J.wr;
     if (a === 'hand2') return [J.wr2[0], J.wr2[1]];
+    if (a === 'trap') { var tu = J.u || [0, -1]; return [J.sho[0] + tu[1] * 6.5 + tu[0] * 1.5, J.sho[1] - tu[0] * 6.5 + tu[1] * 1.5]; }
     if (a === 'hip') return J.hip; if (a === 'sho') return J.sho; if (a === 'head') return J.head;
     if (a === 'ank') return J.an; if (a === 'kn') return J.kn; if (a === 'wr') return J.wr; if (a === 'toe') return J.toe;
     return a;
@@ -1365,34 +1378,80 @@ var FIG = (function () {
     var a = seg[0], b = seg[1], dx = b[0] - a[0], dy = b[1] - a[1], l = Math.sqrt(dx * dx + dy * dy) || 1, d = [dx / l, dy / l];
     var nrm = h[0] === 'to' || h[0] === 'hip' ? [-d[1], d[0]] : [d[1], -d[0]];
     var c = pt(pt(a, d, l * h[1]), nrm, h[2]);
-    return ellipse(c, h[3] || 8, h[4] || 8, Math.atan2(d[1], d[0]) * 180 / Math.PI, 'hl');
+    var hl2 = (h[3] || 8) * 1.15, hw = Math.min((h[4] || 8) * .62, 6.8);
+    return musc(pt(c, d, -hl2), pt(c, d, hl2), 1, 1, hw, hw, 'hl', .5);
   }
-  function face(J) {
+  /* ---- anatomy-illustration style: tapered, shaded muscle shapes instead of sticks ---- */
+  function P2(p) { return f1(p[0]) + ' ' + f1(p[1]); }
+  // a limb segment from a (half-width ra) to b (half-width rb), bulging to m1 / m2 at bp along its length
+  function musc(a, b, ra, rb, m1, m2, cls, bp) {
+    bp = bp === undefined ? .45 : bp;
+    var dx = b[0] - a[0], dy = b[1] - a[1], l = Math.sqrt(dx * dx + dy * dy) || 1, d = [dx / l, dy / l], n = [-d[1], d[0]];
+    var c1 = 2 * m1 - (ra + rb) / 2, c2 = 2 * m2 - (ra + rb) / 2, m = lerp(a, b, bp);
+    return '<path class="' + cls + '" d="M' + P2(pt(a, n, ra)) + 'Q' + P2(pt(m, n, c1)) + ' ' + P2(pt(b, n, rb)) +
+      'Q' + P2(pt(b, d, rb * 1.35)) + ' ' + P2(pt(b, n, -rb)) + 'Q' + P2(pt(m, n, -c2)) + ' ' + P2(pt(a, n, -ra)) +
+      'Q' + P2(pt(a, d, -ra * 1.35)) + ' ' + P2(pt(a, n, ra)) + 'Z"/>';
+  }
+  function crease(a, b, k0, k1, off) {   // a muscle-definition line along a segment
+    var dx = b[0] - a[0], dy = b[1] - a[1], l = Math.sqrt(dx * dx + dy * dy) || 1, n = [-dy / l, dx / l];
+    var p = pt(lerp(a, b, k0), n, off), q = pt(lerp(a, b, k1), n, off * .6), c = pt(lerp(a, b, (k0 + k1) / 2), n, off * 1.25);
+    return '<path class="mdef" d="M' + P2(p) + 'Q' + P2(c) + ' ' + P2(q) + '"/>';
+  }
+  function thigh(h, k, cls) { return musc(h, k, 10.2, 6.2, 11, 9.6, cls, .36) + crease(h, k, .22, .82, -2); }
+  function shin(k, a, cls) { return musc(k, a, 6.2, 3.4, 8.2, 5.4, cls, .3); }   // calf bulges at the back
+  function uarm(sh, e, cls) { return musc(sh, e, 8.4, 4.8, 7.4, 7.8, cls, .4) + crease(sh, e, .3, .85, .5); }
+  function farm(e, w, cls) { return musc(e, w, 5, 3, 6.2, 5.2, cls, .28); }
+  function foot(an, toe, cls) { return musc(an, toe, 3.6, 2.4, 3.4, 3, cls, .4); }
+  function hand(w, h, cls) { return musc(w, h, 2.8, 2.6, 3.3, 3.3, cls, .55); }
+  function torsoSide(hip, sho, cls) {   // chest in front, glutes behind; 'front' is the way the body faces
+    var dx = sho[0] - hip[0], dy = sho[1] - hip[1], l = Math.sqrt(dx * dx + dy * dy) || 1, u = [dx / l, dy / l], f = [-u[1], u[0]];
+    if (f[0] * 1 + 0 < 0 && Math.abs(f[0]) > .05) { }   // (kept facing right by the solver)
+    function q(k, o) { return pt(pt(hip, u, l * k), f, o); }
+    var F = [q(-.04, 8.6), q(.3, 10), q(.62, 13), q(.84, 13.6), q(1.04, 7)], Bk = [q(1.05, -9), q(.8, -12.6), q(.45, -10), q(.16, -13), q(-.09, -9.6)];
+    var d = 'M' + P2(F[0]);
+    for (var i = 1; i < F.length; i++) d += 'Q' + P2(F[i]) + ' ' + P2(lerp(F[i], F[i + 1] || Bk[0], .5));
+    for (i = 0; i < Bk.length; i++) d += 'Q' + P2(Bk[i]) + ' ' + P2(lerp(Bk[i], Bk[i + 1] || F[0], .5));
+    var abs = '<path class="mdef" d="M' + P2(q(.62, 9.6)) + 'Q' + P2(q(.66, 4)) + ' ' + P2(q(.6, 1)) + '"/>' +
+      '<path class="mdef" d="M' + P2(q(.48, 8)) + 'L' + P2(q(.48, 5.4)) + 'M' + P2(q(.36, 7.8)) + 'L' + P2(q(.36, 5.2)) + '"/>';
+    return '<path class="' + cls + '" d="' + d + 'Z"/>' + abs;
+  }
+  function shortsSide(hip, sho, kn) {
+    var dx = sho[0] - hip[0], dy = sho[1] - hip[1], l = Math.sqrt(dx * dx + dy * dy) || 1, u = [dx / l, dy / l], f = [-u[1], u[0]];
+    var g = musc(lerp(hip, sho, .22), hip, 10.8, 11.4, 11.6, 12.6, 'shorts', .5) + musc(pt(hip, u, -2), lerp(hip, kn, .48), 11.2, 8.6, 11.4, 10.6, 'shorts', .4);
+    return g.replace(/class="shorts"/g, 'class="shortso"') + g;
+  }
+  function headSide(J) {
     var a = J.hdAng, n = [Math.cos(R(a)), Math.sin(R(a))], u = up(a), h = J.head;
-    var skinC = pt(h, n, 2);
-    var eye = pt(pt(h, n, 6.2), u, 1.8);
-    return circ(h, 11.6, 'hair') + circ(skinC, 10.4, 'skin') + circ(eye, 1.7, 'eye');
+    var jaw = pt(pt(h, n, 4.6), u, -6.2), neckB = pt(J.sho, u, 2);
+    var neck = '';
+    var skull = '<ellipse class="m" cx="' + f1(h[0]) + '" cy="' + f1(h[1]) + '" rx="9.6" ry="10.6" transform="rotate(' + f1(a) + ' ' + f1(h[0]) + ' ' + f1(h[1]) + ')"/>';
+    var face = musc(pt(h, u, 2), jaw, 6.4, 3.4, 6.6, 5, 'm', .5);
+    var hair = '<path class="hair" d="M' + P2(pt(pt(h, n, 6), u, 6.4)) + 'Q' + P2(pt(pt(h, n, 1), u, 12.6)) + ' ' + P2(pt(pt(h, n, -7), u, 7.2)) + 'Q' + P2(pt(pt(h, n, -10.6), u, 1)) + ' ' + P2(pt(pt(h, n, -7.4), u, -3)) + 'Q' + P2(pt(pt(h, n, -2), u, 4)) + ' ' + P2(pt(pt(h, n, 6), u, 6.4)) + 'Z"/>';
+    var eye = circ(pt(pt(h, n, 6.6), u, 1.6), 1.15, 'eye'), ear = '<ellipse class="mdk" cx="' + f1(pt(h, n, -1.4)[0]) + '" cy="' + f1(pt(h, n, -1.4)[1]) + '" rx="1.8" ry="2.8" transform="rotate(' + f1(a) + ' ' + f1(pt(h, n, -1.4)[0]) + ' ' + f1(pt(h, n, -1.4)[1]) + ')"/>';
+    return solid(face + skull) + hair + ear + eye;
+  }
+  function face(J) { return headSide(J); }
+  function solid(str) {   // draw a group of body shapes as one figure: outlines first, then fills, so joints don't show seams
+    var outl = str.replace(/<path class="mdef"[^>]*\/>/g, '').replace(/class="(m|mf)"/g, 'class="$1o"');
+    return outl + str;
   }
   function drawSide(J, P, T) {
     var s = '', i;
-    // far limbs
-    s += limb(J.hip, J.kn2, 13, 'skf') + limb(J.kn2, J.an2, 11.5, 'skf') + ln(J.an2, J.toe2, 11, 'o') + ln(J.an2, J.toe2, 8, 'shoe');
-    s += limb(J.sho, J.el2, 10, 'skf') + limb(J.el2, J.wr2, 9, 'skf');
-    // torso
-    s += limb(J.hip, J.sho, 21, 'shirt');
-    s += ln(J.hip, lerp(J.hip, J.sho, .22), 21.5, 'shorts');
-    // near leg
-    s += limb(J.hip, J.kn, 15, 'sk') + ln(J.hip, lerp(J.hip, J.kn, .5), 17, 'shorts');
-    s += limb(J.kn, J.an, 12.5, 'sk') + ln(J.an, J.toe, 12, 'o') + ln(J.an, J.toe, 9, 'shoe');
-    // equipment behind hands (pads, benches)
+    // far limbs (a shade darker, behind the body)
+    s += solid(thigh(J.hip, J.kn2, 'mf') + shin(J.kn2, J.an2, 'mf') + foot(J.an2, J.toe2, 'mf'));
+    s += solid(uarm(J.sho, J.el2, 'mf') + farm(J.el2, J.wr2, 'mf') + hand(J.wr2, pt(J.wr2, [J.wr2[0] - J.el2[0], J.wr2[1] - J.el2[1]].map(function (v, k, A) { return v / (Math.sqrt(A[0] * A[0] + A[1] * A[1]) || 1); }), 7), 'mf'));
+    // torso, neck and near leg as one shape, then the shorts
+    var a0 = J.hdAng, u0 = up(a0);
+    s += solid(torsoSide(J.hip, J.sho, 'm') + musc(lerp(J.sho, J.head, .02), lerp(J.sho, J.head, .66), 6.4, 5, 6.2, 6, 'm', .5) + thigh(J.hip, J.kn, 'm') + shin(J.kn, J.an, 'm') + foot(J.an, J.toe, 'm'));
+    s += shortsSide(J.hip, J.sho, J.kn);
     var eq = T.eq || [];
     for (i = 0; i < eq.length; i++) if (eq[i].back) s += eqDraw(J, eq[i], P);
-    // arm
-    s += limb(J.el, J.wr, 9.5, 'sk') + limb(J.sho, J.el, 11.5, 'sk') + ln(J.sho, lerp(J.sho, J.el, .42), 12.5, 'shirt');
-    s += ln(J.wr, J.hand, 8, 'o') + ln(J.wr, J.hand, 6.5, 'sk');
-    s += face(J);
-    var hl = T.hl || [];
-    for (i = 0; i < hl.length; i++) s += hlDraw(J, hl[i]);
+    s += headSide(J);
+    var hl = T.hl || [], hlLimb = '';
+    for (i = 0; i < hl.length; i++) if (hl[i][0] !== 'ua' && hl[i][0] !== 'fa' && !(hl[i][0] === 'to' && hl[i][1] >= .85)) s += hlDraw(J, hl[i]); else hlLimb += hlDraw(J, hl[i]);
+    // near arm on top, with its own highlights
+    s += solid(musc(pt(J.sho, [J.el[0] - J.sho[0], J.el[1] - J.sho[1]].map(function (v) { return -v * .12; }), 0), lerp(J.sho, J.el, .55), 8.6, 6, 9.4, 9.4, 'm', .3) + uarm(J.sho, J.el, 'm') + farm(J.el, J.wr, 'm') + hand(J.wr, J.hand, 'm'));
+    s += hlLimb;
     for (i = 0; i < eq.length; i++) if (!eq[i].back) s += eqDraw(J, eq[i], P);
     return s;
   }
@@ -1426,8 +1485,27 @@ var FIG = (function () {
   }
   function faceF(J) {
     var h = J.head;
-    return circ(h, 11.6, 'hair') + circ([h[0], h[1] + 1.5], 10.4, 'skin') + circ([h[0] - 3.6, h[1] + 1], 1.5, 'eye') + circ([h[0] + 3.6, h[1] + 1], 1.5, 'eye') +
-      '<path class="mouth" d="M' + f1(h[0] - 3) + ' ' + f1(h[1] + 6) + ' q3 2.4 6 0"/>';
+    return musc([h[0], J.s[1] + 2], [h[0], h[1] + 6], 5.6, 4.8, 5.6, 5.6, 'm', .5) +
+      '<ellipse class="m" cx="' + f1(h[0]) + '" cy="' + f1(h[1] + .5) + '" rx="9" ry="10.8"/>' +
+      '<path class="hair" d="M' + f1(h[0] - 9.2) + ' ' + f1(h[1] - 1) + 'Q' + f1(h[0] - 9) + ' ' + f1(h[1] - 12) + ' ' + f1(h[0]) + ' ' + f1(h[1] - 11.4) + 'Q' + f1(h[0] + 9) + ' ' + f1(h[1] - 12) + ' ' + f1(h[0] + 9.2) + ' ' + f1(h[1] - 1) + 'Q' + f1(h[0] + 6) + ' ' + f1(h[1] - 6.4) + ' ' + f1(h[0]) + ' ' + f1(h[1] - 6.6) + 'Q' + f1(h[0] - 6) + ' ' + f1(h[1] - 6.4) + ' ' + f1(h[0] - 9.2) + ' ' + f1(h[1] - 1) + 'Z"/>' +
+      circ([h[0] - 3.4, h[1] + 1], 1.1, 'eye') + circ([h[0] + 3.4, h[1] + 1], 1.1, 'eye') +
+      '<path class="mdef" d="M' + f1(h[0] - 2.4) + ' ' + f1(h[1] + 6.4) + ' q2.4 1.2 4.8 0"/>';
+  }
+  function torsoFront(hip, s, bend) {
+    var dx = s[0] - hip[0], dy = s[1] - hip[1], l = Math.sqrt(dx * dx + dy * dy) || 1, u = [dx / l, dy / l], r = [-u[1] * -1, u[0] * -1];
+    r = [u[1] * -1 * -1, -u[0]];   // sideways (to the viewer's right)
+    r = [-u[1], u[0]]; if (r[0] < 0) r = [-r[0], -r[1]];
+    function q(k, o) { return pt(pt(hip, u, l * k), r, o); }
+    var W = bend ? [17, 18, 23, 25, 24] : [17, 15.6, 20.5, 24, 21.5];
+    var R1 = [q(-.05, W[0]), q(.34, W[1]), q(.7, W[2]), q(.93, W[3]), q(1.06, W[4] - 7)], L1 = R1.map(function (p, i) { var k = [-.05, .34, .7, .93, 1.06][i], o = [W[0], W[1], W[2], W[3], W[4] - 7][i]; return q(k, -o); }).reverse();
+    var pts = R1.concat(L1), d = 'M' + P2(lerp(pts[pts.length - 1], pts[0], .5));
+    for (var i = 0; i < pts.length; i++) d += 'Q' + P2(pts[i]) + ' ' + P2(lerp(pts[i], pts[(i + 1) % pts.length], .5));
+    var out = '<path class="m" d="' + d + 'Z"/>';
+    if (!bend) {
+      out += '<path class="mdef" d="M' + P2(q(.62, -15)) + 'Q' + P2(q(.56, -6)) + ' ' + P2(q(.6, 0)) + 'Q' + P2(q(.56, 6)) + ' ' + P2(q(.62, 15)) + '"/>';
+      out += '<path class="mdef" d="M' + P2(q(.55, 0)) + 'L' + P2(q(.12, 0)) + 'M' + P2(q(.44, -6)) + 'L' + P2(q(.44, 6)) + 'M' + P2(q(.32, -6)) + 'L' + P2(q(.32, 6)) + 'M' + P2(q(.2, -6)) + 'L' + P2(q(.2, 6)) + '"/>';
+    }
+    return out;
   }
   function eqDrawF(J, it) {
     var wl = J.wl, wr = J.wrr;
@@ -1448,18 +1526,29 @@ var FIG = (function () {
     var c = { delt: [[J.sl, -2, -1], [J.sr, 2, -1]], trap: [[[J.s[0] - 9, J.s[1] - 5], 0, 0], [[J.s[0] + 9, J.s[1] - 5], 0, 0]], chest: [[[J.s[0] - 8, J.s[1] + 12], 0, 0], [[J.s[0] + 8, J.s[1] + 12], 0, 0]], lat: [[[J.s[0] - 13, J.s[1] + 20], 0, 0], [[J.s[0] + 13, J.s[1] + 20], 0, 0]], bi: [[lerp(J.sl, J.el, .5), 0, 0], [lerp(J.sr, J.er, .5), 0, 0]] }[h];
     if (!c) return '';
     var rx = { delt: 8, trap: 9, chest: 9, lat: 6, bi: 6 }[h], ry = { delt: 8, trap: 6, chest: 8, lat: 14, bi: 10 }[h];
-    return c.map(function (q) { return ellipse(q[0], rx, ry, 0, 'hl'); }).join('');
+    return c.map(function (q) { return musc([q[0][0], q[0][1] - ry * .95], [q[0][0], q[0][1] + ry * .95], 1, 1, rx * .8, rx * .8, 'hl', .5); }).join('');
+  }
+  function shortsF(J) {   // one pair of shorts: waistband, crotch, two leg openings
+    var w = lerp(J.hip, J.s, .2), up_ = [(J.s[0] - J.hip[0]), (J.s[1] - J.hip[1])], ul = Math.hypot(up_[0], up_[1]) || 1; up_ = [up_[0] / ul, up_[1] / ul];
+    var r = [-up_[1], up_[0]]; if (r[0] < 0) r = [-r[0], -r[1]];
+    var lo = lerp(J.hl, J.kl, .4), ro = lerp(J.hr, J.kr, .4);
+    function side(p, q) { var dx = q[0] - p[0], dy = q[1] - p[1], l = Math.hypot(dx, dy) || 1; return [-dy / l, dx / l]; }
+    var nl = side(J.hl, J.kl), nr = side(J.hr, J.kr); if (nl[0] > 0) nl = [-nl[0], -nl[1]]; if (nr[0] < 0) nr = [-nr[0], -nr[1]];
+    var crotch = pt(J.hip, up_, -7);
+    var pts = [pt(w, r, -15.6), pt(w, r, 15.6), pt(J.hr, r, 9.6), pt(ro, nr, 8.6), pt(ro, nr, -7.4), crotch, pt(lo, nl, -7.4), pt(lo, nl, 8.6), pt(J.hl, r, -9.6)];
+    return '<path class="shorts" d="M' + pts.map(P2).join('L') + 'Z" stroke-linejoin="round"/>';
   }
   function drawFront(J, P, T) {
     var s = '', i, eq = T.eq || [];
     for (i = 0; i < eq.length; i++) if (eq[i].back) s += eqDrawF(J, eq[i]);
-    s += limb(J.hl, J.kl, 13, 'sk') + ln(J.hl, lerp(J.hl, J.kl, .5), 15, 'shorts') + limb(J.kl, J.al, 11.5, 'sk');
-    s += limb(J.hr, J.kr, 13, 'sk') + ln(J.hr, lerp(J.hr, J.kr, .5), 15, 'shorts') + limb(J.kr, J.ar, 11.5, 'sk');
-    s += ln(J.al, [J.al[0] - 6, J.al[1]], 9, 'o') + ln(J.al, [J.al[0] - 6, J.al[1]], 6.5, 'shoe') + ln(J.ar, [J.ar[0] + 6, J.ar[1]], 9, 'o') + ln(J.ar, [J.ar[0] + 6, J.ar[1]], 6.5, 'shoe');
-    s += limb(J.hip, J.s, 29, 'shirt') + ln(J.hip, lerp(J.hip, J.s, .2), 29.5, 'shorts');
-    s += limb(J.sl, J.el, 11, 'sk') + ln(J.sl, lerp(J.sl, J.el, .4), 12.5, 'shirt') + limb(J.el, J.wl, 9.5, 'sk') + circ(J.wl, 4.6, 'sk');
-    s += limb(J.sr, J.er, 11, 'sk') + ln(J.sr, lerp(J.sr, J.er, .4), 12.5, 'shirt') + limb(J.er, J.wrr, 9.5, 'sk') + circ(J.wrr, 4.6, 'sk');
-    s += faceF(J);
+    function legF(h, k, a, side) { return thigh(h, k, 'm') + shin(k, a, 'm') + foot(a, [a[0] + side * 6, a[1] + 1], 'm'); }
+    var bent = J.s[1] > J.hip[1] - LEN.to * .5;
+    if (!bent) s += solid(faceF(J).replace(/<path class="hair"[\s\S]*$/, '')) + faceF(J).replace(/^[\s\S]*?(<path class="hair")/, '$1');
+    s += solid(legF(J.hl, J.kl, J.al, -1) + legF(J.hr, J.kr, J.ar, 1) + torsoFront(J.hip, J.s, bent));
+    s += shortsF(J);
+    function armF(sh, e, w) { var hd = pt(w, [(w[0] - e[0]) / (Math.hypot(w[0] - e[0], w[1] - e[1]) || 1), (w[1] - e[1]) / (Math.hypot(w[0] - e[0], w[1] - e[1]) || 1)], 4.2); return solid(musc([sh[0], sh[1] - 2], lerp(sh, e, .5), 8.6, 6.4, 9.6, 9.6, 'm', .3) + uarm(sh, e, 'm') + farm(e, w, 'm') + hand(w, hd, 'm')); }
+    s += armF(J.sl, J.el, J.wl) + armF(J.sr, J.er, J.wrr);
+    if (bent) s += solid(faceF(J).replace(/<path class="hair"[\s\S]*$/, '')) + faceF(J).replace(/^[\s\S]*?(<path class="hair")/, '$1');   // bent over: the head sits in front of the back
     var hl = T.hl || [];
     for (i = 0; i < hl.length; i++) s += hlDrawF(J, hl[i]);
     for (i = 0; i < eq.length; i++) if (!eq[i].back) s += eqDrawF(J, eq[i]);
@@ -1500,10 +1589,11 @@ var FIG = (function () {
   function hlDrawP(F, h) {
     var segs = { ua: [[F.sl, F.el], [F.sr, F.er]], fa: [[F.el, F.wl], [F.er, F.wrr]], th: [[F.hl, F.kl], [F.hr, F.kr]], sh: [[F.kl, F.al], [F.kr, F.ar]],
       to: [[[F.hip[0] - 7, F.hip[1]], [F.s[0] - 7, F.s[1]]], [[F.hip[0] + 7, F.hip[1]], [F.s[0] + 7, F.s[1]]]] }[h[0] === 'hip' ? 'to' : h[0]];
-    if (!segs) return '';
+    if (!segs || h[0] === 'hip') return '';   // glutes can't be seen from the front
     return segs.map(function (sg) {
       var a = sg[0], b = sg[1], c = lerp(a, b, h[1]), l = Math.max(4, Math.sqrt((b[0] - a[0]) * (b[0] - a[0]) + (b[1] - a[1]) * (b[1] - a[1])));
-      return ellipse(c, Math.min(h[3] || 8, 7), Math.min(h[4] || 8, l * .45 + 3), Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI - 90, 'hl');
+      var dd = [(b[0] - a[0]) / l, (b[1] - a[1]) / l], hh = Math.min(h[4] || 8, l * .45 + 3) * 1.1, ww = Math.min(h[3] || 8, 7) * .72;
+      return musc(pt(c, dd, -hh), pt(c, dd, hh), 1, 1, ww, ww, 'hl', .5);
     }).join('');
   }
   function frontOK(T) {   // only for upright and seated moves: a lying body seen end-on tells you nothing
@@ -1515,7 +1605,7 @@ var FIG = (function () {
   }
   function frameFront(T, k) {
     var P = mix(T.A, T.B, ease(k)); if (T.wide === undefined) T.wide = (T.eq || []).some(function (it) { return it.k === 'plate' && (it.at === 'hand' || it.at === 'wr'); }) ? 12 : 0; P.wide = T.wide; var F = projF(solve(P), P), s = '',
-      barSho = (T.eq || []).some(function (it) { return it.k === 'plate' && it.at === 'sho'; });
+      barSho = (T.eq || []).some(function (it) { return it.k === 'plate' && (it.at === 'sho' || it.at === 'trap'); });
     if (barSho) {   // bar across the shoulders: hands wide at shoulder height, elbows down
       F.wl = [F.sl[0] - 18, F.sl[1] - 3]; F.wrr = [F.sr[0] + 18, F.sr[1] - 3]; F.el = [F.sl[0] - 14, F.sl[1] + 14]; F.er = [F.sr[0] + 14, F.sr[1] + 14];
     }
@@ -1533,6 +1623,15 @@ var FIG = (function () {
     var n = T.K.length - 1, x = Math.max(0, Math.min(n - 1e-6, k * n)), i = Math.floor(x);
     return mix(T.K[i], T.K[i + 1], ease(x - i));
   }
+  var DEFS = '<svg width="0" height="0" style="position:absolute;width:0;height:0" aria-hidden="true"><defs>' +
+    '<linearGradient id="ilSk" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f4f4f4"/><stop offset=".55" stop-color="#d3d3d3"/><stop offset="1" stop-color="#9c9c9c"/></linearGradient>' +
+    '<linearGradient id="ilSkF" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#cfcfcf"/><stop offset="1" stop-color="#8a8a8a"/></linearGradient>' +
+    '<linearGradient id="ilHl" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f7a07a"/><stop offset=".5" stop-color="#e8613c"/><stop offset="1" stop-color="#b9361c"/></linearGradient>' +
+    '<linearGradient id="ilSh" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4a4a4a"/><stop offset="1" stop-color="#121212"/></linearGradient>' +
+    '<linearGradient id="ilMet" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f2f4f6"/><stop offset=".5" stop-color="#b7bcc2"/><stop offset="1" stop-color="#7d838a"/></linearGradient>' +
+    '<radialGradient id="ilPl" cx=".38" cy=".34" r=".75"><stop offset="0" stop-color="#5b5b5b"/><stop offset=".6" stop-color="#262626"/><stop offset="1" stop-color="#0b0b0b"/></radialGradient>' +
+    '<linearGradient id="ilPad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4c4c4c"/><stop offset="1" stop-color="#141414"/></linearGradient>' +
+    '</defs></svg>';
   function frame(T, k, view) {
     if (view === 'front') return frameFront(T, k);
     var P = keyPose(T, k), J, body;
@@ -1656,11 +1755,11 @@ var FIG = (function () {
   B.squat = function (o) {
     var Ap = { stand: 1, ax: 150, th: 3, sh: 0, t: 0 }, Bp = { stand: 1, ax: 150, th: 88, sh: -36, t: 36 }, eq = [];
     var v = o.v || 'back';
-    if (v === 'back') { Ap.hs = Bp.hs = [-4, -7]; Ap.eb = Bp.eb = -1; eq = [{ k: 'plate', at: 'sho', dx: -5, dy: -6, r: 10 }]; }
+    if (v === 'back') { Ap.hs = Bp.hs = [-13, -1]; Ap.eb = Bp.eb = -1; eq = [{ k: 'plate', at: 'trap', r: 10 }]; }
     else if (v === 'front') { Ap.hs = Bp.hs = [12, -3]; Ap.eb = Bp.eb = 1; eq = [{ k: 'plate', at: 'sho', dx: 11, dy: -2, r: 10 }]; }
     else if (v === 'goblet') { Ap.hs = Bp.hs = [10, 10]; Ap.eb = Bp.eb = 1; eq = [{ k: 'db', at: 'hand', rot: 90 }]; }
     else if (v === 'db') { Ap.ua = Bp.ua = 0; Ap.fa = Bp.fa = 0; Bp.ua = 8; Bp.fa = 8; eq = [{ k: 'db', at: 'hand', rot: 90 }]; }
-    else if (v === 'smith') { Ap.hs = Bp.hs = [-4, -7]; Ap.eb = Bp.eb = -1; eq = [{ k: 'plate', at: 'sho', dx: -5, dy: -6, r: 10 }, { k: 'line', a: [116, 20], b: [116, FY], w: 2, c: 'bar', back: 1 }]; }
+    else if (v === 'smith') { Ap.hs = Bp.hs = [-13, -1]; Ap.eb = Bp.eb = -1; eq = [{ k: 'plate', at: 'trap', r: 10 }, { k: 'line', a: [116, 20], b: [116, FY], w: 2, c: 'bar', back: 1 }]; }
     else if (v === 'hack') {
       Ap = { stand: 1, ax: 168, th: -14, sh: -14, t: -18, hs: [4, -6], eb: -1 }; Bp = { stand: 1, ax: 168, th: 72, sh: -40, t: -18, hs: [4, -6], eb: -1 };
       eq = [{ k: 'line', a: [78, 30], b: [130, FY], w: 4, c: 'cab', back: 1 }, { k: 'padline', off: 14, s0: -4, s1: 60, w: 9, back: 1 }, { k: 'rect', x: 150, y: FY - 8, w: 44, h: 8, r: 2, c: 'pad', back: 1 }];
@@ -1674,7 +1773,7 @@ var FIG = (function () {
     var Bp = { stand: 1, ax: 176, th: 86, sh: -4, t: 4, ank2: [92, FY - 11], kb2: 1, toe2: 1, ua: 0, fa: 0 };
     var eq = held(o.h === 'bar' ? 'none' : o.h);
     if (o.h === 'db') eq = [{ k: 'db', at: 'hand', rot: 90 }];
-    if (o.h === 'bar') { Ap.hs = Bp.hs = [-4, -7]; Ap.eb = Bp.eb = -1; eq = [{ k: 'plate', at: 'sho', dx: -5, dy: -6, r: 10 }]; }
+    if (o.h === 'bar') { Ap.hs = Bp.hs = [-13, -1]; Ap.eb = Bp.eb = -1; eq = [{ k: 'plate', at: 'trap', r: 10 }]; }
     return { A: Ap, B: Bp, eq: eq, hl: [['th', .5, 9, 14, 8], ['hip', 0, -4, 9, 9]] };
   };
   B.deadlift = function (o) {
@@ -1684,7 +1783,7 @@ var FIG = (function () {
   B.rdl = function (o) {
     var Ap = { stand: 1, ax: 140, th: 22, sh: -10, t: 78, hd: -50, hs: [6, 50], eb: -1 }, Bp = { stand: 1, ax: 140, th: 2, sh: 0, t: 3, hd: -2, hs: [4, 50], eb: -1 };
     var eq = o.h === 'db' ? [{ k: 'db', at: 'hand', rot: 90 }] : [{ k: 'plate', at: 'hand', r: 9 }];
-    if (o.gm) { Ap.hs = Bp.hs = [-4, -7]; eq = [{ k: 'plate', at: 'sho', dx: -5, dy: -6, r: 9 }]; Ap.hd = -60; }
+    if (o.gm) { Ap.hs = Bp.hs = [-13, -1]; eq = [{ k: 'plate', at: 'trap', r: 9 }]; Ap.hd = -60; }
     return { A: Ap, B: Bp, eq: eq, hl: [['th', .5, -9, 12, 7], ['hip', 0, -3, 9, 9]] };
   };
   function torsoTo(hip, sho) { var dx = sho[0] - hip[0], dy = sho[1] - hip[1]; return Math.atan2(dx, -dy) * 180 / Math.PI; }   // torso angle that puts the shoulders at sho
@@ -1918,7 +2017,7 @@ var FIG = (function () {
     var Ap = { stand: 1, ax: 176, th: 12, sh: 0, t: 4, ank2: [96, FY - 44], kb2: 1, ft2: -110, ua: 0, fa: 0 };
     var Bp = { stand: 1, ax: 176, th: 80, sh: -12, t: 12, ank2: [96, FY - 44], kb2: 1, ft2: -110, ua: 2, fa: 2 };
     if (o.h === 'db') eq.push({ k: 'db', at: 'hand', rot: 90 });
-    if (o.h === 'bar') { Ap.hs = Bp.hs = [-4, -7]; Ap.eb = Bp.eb = -1; Ap.ua = Bp.ua = Ap.fa = Bp.fa = undefined; eq.push({ k: 'plate', at: 'sho', dx: -5, dy: -6, r: 10 }); }
+    if (o.h === 'bar') { Ap.hs = Bp.hs = [-13, -1]; Ap.eb = Bp.eb = -1; Ap.ua = Bp.ua = Ap.fa = Bp.fa = undefined; eq.push({ k: 'plate', at: 'trap', r: 10 }); }
     return { A: Ap, B: Bp, eq: eq, hl: [['th', .5, 9, 14, 8], ['hip', 0, -4, 9, 9]], noFront: 1 };
   };
   B.sideLunge = function (o) {   // front view: step out to one side, sit back on that leg, the other leg stays straight
@@ -2162,10 +2261,16 @@ var FIG = (function () {
     return memo[ex.n];
   }
   function svgDoc(T, k, cls) { return '<svg class="' + (cls || 'fig') + '" viewBox="0 0 300 200" role="img" aria-hidden="true">' + frame(T, k) + '</svg>'; }
+  function ensureDefs() {   // the shading gradients live once in the page
+    if (typeof document === 'undefined' || document.getElementById('ilSk')) return;
+    var host = document.getElementById('fig-defs'), inner = DEFS.replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '');
+    if (host) host.insertAdjacentHTML('afterbegin', inner); else if (document.body) document.body.insertAdjacentHTML('beforeend', DEFS);
+  }
   function thumb(T) {
+    ensureDefs();
     var host = document.getElementById('fig-defs');
-    if (host && !syms[T.id]) { syms[T.id] = 1; host.insertAdjacentHTML('beforeend', '<symbol id="' + T.id + '" viewBox="0 0 300 200">' + frame(T, 0.85) + '</symbol>'); }
-    return '<svg class="fig" viewBox="0 0 300 200" aria-hidden="true"><use href="#' + T.id + '"/></svg>';
+    if (!syms[T.id]) syms[T.id] = frame(T, 0.85);   // drawn once, then reused as markup (styles don't reach inside <use> copies)
+    return '<svg class="fig" viewBox="0 0 300 200" aria-hidden="true">' + syms[T.id] + '</svg>';
   }
   /* live animation: updates one <svg> until it leaves the page */
   function cycle(ms) {
@@ -2176,6 +2281,7 @@ var FIG = (function () {
     return 0;
   }
   function live(svg, T, view, t0in) {
+    ensureDefs();
     var still = false;
     try { still = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) { }
     var t0 = t0in || Date.now();
@@ -2188,7 +2294,7 @@ var FIG = (function () {
     }
     step();
   }
-  return { frontOK: frontOK, forEx: forEx, svgDoc: svgDoc, thumb: thumb, live: live, frame: frame, pick: pick, tpl: tpl, B: B, FY: FY };
+  return { defs: function () { return DEFS; }, frontOK: frontOK, forEx: forEx, svgDoc: svgDoc, thumb: thumb, live: live, frame: frame, pick: pick, tpl: tpl, B: B, FY: FY };
 })();
 
 /* ===== friends, compare & challenges =====
