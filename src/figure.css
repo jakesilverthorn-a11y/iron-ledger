@@ -23,8 +23,10 @@
 .fig path.mf { fill: url(#ilSkF); }
 .fig .mdef { fill: none; stroke: #8b8e92; stroke-width: .7; stroke-linecap: round; opacity: .75; }
 .fig .mdk { fill: #b9b9b9; stroke: #7a7d81; stroke-width: .6; }
-.fig path.hair { fill: #3b3b3b; stroke: #1f1f1f; stroke-width: .6; }
+.fig ellipse.hair, .fig path.hair { fill: #3b3b3b; stroke: #1f1f1f; stroke-width: .6; }
 .fig path.shorts { fill: #2a2a2a; }
 .fig path.shortso { fill: #0d0d0d; stroke: #0d0d0d; stroke-width: 1.6; stroke-linejoin: round; }
 .fig circle.eye { fill: #2a2a2a; }
 .fig-toggle { display: flex; gap: 6px; }
+
+.fig line.band { stroke: #3f8f5a; } .fig line.post { stroke: #2b2b2b; }

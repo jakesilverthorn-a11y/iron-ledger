@@ -70,7 +70,7 @@ var FIG = (function () {
   function anchor(J, a) {
     if (a === 'hand') return J.hand ? lerp(J.wr, J.hand, .55) : J.wr;
     if (a === 'hand2') return [J.wr2[0], J.wr2[1]];
-    if (a === 'trap') { var tu = J.u || [0, -1]; return [J.sho[0] + tu[1] * 6.5 + tu[0] * 1.5, J.sho[1] - tu[0] * 6.5 + tu[1] * 1.5]; }
+    if (a === 'trap') { var tu = J.u || [0, -1]; return [J.sho[0] + tu[1] * 9 + tu[0] * 1, J.sho[1] - tu[0] * 9 + tu[1] * 1]; }
     if (a === 'hip') return J.hip; if (a === 'sho') return J.sho; if (a === 'head') return J.head;
     if (a === 'ank') return J.an; if (a === 'kn') return J.kn; if (a === 'wr') return J.wr; if (a === 'toe') return J.toe;
     return a;
@@ -88,8 +88,9 @@ var FIG = (function () {
       case 'plat': { var pa = R(it.ang || 0), v = [Math.cos(pa), Math.sin(pa)], l = it.len || 24; return ln([p[0] - v[0] * l, p[1] - v[1] * l], [p[0] + v[0] * l, p[1] + v[1] * l], 6, 'pad'); }
       case 'barTo': return ln(p, it.to, 4, 'bar') + circ(lerp(p, it.to, .12), 8, 'plate');
       case 'roller': return circ(p, it.r || 6, 'pad');
-      case 'cable': { var q = it.to; return ln(p, q, 1.6, 'cab') + circ(q, 3.6, 'hub'); }
-      case 'cable2': { var q2 = it.to, a2 = anchor(J, it.at2 || 'hand2'); return ln(p, q2, 1.6, 'cab') + circ(q2, 3.6, 'hub'); }
+      case 'cable': { var q = it.to; return (it.post ? ln([q[0], q[1]], [q[0], FY], 5, 'post') : '') + ln(p, q, 1.6, 'cab') + circ(q, 3.6, 'hub'); }
+      case 'band': { var qb = it.to === 'feet' ? [J.toe[0] - 3, J.toe[1] - 1] : it.to; return ln(p, qb, 2.6, 'band'); }
+      case 'cable2': { var q2 = it.to; return ln(p, q2, 1.6, 'cab') + circ(q2, 3.6, 'hub'); }
       case 'padline': {
         var u = J.u, nrm = [-u[1], u[0]], a = pt(pt(J.hip, nrm, -(it.off || 15)), u, it.s0 === undefined ? -6 : it.s0), b = pt(pt(J.hip, nrm, -(it.off || 15)), u, it.s1 === undefined ? 62 : it.s1);
         var out = ln(a, b, it.w || 9, 'pad');
@@ -237,13 +238,15 @@ var FIG = (function () {
   function eqDrawF(J, it) {
     var wl = J.wl, wr = J.wrr;
     switch (it.k) {
-      case 'dbF': return [wl, wr].map(function (p) { return rect(p[0] - 3, p[1] - 8, 6, 16, 2, 'bar') + rect(p[0] - 7, p[1] - 6, 14, 5, 2, 'plate') + rect(p[0] - 7, p[1] + 2, 14, 5, 2, 'plate'); }).join('');
+      case 'dbF': return (it.side === 'l' ? [wl] : it.side === 'r' ? [wr] : [wl, wr]).map(function (p) { return rect(p[0] - 3, p[1] - 8, 6, 16, 2, 'bar') + rect(p[0] - 7, p[1] - 6, 14, 5, 2, 'plate') + rect(p[0] - 7, p[1] + 2, 14, 5, 2, 'plate'); }).join('');
       case 'barF': return ln([wl[0] - 9, wl[1]], [wr[0] + 9, wr[1]], 3, 'bar') + [wl[0] - 10, wr[0] + 10].map(function (x, i) { var y = i ? wr[1] : wl[1]; return rect(x - 2.5, y - 11, 5, 22, 2, 'plate'); }).join('');
+      case 'bandH': return ln(wl, wr, 2.6, 'band');
       case 'grip': return ln([wl[0] - 4, wl[1]], [wr[0] + 4, wr[1]], 3.5, 'bar');
-      case 'cableF': return ln(wl, it.l, 1.6, 'cab') + ln(wr, it.r, 1.6, 'cab') + circ(it.l, 3.6, 'hub') + circ(it.r, 3.6, 'hub');
+      case 'cableF': return (it.side !== 'r' ? ln(wl, it.l, 1.6, 'cab') + circ(it.l, 3.6, 'hub') : '') + (it.side !== 'l' ? ln(wr, it.r, 1.6, 'cab') + circ(it.r, 3.6, 'hub') : '');
+      case 'bandF': return (it.side !== 'r' ? ln(wl, it.l === 'feet' ? [J.al[0] - 2, J.al[1] + 2] : it.l, 2.6, 'band') : '') + (it.side !== 'l' ? ln(wr, it.r === 'feet' ? [J.ar[0] + 2, J.ar[1] + 2] : it.r, 2.6, 'band') : '');
       case 'rect': return rect(it.x, it.y, it.w, it.h, it.r === undefined ? 3 : it.r, it.c || 'pad');
       case 'line': return ln(it.a, it.b, it.w || 3, it.c || 'bar');
-      case 'plate': return circ(wl, it.r || 9, 'plate') + circ(wr, it.r || 9, 'plate');
+      case 'plate': return (it.side !== 'r' ? circ(wl, it.r || 9, 'plate') : '') + (it.side !== 'l' ? circ(wr, it.r || 9, 'plate') : '');
       case 'plateMid': { var pm = lerp(wl, wr, .5); return circ(pm, it.r || 8, 'plate') + circ(pm, (it.r || 8) * .42, 'hub'); }
       case 'dbL': return rect(wl[0] - 3, wl[1] - 8, 6, 16, 2, 'bar') + rect(wl[0] - 7, wl[1] - 6, 14, 5, 2, 'plate') + rect(wl[0] - 7, wl[1] + 2, 14, 5, 2, 'plate');
     }
@@ -270,12 +273,17 @@ var FIG = (function () {
     for (i = 0; i < eq.length; i++) if (eq[i].back) s += eqDrawF(J, eq[i]);
     function legF(h, k, a, side) { return thigh(h, k, 'm') + shin(k, a, 'm') + foot(a, [a[0] + side * 6, a[1] + 1], 'm'); }
     var bent = J.s[1] > J.hip[1] - LEN.to * .5;
-    if (!bent) s += solid(faceF(J).replace(/<path class="hair"[\s\S]*$/, '')) + faceF(J).replace(/^[\s\S]*?(<path class="hair")/, '$1');
+    if (T.prone) {
+      var hh = J.head;
+      s += solid(musc([hh[0], J.s[1] + 2], [hh[0], hh[1] + 6], 5.6, 4.8, 5.6, 5.6, 'm', .5) + '<ellipse class="m" cx="' + f1(hh[0]) + '" cy="' + f1(hh[1] + .5) + '" rx="9" ry="10.8"/>') +
+        '<ellipse class="hair" cx="' + f1(hh[0]) + '" cy="' + f1(hh[1] - 2.5) + '" rx="9" ry="8.4"/>';
+      bent = true;
+    } else if (!bent) s += solid(faceF(J).replace(/<path class="hair"[\s\S]*$/, '')) + faceF(J).replace(/^[\s\S]*?(<path class="hair")/, '$1');
     s += solid(legF(J.hl, J.kl, J.al, -1) + legF(J.hr, J.kr, J.ar, 1) + torsoFront(J.hip, J.s, bent));
     s += shortsF(J);
     function armF(sh, e, w) { var hd = pt(w, [(w[0] - e[0]) / (Math.hypot(w[0] - e[0], w[1] - e[1]) || 1), (w[1] - e[1]) / (Math.hypot(w[0] - e[0], w[1] - e[1]) || 1)], 4.2); return solid(musc([sh[0], sh[1] - 2], lerp(sh, e, .5), 8.6, 6.4, 9.6, 9.6, 'm', .3) + uarm(sh, e, 'm') + farm(e, w, 'm') + hand(w, hd, 'm')); }
     s += armF(J.sl, J.el, J.wl) + armF(J.sr, J.er, J.wrr);
-    if (bent) s += solid(faceF(J).replace(/<path class="hair"[\s\S]*$/, '')) + faceF(J).replace(/^[\s\S]*?(<path class="hair")/, '$1');   // bent over: the head sits in front of the back
+    if (bent && !T.prone && J.s[1] > J.hip[1] - LEN.to * .5) s += solid(faceF(J).replace(/<path class="hair"[\s\S]*$/, '')) + faceF(J).replace(/^[\s\S]*?(<path class="hair")/, '$1');   // bent over: the head sits in front of the back
     var hl = T.hl || [];
     for (i = 0; i < hl.length; i++) s += hlDrawF(J, hl[i]);
     for (i = 0; i < eq.length; i++) if (!eq[i].back) s += eqDrawF(J, eq[i]);
@@ -305,7 +313,13 @@ var FIG = (function () {
       if (it.k === 'db' && (it.at === 'hand' || it.at === 'wr')) out.push({ k: 'dbF' });
       else if (it.k === 'plate' && (it.at === 'hand' || it.at === 'wr')) out.push({ k: 'barF' });
       else if (it.k === 'kb' || it.k === 'ball') out.push({ k: it.k === 'ball' ? 'plateMid' : 'plate', r: 7 });
+      else if ((it.k === 'cable' || it.k === 'band') && it.at === 'hand') {
+        var FA = projF(solve(T.A), T.A), FB = projF(solve(T.B), T.B);
+        if (it.k === 'band' && it.to === 'feet') out.push({ k: 'bandF', l: 'feet', r: 'feet' });
+        else out.push({ k: it.k === 'band' ? 'bandF' : 'cableF', l: pulleyAt(FA.wl, FB.wl, [-1, .6]), r: pulleyAt(FA.wrr, FB.wrr, [1, .6]) });
+      }
     });
+    if (T.uni === 'one') out.forEach(function (q) { if (/F$|^plate$/.test(q.k)) q.side = 'r'; });
     if (A.hip && !A.stand) {   // seat (and backrest) seen from the front
       var hy = A.hip[1];
       if ((T.eq || []).some(function (it) { return it.k === 'padline' && (it.off || 15) > 0; })) out.unshift({ k: 'rect', x: 129, y: hy - 58, w: 42, h: 62, r: 5, c: 'pad', back: 1 });
@@ -336,6 +350,7 @@ var FIG = (function () {
     if (barSho) {   // bar across the shoulders: hands wide at shoulder height, elbows down
       F.wl = [F.sl[0] - 18, F.sl[1] - 3]; F.wrr = [F.sr[0] + 18, F.sr[1] - 3]; F.el = [F.sl[0] - 14, F.sl[1] + 14]; F.er = [F.sr[0] + 14, F.sr[1] + 14];
     }
+    if (T.uni) { var FA0 = projF(solve(T.A), mix(T.A, T.A, 0)), dy0 = F.sl[1] - FA0.sl[1]; F.el = [FA0.el[0], FA0.el[1] + dy0]; F.wl = [FA0.wl[0], FA0.wl[1] + dy0]; }
     var eq = T.feq || (T.feq = frontEq(T)), i;
     s = drawFront(F, P, { eq: eq.filter(function (q) { return q.back; }), hl: [] });
     if (barSho) s += ln([F.s[0] - 52, F.s[1] - 4], [F.s[0] + 52, F.s[1] - 4], 3, 'bar') + rect(F.s[0] - 56, F.s[1] - 15, 6, 22, 2, 'plate') + rect(F.s[0] + 50, F.s[1] - 15, 6, 22, 2, 'plate');
@@ -362,7 +377,12 @@ var FIG = (function () {
   function frame(T, k, view) {
     if (view === 'front') return frameFront(T, k);
     var P = keyPose(T, k), J, body;
-    if (T.fv) { J = solveF(P); body = drawFront(J, P, T); } else { J = solve(P); body = drawSide(J, P, T); }
+    if (T.uni && T.fv) { P = X(P, {}); ['uar', 'far', 'hdr', 'ebr'].forEach(function (q) { P[q] = T.A[q]; }); }
+    if (T.fv) { J = solveF(P); body = drawFront(J, P, T); } else {
+      J = solve(P);
+      if (T.uni) { var JA = T._JA || (T._JA = solve(T.A)), ox = J.sho[0] - JA.sho[0], oy = J.sho[1] - JA.sho[1]; J.el2 = [JA.el[0] - 4 + ox, JA.el[1] + 1 + oy]; J.wr2 = [JA.wr[0] - 4 + ox, JA.wr[1] + 1 + oy]; }
+      body = drawSide(J, P, T);
+    }
     if (T.top) {   // lying on a bench, seen from above: the front-view body turned on its side
       body = '<g transform="rotate(-90 150 100)">' + body + '</g>';
       return '<rect class="floor" x="0" y="0" width="300" height="200" opacity=".5"/>' + '<g transform="translate(150 100) scale(' + f1(T.sc || 1) + ') translate(-150 -100)">' + body + '</g>';
@@ -855,6 +875,17 @@ var FIG = (function () {
     return { A: { stand: 1, ua: 1, fa: 1 }, B: { stand: 1, ua: 1, fa: 1, t: 1 }, eq: [{ k: 'plate', at: 'hand', r: 10 }], hl: [['fa', .5, 5, 9, 5]], noFront: 1 };
   };
 
+  B.latSide = function () {   // lying on one side on a bench (seen from the front, turned on its side): top arm lifts from the hip to straight up
+    return { fv: 1, top: 1, sc: 1, noUni: 1, A: { ual: -8, fal: -6, uar: 8, far: 6 }, B: { ual: -8, fal: -6, uar: 92, far: 94 }, eq: [{ k: 'rect', x: 132, y: 30, w: 36, h: 92, r: 5, c: 'pad', back: 1 }, { k: 'dbF', side: 'r' }], hl: ['delt'] };
+  };
+  B.revflyTop = function () {   // face down on a bench, seen from above: arms hang, then lift out to the sides
+    return { fv: 1, top: 1, prone: 1, sc: 1.05, A: { ual: -14, fal: 20, uar: 14, far: -20, af: .34 }, B: { ual: -88, fal: -92, uar: 88, far: 92, af: 1 }, eq: [{ k: 'rect', x: 132, y: 18, w: 36, h: 100, r: 5, c: 'pad', back: 1 }, { k: 'dbF' }], hl: ['delt', 'trap'] };
+  };
+  B.standCrunch = function () {   // standing rope crunch: back to the high pulley, rope by the ears, curl the chest down
+    var b = { stand: 1, ax: 150, th: 12, sh: -6, hh: [4, 2], eb: 1 };
+    return { A: X(b, { t: 6, hd: 0 }), B: X(b, { t: 54, hd: 30 }), eq: [{ k: 'rect', x: 40, y: 10, w: 22, h: 168, r: 3, c: 'pad', back: 1 }, { k: 'cable', at: 'hand', to: [62, 30] }], hl: [['to', .35, 10, 10, 7]], noFront: 1 };
+  };
+
   /* ---------- picking a template for an exercise ---------- */
   function hold(n) { if (/dumbbell|db /.test(n)) return 'db'; if (/barbell|\bez\b|bar\b|\bolympic\b|smith|axle|trap bar/.test(n)) return 'bar'; if (/cable|rope|pulley|band/.test(n)) return 'cable'; if (/kettlebell/.test(n)) return 'kb'; return 'none'; }
   function pick0(ex) {
@@ -962,7 +993,7 @@ var FIG = (function () {
     return null;
   }
   /* exact matches, checked first: exercises the name rules above would draw wrong. null = no cartoon (photos show instead) */
-  var OVR = {"incline push-up": ["pushupV", {"v": "incline"}], "incline push-up close-grip": ["pushupV", {"v": "incline"}], "incline push-up medium": ["pushupV", {"v": "incline"}], "incline push-up reverse grip": ["pushupV", {"v": "incline"}], "incline push-up wide": ["pushupV", {"v": "incline"}], "decline push-up": ["pushupV", {"v": "decline"}], "push-ups with feet elevated": ["pushupV", {"v": "decline"}], "knee push-up": ["pushupV", {"v": "knee"}], "pike push-up": ["pushupV", {"v": "pike"}], "alternating renegade row": ["pushupV", {"v": "renegade"}], "wall sit": ["wallsit", {}], "burpee": ["burpee", {}], "dumbbell devil press": null, "kneeling jump squat": null, "bulgarian split squat": ["bulgarian", {"h": "none"}], "dumbbell bulgarian split squat": ["bulgarian", {"h": "db"}], "smith single-leg split squat": ["bulgarian", {"h": "none"}], "cossack squat": ["sideLunge", {}], "dumbbell lateral lunge": ["sideLunge", {"h": "db"}], "lying leg curls": ["legcurlLying", {}], "standing leg curl": ["legcurlStand", {}], "kettlebell one-legged deadlift": ["rdl1", {"h": "kb"}], "single-leg dumbbell romanian deadlift": ["rdl1", {"h": "db"}], "donkey calf raises": ["donkeyCalf", {}], "tibialis raise": ["toeRaise", {}], "smith machine reverse calf raises": ["toeRaise", {}], "calf press on the leg press machine": ["legpressCalf", {}], "calf press": ["legpressCalf", {}], "one leg barbell squat": null, "belt squat": ["squat", {"v": "db"}], "barbell step ups": ["stepup", {"h": "none", "knee": false}], "band hip adductions": ["cableHipF", {"add": 1}], "cable hip adduction": ["cableHipF", {"add": 1}], "dumbbell farmer's carry": ["walk", {"h": "db"}], "walking": ["walk", {}], "walking, treadmill": ["walk", {}], "trail running/walking": ["walk", {}], "plate pinch": ["platePinch", {}], "reverse crunch": ["revcrunch", {}], "decline reverse crunch": ["revcrunch", {}], "cable reverse crunch": ["revcrunch", {}], "suspended reverse crunch": ["revcrunch", {}], "leg pull-in": ["revcrunch", {}], "bottoms up": ["revcrunch", {}], "hollow body hold": ["hollow", {}], "flutter kicks": ["flutter", {}], "dragon flag": ["dragonflag", {}], "bird dog": ["birddog", {}], "stir the pot": null, "hanging knee raise": ["hangleg", {"knee": 1}], "knee/hip raise on parallel bars": ["hangleg", {"knee": 1}], "l-sit": ["hangleg", {"hold": 1}], "windshield wipers": null, "plank": ["plank", {}], "ab roller": ["rollout", {}], "barbell ab rollout - on knees": ["rollout", {}], "barbell ab rollout": ["rollout", {"standing": 1}], "suspended fallout": ["rollout", {"standing": 1}], "natural glute ham raise": ["nordic", {}], "floor glute-ham raise": ["nordic", {}], "hyperextensions with no hyperextension bench": null, "bosu ball cable crunch with side bends": null, "cable russian twists": null, "dumbbell flyes": ["flyTop", {"h": "db"}], "one-arm flat bench dumbbell flye": ["flyTop", {"h": "db"}], "decline dumbbell flyes": ["flyTop", {"h": "db"}], "incline dumbbell flyes": ["flyTop", {"h": "db"}], "flat bench cable flyes": ["flyTop", {"h": "cable"}], "incline cable flye": ["flyTop", {"h": "cable"}], "standing cable chest press": ["standPress", {}], "dips - chest version": ["dip", {"chest": 1}], "straight-arm pulldown": ["straightPulldown", {}], "rope straight-arm pulldown": ["straightPulldown", {}], "kneeling high pulley row": ["pulldown", {}], "kneeling single-arm high pulley row": ["pulldown", {}], "cable rope rear-delt rows": ["facepull", {}], "dumbbell incline row": ["chestRow", {"h": "db"}], "incline bench pull": ["chestRow", {"h": "db"}], "lying t-bar row": ["chestRow", {"h": "bar"}], "lying cambered barbell row": ["chestRow", {"h": "bar"}], "straight bar bench mid rows": ["chestRow", {"h": "bar"}], "dumbbell one-arm upright row": ["uprow", {"h": "db"}], "smith machine one-arm upright row": ["uprow", {"h": "bar"}], "leverage high row": ["rowSeated", {}], "sled row": null, "barbell rear delt row": ["bentRow", {"h": "bar"}], "middle back shrug": null, "reverse flyes": ["revflyBent", {"h": "db"}], "reverse flyes with external rotation": ["revflyBent", {"h": "db"}], "seated bent-over rear delt raise": ["revflyBent", {"h": "db"}], "bent over dumbbell rear delt raise with head on bench": ["revflyBent", {"h": "db"}], "cable rear delt fly": ["revflyBent", {"h": "cable"}], "bent over low-pulley side lateral": ["revflyBent", {"h": "cable"}], "back flyes - with bands": ["revflyBent", {"h": "cable"}], "dumbbell rear delt row": ["revflyBent", {"h": "db"}], "dumbbell lying rear lateral raise": ["revflyBent", {"h": "db"}], "dumbbell lying one-arm rear lateral raise": ["revflyBent", {"h": "db"}], "lying rear delt raise": ["revflyBent", {"h": "db"}], "sled reverse flye": null, "dumbbell y-raise": ["yraise", {"h": "db"}], "cable y-raise": ["yraise", {"h": "cable"}], "standing dumbbell straight-arm front delt raise above head": ["yraise", {"h": "db"}], "side laterals to front raise": ["lat", {"h": "db"}], "front raise and pullover": ["pullover", {"h": "bar"}], "landmine press": ["landmine", {}], "standing alternating dumbbell press": ["ohp", {"h": "db", "seated": false}], "standing dumbbell press": ["ohp", {"h": "db", "seated": false}], "standing palm-in one-arm dumbbell press": ["ohp", {"h": "db", "seated": false}], "standing palms-in dumbbell press": ["ohp", {"h": "db", "seated": false}], "dumbbell push press": ["ohp", {"h": "db", "seated": false}], "kettlebell seated press": ["ohp", {"h": "kb", "seated": true}], "bayesian cable curl": ["bayesian", {}], "high cable curls": ["highCurl", {}], "overhead cable curl": ["highCurl", {}], "lying cable curl": null, "lying close-grip bar curl on high pulley": null, "lying supine dumbbell curl": ["curl", {"h": "db", "hammer": false, "v": "incline"}], "lying high bench barbell curl": ["lyingCurl", {"h": "bar"}], "machine bicep curl": ["curl", {"h": "bar", "hammer": false, "v": "preacher"}], "seated dumbbell curl": ["seatedCurl", {}], "seated dumbbell inner biceps curl": ["seatedCurl", {}], "cable hammer curls - rope attachment": ["curl", {"h": "cable", "hammer": false, "v": ""}], "standing low-pulley one-arm triceps extension": ["cableTri", {}], "triceps overhead extension with rope": ["cableTri", {}], "cable incline pushdown": null, "dumbbell snatch": ["snatch", {"h": "db"}], "kettlebell deadlift": ["deadlift", {"h": "kb"}], "barbell thruster": ["thruster", {"h": "bar"}], "dumbbell thruster": ["thruster", {"h": "db"}], "wrist roller": null, "wrist rotations with straight bar": null};
+  var OVR = {"incline push-up": ["pushupV", {"v": "incline"}], "incline push-up close-grip": ["pushupV", {"v": "incline"}], "incline push-up medium": ["pushupV", {"v": "incline"}], "incline push-up reverse grip": ["pushupV", {"v": "incline"}], "incline push-up wide": ["pushupV", {"v": "incline"}], "decline push-up": ["pushupV", {"v": "decline"}], "push-ups with feet elevated": ["pushupV", {"v": "decline"}], "knee push-up": ["pushupV", {"v": "knee"}], "pike push-up": ["pushupV", {"v": "pike"}], "alternating renegade row": ["pushupV", {"v": "renegade"}], "wall sit": ["wallsit", {}], "burpee": ["burpee", {}], "dumbbell devil press": null, "kneeling jump squat": null, "bulgarian split squat": ["bulgarian", {"h": "none"}], "dumbbell bulgarian split squat": ["bulgarian", {"h": "db"}], "smith single-leg split squat": ["bulgarian", {"h": "none"}], "cossack squat": ["sideLunge", {}], "dumbbell lateral lunge": ["sideLunge", {"h": "db"}], "lying leg curls": ["legcurlLying", {}], "standing leg curl": ["legcurlStand", {}], "kettlebell one-legged deadlift": ["rdl1", {"h": "kb"}], "single-leg dumbbell romanian deadlift": ["rdl1", {"h": "db"}], "donkey calf raises": ["donkeyCalf", {}], "tibialis raise": ["toeRaise", {}], "smith machine reverse calf raises": ["toeRaise", {}], "calf press on the leg press machine": ["legpressCalf", {}], "calf press": ["legpressCalf", {}], "one leg barbell squat": null, "belt squat": ["squat", {"v": "db"}], "barbell step ups": ["stepup", {"h": "none", "knee": false}], "band hip adductions": ["cableHipF", {"add": 1}], "cable hip adduction": ["cableHipF", {"add": 1}], "dumbbell farmer's carry": ["walk", {"h": "db"}], "walking": ["walk", {}], "walking, treadmill": ["walk", {}], "trail running/walking": ["walk", {}], "plate pinch": ["platePinch", {}], "reverse crunch": ["revcrunch", {}], "decline reverse crunch": ["revcrunch", {}], "cable reverse crunch": ["revcrunch", {}], "suspended reverse crunch": ["revcrunch", {}], "leg pull-in": ["revcrunch", {}], "bottoms up": ["revcrunch", {}], "hollow body hold": ["hollow", {}], "flutter kicks": ["flutter", {}], "dragon flag": ["dragonflag", {}], "bird dog": ["birddog", {}], "stir the pot": null, "hanging knee raise": ["hangleg", {"knee": 1}], "knee/hip raise on parallel bars": ["hangleg", {"knee": 1}], "l-sit": ["hangleg", {"hold": 1}], "windshield wipers": null, "plank": ["plank", {}], "ab roller": ["rollout", {}], "barbell ab rollout - on knees": ["rollout", {}], "barbell ab rollout": ["rollout", {"standing": 1}], "suspended fallout": ["rollout", {"standing": 1}], "natural glute ham raise": ["nordic", {}], "floor glute-ham raise": ["nordic", {}], "hyperextensions with no hyperextension bench": null, "bosu ball cable crunch with side bends": null, "cable russian twists": null, "dumbbell flyes": ["flyTop", {"h": "db"}], "one-arm flat bench dumbbell flye": ["flyTop", {"h": "db"}], "decline dumbbell flyes": ["flyTop", {"h": "db"}], "incline dumbbell flyes": ["flyTop", {"h": "db"}], "flat bench cable flyes": ["flyTop", {"h": "cable"}], "incline cable flye": ["flyTop", {"h": "cable"}], "standing cable chest press": ["standPress", {}], "dips - chest version": ["dip", {"chest": 1}], "straight-arm pulldown": ["straightPulldown", {}], "rope straight-arm pulldown": ["straightPulldown", {}], "kneeling high pulley row": ["pulldown", {}], "kneeling single-arm high pulley row": ["pulldown", {}], "cable rope rear-delt rows": ["facepull", {}], "dumbbell incline row": ["chestRow", {"h": "db"}], "incline bench pull": ["chestRow", {"h": "db"}], "lying t-bar row": ["chestRow", {"h": "bar"}], "lying cambered barbell row": ["chestRow", {"h": "bar"}], "straight bar bench mid rows": ["chestRow", {"h": "bar"}], "dumbbell one-arm upright row": ["uprow", {"h": "db"}], "smith machine one-arm upright row": ["uprow", {"h": "bar"}], "leverage high row": ["rowSeated", {}], "sled row": null, "barbell rear delt row": ["bentRow", {"h": "bar"}], "middle back shrug": null, "reverse flyes": ["revflyBent", {"h": "db"}], "reverse flyes with external rotation": ["revflyBent", {"h": "db"}], "seated bent-over rear delt raise": ["revflyBent", {"h": "db"}], "bent over dumbbell rear delt raise with head on bench": ["revflyBent", {"h": "db"}], "cable rear delt fly": ["revflyBent", {"h": "cable"}], "bent over low-pulley side lateral": ["revflyBent", {"h": "cable"}], "back flyes - with bands": ["revflyBent", {"h": "cable"}], "dumbbell rear delt row": ["revflyBent", {"h": "db"}], "dumbbell lying rear lateral raise": ["revflyBent", {"h": "db"}], "dumbbell lying one-arm rear lateral raise": ["revflyBent", {"h": "db"}], "lying rear delt raise": ["revflyBent", {"h": "db"}], "sled reverse flye": null, "dumbbell y-raise": ["yraise", {"h": "db"}], "cable y-raise": ["yraise", {"h": "cable"}], "standing dumbbell straight-arm front delt raise above head": ["yraise", {"h": "db"}], "side laterals to front raise": ["lat", {"h": "db"}], "front raise and pullover": ["pullover", {"h": "bar"}], "landmine press": ["landmine", {}], "standing alternating dumbbell press": ["ohp", {"h": "db", "seated": false}], "standing dumbbell press": ["ohp", {"h": "db", "seated": false}], "standing palm-in one-arm dumbbell press": ["ohp", {"h": "db", "seated": false}], "standing palms-in dumbbell press": ["ohp", {"h": "db", "seated": false}], "dumbbell push press": ["ohp", {"h": "db", "seated": false}], "kettlebell seated press": ["ohp", {"h": "kb", "seated": true}], "bayesian cable curl": ["bayesian", {}], "high cable curls": ["highCurl", {}], "overhead cable curl": ["highCurl", {}], "lying cable curl": null, "lying close-grip bar curl on high pulley": null, "lying supine dumbbell curl": ["curl", {"h": "db", "hammer": false, "v": "incline"}], "lying high bench barbell curl": ["lyingCurl", {"h": "bar"}], "machine bicep curl": ["curl", {"h": "bar", "hammer": false, "v": "preacher"}], "seated dumbbell curl": ["seatedCurl", {}], "seated dumbbell inner biceps curl": ["seatedCurl", {}], "cable hammer curls - rope attachment": ["curl", {"h": "cable", "hammer": false, "v": ""}], "standing low-pulley one-arm triceps extension": ["cableTri", {}], "triceps overhead extension with rope": ["cableTri", {}], "cable incline pushdown": null, "dumbbell snatch": ["snatch", {"h": "db"}], "kettlebell deadlift": ["deadlift", {"h": "kb"}], "barbell thruster": ["thruster", {"h": "bar"}], "lying one-arm lateral raise": ["latSide", {}], "dumbbell lying rear lateral raise": ["revflyTop", {}], "dumbbell lying one-arm rear lateral raise": ["revflyTop", {}], "lying rear delt raise": ["revflyTop", {}], "standing rope crunch": ["standCrunch", {}], "standing concentration curl": ["curl", {"h": "db", "hammer": false, "v": ""}], "weighted jump squat": ["squat", {"v": "back"}], "dumbbell thruster": ["thruster", {"h": "db"}], "wrist roller": null, "wrist rotations with straight bar": null};
   function pick(ex) {
     var n0 = ex.n.toLowerCase();
     if (OVR.hasOwnProperty(n0)) return OVR[n0];
@@ -982,9 +1013,117 @@ var FIG = (function () {
     if (!cache[id]) { var t = B[p[0]](p[1]); t.id = 'fg' + (uid++); cache[id] = t; }
     return cache[id];
   }
+  // where a cable's pulley sits: straight back along the line of pull from the start position, until it meets the floor or the frame
+  function pulleyAt(a, b, dflt) {
+    var d = [a[0] - b[0], a[1] - b[1]], l = Math.hypot(d[0], d[1]);
+    if (l < 6) d = dflt || [0, 1]; else d = [d[0] / l, d[1] / l];
+    var best = 400;
+    if (d[1] > .05) best = Math.min(best, (FY - 4 - a[1]) / d[1]);
+    if (d[1] < -.05) best = Math.min(best, (14 - a[1]) / d[1]);
+    if (d[0] > .05) best = Math.min(best, (290 - a[0]) / d[0]);
+    if (d[0] < -.05) best = Math.min(best, (10 - a[0]) / d[0]);
+    best = Math.max(24, Math.min(best, 400));
+    return [Math.round(a[0] + d[0] * best), Math.round(a[1] + d[1] * best)];
+  }
+  function gearOf(ex) {
+    var n = ex.n.toLowerCase(), q = ex.q || '';
+    if (/\bcable|pulley|\brope\b|cross[- ]?over|lat pull/.test(n) || (q === 'cable' && !/machine|lever/.test(n))) return 'cable';
+    var free = /barbell|dumbbell|kettlebell|e-?z[- ]?(curl )?bar|curl bar|deadlift|squat|bench press|smith/.test(n);
+    if (q === 'bands' && !free) return 'band';   // bands added to a bar ('with bands', 'reverse band') don't replace it
+    if (/kettlebell/.test(n) || (q === 'kettlebells' && !/dumbbell|barbell/.test(n))) return 'kb';
+    if (/dumbbell|\bdb\b/.test(n) || (q === 'dumbbell' && !/barbell|kettlebell/.test(n))) return 'db';
+    if (/barbell|e-?z[- ]?(curl )?bar|curl bar|smith|trap bar|\bbar\b/.test(n) || q === 'barbell' || q === 'e-z curl bar') return 'bar';
+    return null;
+  }
+  function uniOf(ex) {
+    var n = ex.n.toLowerCase(), ins = (ex.i || []).join(' ').toLowerCase();
+    if (/alternat|see-saw|seesaw/.test(n)) return 'alt';
+    if (/(one|single|1)[- ]arm|one arm|unilateral/.test(n)) return 'one';
+    if (/\b(alternating arms|alternate arms|alternating each arm)\b/.test(ins)) return 'alt';
+    if (/\b(with|in) one hand\b/.test(ins) && !/both hands/.test(ins)) return 'one';
+    return null;
+  }
+  function adapt(T, ex) {
+    var gear = gearOf(ex), uni = T.noUni ? null : uniOf(ex), eq = T.eq || [], held = -1, i;
+    var HELD = { plate: 'bar', db: 'db', kb: 'kb', cable: 'cable', band: 'band', dbF: 'db', barF: 'bar', cableF: 'cable', bandF: 'band', dbL: 'db' };
+    for (i = 0; i < eq.length; i++) { var it = eq[i]; if (HELD[it.k] && (T.fv ? /F$|^dbL$/.test(it.k) : (it.at === 'hand' || it.at === 'wr'))) { held = i; break; } }
+    var cur = held >= 0 ? HELD[eq[held].k] : null;
+    // arms that don't move (squats, lunges with weights at the sides) aren't 'one-arm' moves
+    if (uni) { var JA = T.fv ? solveF(T.A) : solve(T.A), JB = T.fv ? solveF(T.B) : solve(T.B), wa = T.fv ? JA.wl : JA.wr, wb = T.fv ? JB.wl : JB.wr, sa = T.fv ? JA.sl : JA.sho, sb = T.fv ? JB.sl : JB.sho; if (Math.hypot(wa[0] - sa[0] - wb[0] + sb[0], wa[1] - sa[1] - wb[1] + sb[1]) < 8) uni = null; }
+    var swap = gear && cur && gear !== cur && !(gear === 'bar' && cur === 'cable' && /machine/.test(ex.n.toLowerCase()));
+    var JA0 = T.fv ? solveF(T.A) : solve(T.A), JB0 = T.fv ? solveF(T.B) : solve(T.B), hw0 = T.fv ? [JA0.wl, JB0.wl] : [JA0.wr, JB0.wr];
+    var sh0 = T.fv ? [JA0.sl, JB0.sl] : [JA0.sho, JB0.sho], handsMove = Math.hypot(hw0[0][0] - sh0[0][0] - hw0[1][0] + sh0[1][0], hw0[0][1] - sh0[0][1] - hw0[1][1] + sh0[1][1]) >= 8, upright = T.fv || (T.A.stand && Math.abs(T.A.t || 0) < 40);
+    var other = eq.filter(function (q) { return /^(plate|db|kb|ball|plateMid|barTo|band)$/.test(q.k) && q.at !== 'hand'; });
+    // nothing in the hands but the exercise uses hand-held gear: give it to them
+    var add = !cur && !other.length && gear && !/pull-?up|chin-?up|\bdip/.test(ex.n.toLowerCase()) && (gear === 'cable' ? (handsMove || upright) : gear === 'band' ? ex.q === 'bands' : (gear === 'db' || gear === 'kb') && upright);
+    // a weight resting on the body, but the wrong kind
+    var fixRest = gear && eq.some(function (q) { return (q.k === 'plate' && q.at === 'hip' && gear === 'db') || (q.k === 'plate' && q.at === 'sho' && gear === 'kb') || (q.k === 'plate' && q.at === 'trap' && gear === 'band' && !/squat/.test(ex.n.toLowerCase())); });
+    // barbell exercise with no bar drawn and still hands (calf raises, step-ups, jump squats): bar across the back
+    var barBack = gear === 'bar' && !cur && !other.length && !handsMove && !T.fv && Math.abs(T.A.t || 0) < 40 && (T.A.stand || (T.A.hip && T.A.hip[1] < 130)) && !eq.some(function (q) { return q.k === 'plate'; });
+    var nm = ex.n.toLowerCase(), wantSeat = /\bseated\b|\bsitting\b/.test(nm);
+    var seatFv = wantSeat && T.fv && !T.top && !T.A.fl && !T.A.hy;
+    var seatSide = wantSeat && !T.fv && T.A.stand && !T.A.hand && !T.B.hand && Math.abs(T.A.t || 0) < 75;
+    var highF = T.fv && cur === 'cable' && /high[- ]pulley|high cable|overhead cable/.test(nm);
+    if (!swap && !uni && !add && !fixRest && !barBack && !seatFv && !seatSide && !highF && !/pull[- ]?apart/.test(nm)) return T;
+    var C = {}; for (var kk in T) if (T.hasOwnProperty(kk) && kk !== 'feq' && kk !== '_JA' && kk !== 'wide') C[kk] = T[kk];
+    C.eq = eq.slice(); C.id = T.id + '_' + (swap || add ? gear : '') + (uni || '') + (fixRest ? 'r' : '') + (barBack ? 'b' : '') + (seatFv || seatSide ? 's' : ''); C.uni = uni;
+    if (seatFv) {   // sitting on a bench, seen from the front
+      var sf = { hy: 120, fl: .5, thl: -8, thr: 8, shl: -2, shr: 2 }; C.A = X(T.A, sf); C.B = X(T.B, sf);
+      C.eq = [{ k: 'rect', x: 116, y: 124, w: 68, h: 9, r: 3, c: 'pad', back: 1 }, { k: 'rect', x: 146, y: 133, w: 8, h: 45, r: 1, c: 'bar', back: 1 }].concat(C.eq);
+    }
+    if (seatSide) {   // the same arm and torso work, sitting on a bench
+      var keep = ['t', 'hd', 'ua', 'fa', 'hs', 'hh', 'eb'];
+      function sit(P) { var o = seated(124, 146, {}); keep.forEach(function (q) { if (P[q] !== undefined) o[q] = P[q]; }); return o; }
+      C.A = sit(T.A); C.B = sit(T.B); C.eq = seatEq(124, 146, false).concat(C.eq.filter(function (q) { return q.k !== 'rect' || !q.back; }));
+    }
+    if (fixRest) C.eq = C.eq.map(function (q) {
+      if (q.k === 'plate' && q.at === 'hip' && gear === 'db') return { k: 'db', at: 'hip', dy: -8 };
+      if (q.k === 'plate' && q.at === 'sho' && gear === 'kb') return { k: 'kb', at: 'sho', dx: 6, dy: -2 };
+      if (q.k === 'plate' && q.at === 'trap' && gear === 'band') return { k: 'band', at: 'trap', to: 'feet' };
+      return q;
+    });
+    if (barBack) {
+      C.A = X(T.A, { hs: [-13, -1], eb: -1, ua: undefined, fa: undefined }); C.B = X(T.B, { hs: [-13, -1], eb: -1, ua: undefined, fa: undefined });
+      C.eq.push({ k: 'plate', at: 'trap', r: 9 }); C.sc = Math.min(T.sc || 1, .9);
+    }
+    if (add) { held = C.eq.length; C.eq.push(T.fv ? { k: 'dbF' } : { k: 'db', at: 'hand', rot: 90 }); }
+    if (swap || add) {
+      var g = gear, it0 = C.eq[held], rep;
+      if (T.fv) {
+        var FA = solveF(T.A), FB = solveF(T.B);
+        if (g === 'db') rep = { k: 'dbF' }; else if (g === 'bar') rep = { k: 'barF' }; else if (g === 'kb') rep = { k: 'plate', r: 7 };
+        else rep = { k: g === 'band' ? 'bandF' : 'cableF', l: pulleyAt(FA.wl, FB.wl, [-1, .6]), r: pulleyAt(FA.wrr, FB.wrr, [1, .6]) };
+        if (g === 'band' && rep.l[1] >= FY - 8 && rep.r[1] >= FY - 8) { rep.l = 'feet'; rep.r = 'feet'; }
+        if (g === 'cable' && /high[- ]pulley|high cable|overhead cable|high[- ]to[- ]low/.test(ex.n.toLowerCase())) { rep.l = [Math.round(FA.wl[0] - 8), 16]; rep.r = [Math.round(FA.wrr[0] + 8), 16]; }
+        if (it0.k === 'dbL') rep.side = 'l';
+      } else {
+        var SA = solve(T.A), SB = solve(T.B), ha = anchor(SA, 'hand'), hb = anchor(SB, 'hand');
+        if (g === 'db') rep = { k: 'db', at: 'hand', rot: it0.rot !== undefined ? it0.rot : 90 };
+        else if (g === 'bar') rep = { k: 'plate', at: 'hand', r: 10 };
+        else if (g === 'kb') rep = { k: 'kb', at: 'hand' };
+        else { var pu = pulleyAt(ha, hb, [0, 1]), nmq = ex.n.toLowerCase();
+          if (/high[- ]pulley|high cable|overhead cable|high[- ]to[- ]low/.test(nmq)) pu = [Math.round(ha[0] + (pu[0] - ha[0]) * .25), 16]; else if (/low[- ]pulley|low cable|low[- ]to[- ]high/.test(nmq)) pu = [pu[0], FY - 4]; rep = g === 'band' ? { k: 'band', at: 'hand', to: pu[1] >= FY - 8 ? 'feet' : pu } : { k: 'cable', at: 'hand', to: pu, post: pu[1] < FY - 30 }; }
+      }
+      C.eq[held] = rep;
+    }
+    if (C.eq !== eq) C.feq = undefined;
+    if (highF) C.eq = C.eq.map(function (q) { return q.k === 'cableF' ? X(q, { l: [Math.round(JA0.wl[0] - 8), 16], r: [Math.round(JA0.wrr[0] + 8), 16], side: /one[- ]arm|single[- ]arm/.test(nm) ? 'l' : q.side }) : q; });
+    if (uni === 'one') C.eq = C.eq.filter(function (q) { return q.at !== 'hand2'; });   // the free hand holds nothing
+    if (/pull[- ]?apart/.test(ex.n.toLowerCase())) C.eq = C.eq.filter(function (q) { return !/^band/.test(q.k); }).concat([{ k: 'bandH' }]);
+    if (uni) {
+      if (T.fv && uni === 'one') C.eq = C.eq.map(function (q) { return /F$|^plate$/.test(q.k) ? X(q, { side: 'l' }) : q; });
+      if (!T.fv && uni === 'alt') {   // the resting hand still holds its weight
+        var h0 = C.eq[held >= 0 ? held : 0];
+        if (h0 && h0.k === 'db') C.eq.push({ k: 'db', at: 'hand2', rot: h0.rot });
+        else if (h0 && h0.k === 'kb') C.eq.push({ k: 'kb', at: 'hand2' });
+        else if (h0 && h0.k === 'cable') C.eq.push({ k: 'cable2', at: 'hand2', to: h0.to });
+      }
+    }
+    return C;
+  }
   var memo = {};
   function forEx(ex) {
-    if (!(ex.n in memo)) { var p = null; try { p = OVR.hasOwnProperty(ex.n.toLowerCase()) ? OVR[ex.n.toLowerCase()] : ((ex.fx && pick({ n: ex.fx, c: ex.c })) || pick(ex)); } catch (e) { p = null; } memo[ex.n] = p && B[p[0]] ? tpl(p) : null; }
+    if (!(ex.n in memo)) { var p = null; try { p = OVR.hasOwnProperty(ex.n.toLowerCase()) ? OVR[ex.n.toLowerCase()] : ((ex.fx && pick({ n: ex.fx, c: ex.c })) || pick(ex)); } catch (e) { p = null; } memo[ex.n] = p && B[p[0]] ? adapt(tpl(p), ex) : null; }
     return memo[ex.n];
   }
   function svgDoc(T, k, cls) { return '<svg class="' + (cls || 'fig') + '" viewBox="0 0 300 200" role="img" aria-hidden="true">' + frame(T, k) + '</svg>'; }
