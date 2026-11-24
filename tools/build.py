@@ -20,8 +20,8 @@ head = src('shell_head.html').replace('<meta name="claude:viewport-fit-sides" co
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <script src="config.js"></script>
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icon-192.png">
-<link rel="apple-touch-icon" href="icon-180.png">''')
+<link rel="icon" href="icon-192.png?v=2">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon-v2.png">''')
 assert 'manifest.webmanifest' in head
 html = head + '<style>\n' + css + '\n</style>\n' + src('shell_body.html') + '<script>\n' + logic + '\n' + js + '\n</script>\n'
 D = os.path.join(R, 'docs'); os.makedirs(D, exist_ok=True)
@@ -32,16 +32,12 @@ for f in os.listdir(os.path.join(R, 'assets')):
 cfg = os.path.join(D, 'config.js')
 if not os.path.exists(cfg):
     open(cfg, 'w').write('// Optional: paste your friends server address between the quotes, then commit.\nwindow.IL_SERVER = "";\n')
-def icon(n):
-    k = n * 4; im = Image.new('RGB', (k, k), '#0f1113'); d = ImageDraw.Draw(im); y = '#f2c230'; c = k // 2
-    d.rounded_rectangle([k*.18, c-k*.03, k*.82, c+k*.03], radius=k*.03, fill=y)
-    for x0, x1, h in [(.22, .30, .30), (.31, .37, .22), (.70, .78, .30), (.63, .69, .22)]:
-        d.rounded_rectangle([k*x0, c-k*h, k*x1, c+k*h], radius=k*.03, fill=y)
-    d.rounded_rectangle([k*.08, c-k*.02, k*.18, c+k*.02], radius=k*.02, fill='#b6bdc6'); d.rounded_rectangle([k*.82, c-k*.02, k*.92, c+k*.02], radius=k*.02, fill='#b6bdc6')
-    return im.resize((n, n), Image.LANCZOS)
+def icon(n):   # the master icon (assets/icon.svg, rendered to assets/icon-1024.png): a gold plate with a rising progress line
+    return Image.open(os.path.join(R, 'assets', 'icon-1024.png')).convert('RGB').resize((n, n), Image.LANCZOS)
 for n in (180, 192, 512): icon(n).save(os.path.join(D, 'icon-%d.png' % n))
+icon(180).save(os.path.join(D, 'apple-touch-icon-v2.png'))   # new name so phones don't reuse an old cached icon
 json.dump({"name": "Iron Ledger", "short_name": "Iron Ledger", "start_url": "./", "scope": "./", "display": "standalone", "background_color": "#0f1113", "theme_color": "#0f1113",
-           "icons": [{"src": "icon-192.png", "sizes": "192x192", "type": "image/png"}, {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}]},
+           "icons": [{"src": "icon-192.png?v=2", "sizes": "192x192", "type": "image/png"}, {"src": "icon-512.png?v=2", "sizes": "512x512", "type": "image/png", "purpose": "any"}]},
           open(os.path.join(D, 'manifest.webmanifest'), 'w'), indent=1)
 open(os.path.join(D, 'sw.js'), 'w').write('''// Iron Ledger offline cache: app shell network-first, pictures cached as they are used.
 const V = 'il-%d';
