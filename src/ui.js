@@ -508,7 +508,7 @@ function recoveryHTML(compact) {
   return (typeof readinessNote === 'function' ? readinessNote() : '') + bodyFigure(rec, any) +
     '<div class="rleg"><span><i class="dot r-0"></i>Fresh</span><span><i class="dot r-1"></i>Recovering</span><span><i class="dot r-2"></i>Tired</span></div>' +
     (any ? (compact ? '<div class="rlist">' + rows + '</div>' : '<details class="rdet"><summary>Muscle by muscle</summary><div class="rlist">' + rows + '</div></details>') : '<div class="note" style="text-align:center">Finish a workout and this map shows which muscles need rest.</div>') +
-    (compact ? '' : '<div class="note">Estimated from the sets you logged: bigger muscles and harder sessions take longer to recover. The time shown is roughly when the muscle is ready to train hard again.</div>');
+    (compact ? '' : '<div class="note">Worked out from every set of every exercise you logged: the weight and reps compared with your best on that lift (a hard set counts fully, a light warm-up much less), with tempo reps counting extra. Bigger muscles take longer. The time shown is roughly when the muscle is ready to train hard again.</div>');
 }
 
 /* ===== views ===== */
