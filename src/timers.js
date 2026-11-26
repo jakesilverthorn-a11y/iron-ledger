@@ -176,8 +176,8 @@ function holdDoneTempo() {
   if (reps < 1) { toast('No reps logged.'); return; }
   var st = S.draft.ex[x].sets[s]; st.r = reps; st.sug = false; st.tp = Math.round(tp * 10) / 10;
   var f = tempoF(st.tp);
-  if (markSetDone(x, s)) toast('Logged ' + reps + ' tempo reps' + (f > 1 ? ' · count as ' + Math.round(reps * f * 10) / 10 + ' for your score' : ''));
-  else render();
+  U.prePR = 'Logged ' + reps + ' tempo reps' + (f > 1 ? ' (count as ' + Math.round(reps * f * 10) / 10 + ')' : ''); var ok = markSetDone(x, s); U.prePR = null;
+  if (!ok) render();
 }
 function timerClick(a, d) {
   if (a === 'holdGo') { holdSheet(+d.x); return true; }

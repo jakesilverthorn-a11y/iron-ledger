@@ -628,7 +628,7 @@ function viewWorkout() {
         '<button class="ck' + (s.done ? ' on' : '') + '" data-act="toggleSet" data-x="' + xi + '" data-s="' + si + '" aria-pressed="' + !!s.done + '" aria-label="Mark set ' + (si + 1) + ' done">' + ico('check') + '</button>';
     });
     return '<div class="wkc">' + (ssLab[xi] ? '<div class="sslab">Superset ' + ssLab[xi] + (e.ss ? ' · no rest, go straight to the next' : ' · then rest') + '</div>' : '') + '<div class="xcard' + (ssLab[xi] ? ' ss' : '') + '"><div class="xcard-head"><button class="thumb" data-act="openEx" data-n="' + esc(e.n) + '" aria-label="View ' + esc(e.n) + '">' + demoHTML(ex, false) + '</button><div class="grow"><button class="xname xlink" data-act="openEx" data-n="' + esc(e.n) + '">' + esc(e.n) + ' <span class="info-i" aria-hidden="true">i</span></button><div class="target">' + (dst ? 'Distance and time · pace and speed are worked out' : 'Target ' + e.sets.filter(function (q) { return !q.wu; }).length + ' × ' + e.lo + '–' + e.hi + ' · <button class="linkbtn" data-act="restCycle" data-x="' + xi + '" aria-label="Change rest time">rest ' + fmtDur(e.rest) + '</button>') + (isBarbell(ex) ? ' · <button class="linkbtn accent" data-act="plates" data-x="' + xi + '">Plates</button>' : '') + '</div>' + muscleLine(ex) + injBadge(ex) + (li.s ? '<button class="loadhint" data-act="loadInfo" data-n="' + esc(e.n) + '">⚖️ ' + esc(li.s) + '</button>' : '') + (S.settings.notes[e.n] ? '<div class="xnote">' + esc(S.settings.notes[e.n]) + '</div>' : '') + '</div><button class="icon-btn" data-act="swapEx" data-x="' + xi + '" aria-label="Swap ' + esc(e.n) + ' for a random similar exercise">' + ico('shuffle') + '</button><button class="icon-btn" data-act="altEx" data-x="' + xi + '" aria-label="Choose a different exercise">' + ico('pick') + '</button><button class="icon-btn" data-act="rmEx" data-x="' + xi + '" aria-label="Remove ' + esc(e.n) + '">' + ico('x') + '</button></div>' +
-      '<div class="sets">' + rows + '</div>' + (dst ? '<div class="note dsum" id="dsum' + xi + '">' + (distSummary(e.sets) || DIST_HINT) + '</div>' : '') + (tmd ? '<button class="btn small block" data-act="holdGo" data-x="' + xi + '">▶ Hold timer</button>' : '') + '<div class="row"><button class="btn small ghost grow" data-act="addSet" data-x="' + xi + '" aria-label="Add a set">+ Set</button>' + (!bw && !dst && !e.sets.some(function (q) { return q.wu; }) && !e.sets.some(function (q) { return q.done; }) ? '<button class="btn small ghost grow" data-act="warmup" data-x="' + xi + '">+ Warm-up</button>' : '') + (e.sets.length > 1 ? '<button class="btn small ghost grow" data-act="rmSet" data-x="' + xi + '" aria-label="Remove a set">– Set</button>' : '') + (xi < d.ex.length - 1 && !dst ? '<button class="btn small ghost grow" data-act="ssToggle" data-x="' + xi + '" aria-pressed="' + !!e.ss + '">' + (e.ss ? '✓ Superset' : '⇄ Superset') + '</button>' : '') + (!tmd && !dst && ex.c !== 'stretching' ? '<button class="btn small ghost grow" data-act="tempoGo" data-x="' + xi + '" aria-label="Tempo timer">⏱ Tempo</button>' : '') + '</div></div></div>';
+      '<div class="sets">' + rows + '</div>' + (dst ? '<div class="note dsum" id="dsum' + xi + '">' + (distSummary(e.sets) || DIST_HINT) + '</div>' : '') + (tmd ? '<button class="btn small block" data-act="holdGo" data-x="' + xi + '">▶ Hold timer</button>' : '') + '<div class="row"><button class="btn small ghost grow" data-act="addSet" data-x="' + xi + '" aria-label="Add a set">+ Set</button>' + (!bw && !dst && !e.sets.some(function (q) { return q.wu; }) && !e.sets.some(function (q) { return q.done; }) ? '<button class="btn small ghost grow" data-act="warmup" data-x="' + xi + '">+ Warm-up</button>' : '') + (d.ex.length > 1 ? '<button class="btn small ghost grow" data-act="moveEx" data-x="' + xi + '" aria-label="Move ' + esc(e.n) + ' to another position">⇅ Move</button>' : '') + (e.sets.length > 1 ? '<button class="btn small ghost grow" data-act="rmSet" data-x="' + xi + '" aria-label="Remove a set">– Set</button>' : '') + (xi < d.ex.length - 1 && !dst ? '<button class="btn small ghost grow" data-act="ssToggle" data-x="' + xi + '" aria-pressed="' + !!e.ss + '">' + (e.ss ? '✓ Superset' : '⇄ Superset') + '</button>' : '') + (!tmd && !dst && ex.c !== 'stretching' ? '<button class="btn small ghost grow" data-act="tempoGo" data-x="' + xi + '" aria-label="Tempo timer">⏱ Tempo</button>' : '') + '</div></div></div>';
   }).join('');
   return '<div class="screen" style="gap:14px;padding-top:0"><div class="wk-top"><div><div class="clock" id="clock">0:00</div></div><div class="grow note" id="wk-stats">' + totalDone + (totalDone === 1 ? ' set' : ' sets') + ' · ' + volDisp(vol) + ' ' + unitL + '</div><button class="btn primary small" data-act="finish">Finish</button></div>' + restAlertTip() + tgBox() +
     (cards ? '<div class="wkgrid">' + cards + '</div>' : '<div class="empty"><h3>Empty workout</h3>Add your first exercise.</div>') +
@@ -1044,7 +1044,7 @@ function markSetDone(xi, si) {
     // superset: no rest yet, go straight to the next exercise
     U.rest = null; persist({ draft: true }); render();
     var nc = document.querySelectorAll('.xcard')[xi + 1]; if (nc) nc.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    toast('Superset: now ' + nxt.n); if (!s.wu) livePR(ex, s); return true;
+    if (!s.wu) livePR(ex, s, 'Superset: now ' + nxt.n); else toast('Superset: now ' + nxt.n); return true;
   }
   U.rest = { end: Date.now() + rs * 1000, total: rs, end0: Date.now() }; unlockAudio();
   if (!s.wu) livePR(ex, s);
@@ -1162,6 +1162,16 @@ document.addEventListener('click', function (ev) {
     if (work.length > 1) { var li = e3.sets.lastIndexOf(work[work.length - 1]); e3.sets.splice(li, 1); }
     else { var wi = -1; e3.sets.forEach(function (q, k) { if (q.wu) wi = k; }); if (wi >= 0) e3.sets.splice(wi, 1); else toast('Keep at least one set, or remove the exercise.'); }
     persist({ draft: true }); render(); return;
+  }
+  if (a === 'moveEx') { moveSheet(+d.x); return; }
+  if (a === 'moveTo') {
+    var from = +d.x, to = +d.to, L = S.draft.ex; if (from === to || !L[from]) { closeSheet(); return; }
+    if (typeof tmStop === 'function' && typeof TM !== 'undefined' && TM) tmStop();
+    var mv = L[from]; if (from > 0 && L[from - 1].ss) L[from - 1].ss = false; mv.ss = false;   // a moved exercise leaves its superset
+    L.splice(from, 1); L.splice(to, 0, mv);
+    persist({ draft: true }); closeSheet(); render(); toast(mv.n + ' is now #' + (to + 1));
+    setTimeout(function () { var c = document.querySelectorAll('.xcard')[to]; if (c) c.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 80);
+    return;
   }
   if (a === 'rmEx') { S.draft.ex.splice(+d.x, 1); persist({ draft: true }); render(); return; }
   if (a === 'finish') { finishWorkout(); return; }
@@ -1619,15 +1629,29 @@ function weekCard() {
   return '<div class="card section week"><div class="row"><div class="grow"><div class="xname">This week</div><div class="xmeta">' + msg + ' · ' + sets + ' sets' + (streak > 1 ? ' · ' + streak + '-week streak' : '') + '</div></div><button class="btn small ghost" data-act="weekGoal" aria-label="Weekly goal, tap to change">' + n + ' of ' + goal + ' days</button></div><div class="wdots">' + dots + '</div>' + pt +
     '<div class="note">' + (P ? 'Tap a day to see or change its workout. Each muscle gets 2–3 days of rest. ' : 'Plan the week to get a workout for each training day, spaced so every muscle rests. ') + planBtn + '</div></div>';
 }
-function livePR(dx, s) {
-  var ex = BYNAME[dx.n]; if (!ex || isDist(ex)) return;
+/* after every set: that set's estimated 1-rep max, against your best on the lift (or "new best" when you beat it) */
+function moveSheet(xi) {
+  var L = S.draft.ex, cur = L[xi];
+  openSheet('Move ' + cur.n, '<div class="note">Tap where it should go.</div><div class="card" style="padding:4px 0">' + L.map(function (e, i) {
+    var me = i === xi;
+    return '<button class="lrow" style="width:100%;text-align:left;padding:12px 14px;gap:12px' + (me ? ';background:var(--surface2)' : '') + '" data-act="moveTo" data-x="' + xi + '" data-to="' + i + '"' + (me ? ' aria-current="true"' : '') + '><span class="num" style="min-width:26px;font-size:20px">' + (i + 1) + '</span><span class="grow">' + esc(e.n) + '</span><span class="note">' + (me ? 'here now' : i < xi ? 'move up here' : 'move down here') + '</span></button>';
+  }).join('') + '</div><button class="btn block ghost" data-act="close">Cancel</button>');
+}
+function livePR(dx, s, pre) {
+  pre = pre || U.prePR; U.prePR = null;
+  var ex = BYNAME[dx.n]; if (!ex || isDist(ex) || isTimed(ex)) { if (pre) toast(pre); return; }
   var h = exHistory(realWorkouts(), dx.n), prev = 0; h.forEach(function (x) { if (x.best > prev) prev = x.best; });
-  var now = sessionBest(ex, dx.sets.filter(function (q) { return q.done && !q.wu; }));
+  var setM = setMetric(ex, s), now = sessionBest(ex, dx.sets.filter(function (q) { return q.done && !q.wu; }));
+  var reps = isBW(ex) && !(+s.w > 0), fmt = function (v) { return reps ? Math.round(v) + ' reps' : toDisp(v, unit()) + ' ' + uLabel(); };
+  var lab = reps ? '' : 'Est. 1RM ', msg;
+  if (!(setM > 0)) { if (pre) toast(pre); return; }
   if (prev > 0 && now > prev * 1.0001 && now > (dx.prShown || 0)) {
-    dx.prShown = now;
-    toast('New best on ' + dx.n + ' · ' + (isBW(ex) ? Math.round(now) + ' reps' : 'est. 1RM ' + toDisp(now, unit()) + ' ' + uLabel()));
-    haptic('tap');
-  }
+    dx.prShown = now; haptic('tap');
+    msg = 'New best! ' + lab + fmt(setM) + ' (was ' + fmt(prev) + ')';
+  } else if (prev > 0) msg = lab + fmt(setM) + ' · your best ' + fmt(Math.max(prev, now));
+  else { var nDone = dx.sets.filter(function (q) { return q.done && !q.wu; }).length; msg = lab + fmt(setM) + (now > setM ? ' · best today ' + fmt(now) : nDone > 1 ? ' · best today' : ' · first time logged'); }
+  if (+s.tp > 0 && tempoF(s.tp) > 1) msg += ' · tempo';
+  toast((pre ? pre + ' · ' : '') + msg);
 }
 function isBarbell(ex) { return !!(ex && ex.gear && (ex.gear.indexOf('barbell') >= 0 || ex.gear.indexOf('trapbar') >= 0 || ex.gear.indexOf('ezbar') >= 0) && !isBW(ex)); }
 function barList() { return unit() === 'kg' ? [20, 15, 10] : [45, 35, 25]; }
