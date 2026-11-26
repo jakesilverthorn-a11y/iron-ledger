@@ -107,10 +107,11 @@ function holdDone() {
 
 /* ----- tempo timer: e.g. 3 s down, 0 s pause, 1 s up, 0 s pause, for N reps ----- */
 function tempoOf(name) { var t = (S.settings.tempo || {})[name]; return t && typeof t === 'object' ? t : { d: 3, b: 0, u: 1, t: 0 }; }
+var TP_READY = [3, 5, 10, 15, 20, 30];   // seconds to get into position before the first rep
 function tempoSheet(xi) {
   tmStop();
   var e = S.draft.ex[xi], si = tmSetIndex(e), st = e.sets[si], t = tempoOf(e.n), reps = +st.r || e.lo || 8;
-  U.tempo = { x: xi, s: si, reps: reps, d: t.d, b: t.b, u: t.u, t: t.t };
+  U.tempo = { x: xi, s: si, reps: reps, d: t.d, b: t.b, u: t.u, t: t.t, g: t.g || 3, st: t.st === 'up' ? 'up' : 'down' };
   tempoSetupSheet();
 }
 function tempoSetupSheet() {
@@ -121,20 +122,24 @@ function tempoSetupSheet() {
   };
   var per = T.d + T.b + T.u + T.t;
   openSheet('Tempo · ' + e.n, '<div class="note">Paces each rep with beeps and voice cues, counts them, and logs the set when you finish. Lowering slowly (3 s or more) is a good way to build muscle with lighter weights.</div>' +
-    '<div class="card" style="padding:0 14px">' + step('reps', 'Reps') + step('d', 'Down (lowering)', ' s') + step('b', 'Pause at the bottom', ' s') + step('u', 'Up (lifting)', ' s') + step('t', 'Pause at the top', ' s') + '</div>' +
-    '<div class="note">Tempo reps count for more in your strength score: at ' + per + ' s a rep, each rep counts as ' + (Math.round(tempoF(per) * 100) / 100) + (tempoF(per) >= 1.6 ? ' (the most)' : '') + '. Slower tempo, more credit.</div>' + '<div class="note">About ' + Math.round(per * T.reps + 3) + ' s for this set · ' + T.d + '-' + T.b + '-' + T.u + '-' + T.t + ' tempo · set ' + (T.s + 1) + '</div>' +
+    '<div><span class="field-label">Start with</span><div class="seg" role="group" aria-label="Start with"><button aria-pressed="' + (T.st === 'down') + '" data-act="tpStart" data-v="down">Down (lowering)</button><button aria-pressed="' + (T.st === 'up') + '" data-act="tpStart" data-v="up">Up (lifting)</button></div></div>' +
+    '<div class="card" style="padding:0 14px">' + step('reps', 'Reps') + (T.st === 'up' ? step('u', 'Up (lifting)', ' s') + step('t', 'Pause at the top', ' s') + step('d', 'Down (lowering)', ' s') + step('b', 'Pause at the bottom', ' s') : step('d', 'Down (lowering)', ' s') + step('b', 'Pause at the bottom', ' s') + step('u', 'Up (lifting)', ' s') + step('t', 'Pause at the top', ' s')) + '</div>' +
+    '<div><span class="field-label">Time to get in position</span><div class="chips">' + TP_READY.map(function (g) { return '<button class="chip" aria-pressed="' + (T.g === g) + '" data-act="tpReady" data-v="' + g + '">' + g + ' s</button>'; }).join('') + '</div></div>' +
+    '<div class="note">Tempo reps count for more in your strength score: at ' + per + ' s a rep, each rep counts as ' + (Math.round(tempoF(per) * 100) / 100) + (tempoF(per) >= 1.6 ? ' (the most)' : '') + '. Slower tempo, more credit.</div>' + '<div class="note">About ' + Math.round(per * T.reps + T.g) + ' s for this set (' + T.g + ' s to get ready) · ' + T.d + '-' + T.b + '-' + T.u + '-' + T.t + ' tempo, starting ' + (T.st === 'up' ? 'up' : 'down') + ' · set ' + (T.s + 1) + '</div>' +
     '<label class="row" style="gap:8px;align-items:center"><input type="checkbox" id="tpvoice"' + (S.settings.voice === false ? '' : ' checked') + '> <span class="note" style="color:var(--fg)">Say "down" and "up" out loud</span></label>' +
     '<button class="btn primary block" data-act="tpGo">Start</button><button class="btn block ghost" data-act="close">Cancel</button>');
 }
 function tempoGo() {
   var T = U.tempo, e = S.draft.ex[T.x];
-  S.settings.tempo = S.settings.tempo || {}; S.settings.tempo[e.n] = { d: T.d, b: T.b, u: T.u, t: T.t }; persist({ settings: true });
+  S.settings.tempo = S.settings.tempo || {}; S.settings.tempo[e.n] = { d: T.d, b: T.b, u: T.u, t: T.t, g: T.g, st: T.st }; persist({ settings: true });
   unlockAudio(); tmTone(660, 1, 0.0001); tmVoiceUnlock();
-  var ph = [['Down', T.d, 440], ['Hold', T.b, 660], ['Up', T.u, 880], ['Hold', T.t, 660]].filter(function (p) { return p[1] > 0; });
-  if (!ph.length) ph = [['Down', 2, 440], ['Up', 1, 880]];
+  var down = [['Down', T.d, 440], ['Hold', T.b, 660]], up = [['Up', T.u, 880], ['Hold', T.t, 660]];
+  var ph = (T.st === 'up' ? up.concat(down) : down.concat(up)).filter(function (p) { return p[1] > 0; });
+  if (!ph.length) ph = T.st === 'up' ? [['Up', 1, 880], ['Down', 2, 440]] : [['Down', 2, 440], ['Up', 1, 880]];
   var per = ph.reduce(function (a, p) { return a + p[1]; }, 0);
-  TM = { kind: 'tempo', x: T.x, s: T.s, reps: T.reps, ph: ph, per: per, t0: Date.now() + 3000, last: null };
-  openSheet('Tempo · ' + e.n, tmFace('3', 'get ready', 'Starting', 0) +
+  var g = T.g || 3;
+  TM = { kind: 'tempo', x: T.x, s: T.s, reps: T.reps, ph: ph, per: per, g: g, t0: Date.now() + g * 1000, last: null };
+  openSheet('Tempo · ' + e.n, tmFace(String(g), 'get ready', 'Starting', 0) +
     '<div class="note" style="text-align:center" id="tmreps">Rep 0 of ' + T.reps + '</div>' +
     '<button class="btn primary block" data-act="tmDone">Stop and log reps</button><button class="btn block ghost" data-act="close">Cancel</button>');
   TM.iv = setInterval(tempoTick, 50); tempoTick();
@@ -144,8 +149,9 @@ function tempoTick() {
   var now = Date.now();
   if (now < TM.t0) {
     var c = Math.ceil((TM.t0 - now) / 1000);
-    if (TM.last !== 'r' + c) { TM.last = 'r' + c; tmTone(660, 120); tmSay(['', 'one', 'two', 'three'][c] || String(c)); }
-    tmUpdate(String(c), 'get ready', 'Starting', 1 - (TM.t0 - now) / 3000); return;
+    // longer get-ready times: say "get in position" once, stay quiet, then count down the last three seconds
+    if (TM.last !== 'r' + c) { TM.last = 'r' + c; if (c <= 3) { tmTone(660, 120); tmSay(['', 'one', 'two', 'three'][c]); } else if (c === TM.g) tmSay('get in position'); }
+    tmUpdate(String(c), 'get ready', 'Starting', 1 - (TM.t0 - now) / (TM.g * 1000)); return;
   }
   var el = (now - TM.t0) / 1000, rep = Math.floor(el / TM.per);
   if (rep >= TM.reps) {
@@ -177,6 +183,8 @@ function timerClick(a, d) {
   if (a === 'holdGo') { holdSheet(+d.x); return true; }
   if (a === 'tempoGo') { tempoSheet(+d.x); return true; }
   if (a === 'tpStep') { var T = U.tempo; if (!T) return true; var k = d.k, v = T[k] + (+d.v); T[k] = k === 'reps' ? Math.max(1, Math.min(50, v)) : Math.max(0, Math.min(10, v)); if (T.d + T.b + T.u + T.t === 0) T.u = 1; tempoSetupSheet(); return true; }
+  if (a === 'tpReady') { if (U.tempo) { U.tempo.g = +d.v; tempoSetupSheet(); } return true; }
+  if (a === 'tpStart') { if (U.tempo) { U.tempo.st = d.v === 'up' ? 'up' : 'down'; tempoSetupSheet(); } return true; }
   if (a === 'tpGo') { var vc = $('#tpvoice'); if (vc) { S.settings.voice = vc.checked; } tempoGo(); return true; }
   if (a === 'tmAdj') { if (TM && TM.kind === 'hold') { TM.target = Math.max(5, TM.target + (+d.v)); TM.hit = false; } return true; }
   if (a === 'tmDone') { if (TM && TM.kind === 'hold') holdDone(); else if (TM && TM.kind === 'tempo') holdDoneTempo(); return true; }
