@@ -107,9 +107,10 @@ function viewGate() {
     '<div class="card section"><h2>Sign in</h2><div class="note">Your workouts, settings and progress are saved to your own account, so only you see your log and you can use it on any phone. Friends only see the strength scores you choose to share.</div>' +
     '<input class="input" id="su" maxlength="16" autocapitalize="none" autocomplete="username" autocorrect="off" spellcheck="false" placeholder="Username" aria-label="Username">' +
     '<input class="input" id="sp" type="password" autocomplete="current-password" placeholder="Password (6+ characters)" aria-label="Password">' +
+    (SRV.mail ? '<input class="input" id="se" type="email" autocapitalize="none" autocomplete="email" placeholder="Email (optional, for password resets)" aria-label="Email, optional">' : '') +
     '<div class="note" id="s-err" style="color:var(--down);min-height:0"></div>' +
     '<div class="row"><button class="btn primary grow" data-act="srvIn">Sign in</button><button class="btn grow" data-act="srvUp">Create account</button></div>' +
-    '<div class="note">New here? Type a username and password, then tap <b>Create account</b>. There is no password reset, so pick one you will remember.</div></div>' +
+        '<div class="note">New here? Type a username and password' + (SRV.mail ? ' (and an email if you want to be able to reset it)' : '') + ', then tap <b>Create account</b>.' + (SRV.mail ? ' <button class="linkbtn" data-act="srvForgot">Forgot password?</button>' : ' Pick a password you will remember.') + '</div></div>' +
     '<button class="btn block ghost" data-act="guestGo">Continue as guest</button><div class="note" style="text-align:center">As a guest nothing is saved: your workouts are gone when you close the app.</div></div>';
 }
 function saveLocal() {
@@ -890,7 +891,7 @@ function viewSettings() {
   var st = S.settings;
   var srvAcct = dbCol && dbCol.srv;
   var status = srvAcct ? (dbState === 'synced' ? 'Saved to your account and this phone.' : dbState === 'error' ? 'Could not reach your account just now. Saved on this phone and retrying.' : 'Connecting to your account…') : dbState === 'synced' ? 'Saved to your Claude account and this device.' : dbState === 'error' ? 'Could not reach your account just now. Saved on this device and retrying.' : dbState === 'pending' ? 'Connecting…' : 'Saved on this device only. Back up regularly.';
-  var acctCard = acctMode() && srvOn() ? '<div class="card section"><div class="row" style="gap:12px"><div class="grow"><div class="xname">' + esc(SRV.name) + '</div><div class="note">Signed in. Your workouts are saved to this account. Sign in with the same username on another phone to see them there.</div></div><button class="btn small" data-act="srvOut">Sign out</button></div><button class="btn block ghost danger" data-act="srvDel">Delete my account</button><div class="note">Deletes your account, your synced workouts and your friend profile from the server for good.</div></div>' : '';
+  var acctCard = acctMode() && srvOn() ? '<div class="card section"><div class="row" style="gap:12px"><div class="grow"><div class="xname">' + esc(SRV.name) + '</div><div class="note">Signed in. Your workouts are saved to this account. Sign in with the same username on another phone to see them there.</div></div><button class="btn small" data-act="srvOut">Sign out</button></div>' + (SRV.mail || SRV.email ? '<div class="row" style="gap:10px"><div class="grow"><div class="note" style="margin:0">Email for password resets</div><div>' + (SRV.email ? esc(SRV.email) : '<span class="faint">None yet: add one so you can reset a forgotten password</span>') + '</div></div><button class="btn small" data-act="srvEmail">' + (SRV.email ? 'Change' : 'Add') + '</button></div>' : '') + '<button class="btn block ghost danger" data-act="srvDel">Delete my account</button><div class="note">Deletes your account, your synced workouts and your friend profile from the server for good.</div></div>' : '';
   return '<div class="screen"><div class="screen-head"><h1>Settings</h1></div>' +
     '<div class="cols"><div class="col">' +
     (acctCard ? '<div class="sgroup"><div class="sghead"><h2>Account</h2></div>' + acctCard + '</div>' : '') +
@@ -1245,7 +1246,30 @@ document.addEventListener('click', function (ev) {
   }
   if (a === 'srvIn' || a === 'srvUp') {
     var su = ($('#su') || {}).value || '', sp = ($('#sp') || {}).value || '', se = $('#s-err'); if (se) se.textContent = '';
-    el.disabled = true; srvAuth(a === 'srvUp' ? 'signup' : 'login', su.trim(), sp).then(function (m) { el.disabled = false; if (m) { var e6 = $('#s-err'); if (e6) e6.textContent = m; } else { toast('Welcome, ' + SRV.name); render(); } }); return;
+    var sem = (($('#se') || {}).value || '').trim();
+    el.disabled = true; srvAuth(a === 'srvUp' ? 'signup' : 'login', su.trim(), sp, sem).then(function (m) { el.disabled = false; if (m) { var e6 = $('#s-err'); if (e6) e6.textContent = m; } else { toast('Welcome, ' + SRV.name); render(); } }); return;
+  }
+  if (a === 'srvForgot') { srvForgotSheet(); return; }
+  if (a === 'srvForgotGo') {
+    var who = (($('#fp-who') || {}).value || '').trim(), fm = $('#fp-msg'); if (!who) { if (fm) fm.textContent = 'Type your username or email.'; return; }
+    el.disabled = true; srvRaw('POST', '/reset/request', { who: who }, false).then(function (r) { el.disabled = false; if (fm) { fm.style.color = ''; fm.textContent = r.msg || 'Sent.'; } }, function (e) { el.disabled = false; if (fm) { fm.style.color = 'var(--down)'; fm.textContent = e.message || 'Could not reach the server.'; } });
+    return;
+  }
+  if (a === 'srvResetGo') {
+    var p1 = ($('#rp-1') || {}).value || '', p2 = ($('#rp-2') || {}).value || '', re = $('#rp-err');
+    if (p1.length < 6) { if (re) re.textContent = 'Use at least 6 characters.'; return; }
+    if (p1 !== p2) { if (re) re.textContent = 'The two passwords don\'t match.'; return; }
+    el.disabled = true; srvRaw('POST', '/reset/confirm', { t: d.t, np: p1 }, false).then(function (r) { closeSheet(); srvResetDone(r); toast('Password changed. Welcome back, ' + r.name); render(); }, function (e) { el.disabled = false; if (re) re.textContent = e.message || 'Could not reach the server.'; });
+    return;
+  }
+  if (a === 'srvEmail') {
+    openSheet('Email for password resets', '<div class="note">Used only to send you a link if you forget your password. Friends never see it. Leave it empty to remove it.</div><input class="input" id="em-new" type="email" autocapitalize="none" autocomplete="email" placeholder="you@example.com" value="' + esc(SRV.email || '') + '"><div class="note" id="em-err" style="color:var(--down);min-height:0"></div><button class="btn primary block" data-act="srvEmailGo">Save</button>');
+    return;
+  }
+  if (a === 'srvEmailGo') {
+    var ne = (($('#em-new') || {}).value || '').trim();
+    el.disabled = true; srvRaw('POST', '/email', { e: ne }).then(function (r) { SRV.email = r.email || ''; closeSheet(); toast(SRV.email ? 'Email saved' : 'Email removed'); render(); }, function (e) { el.disabled = false; var x = $('#em-err'); if (x) x.textContent = e.message || 'Could not save.'; });
+    return;
   }
   if (a === 'srvCodes') { U.codes = true; render(); return; }
   if (a === 'srvBack') { U.codes = false; render(); return; }

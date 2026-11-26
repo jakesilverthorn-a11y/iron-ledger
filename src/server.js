@@ -23,6 +23,32 @@ function srvLoad() {
     SRV.url = a.url || ''; SRV.token = a.token || ''; SRV.uid = a.uid || ''; SRV.name = a.name || '';
   } catch (e) { }
 }
+function srvMailCheck() {   // does this server send password-reset emails? (older servers don't)
+  if (!SRV.url) return;
+  fetch(SRV.url + '/ping').then(function (r) { return r.json(); }).then(function (j) { var m = !!(j && j.mail); if (m !== !!SRV.mail) { SRV.mail = m; render(); } }).catch(function () { });
+}
+/* forgot password: ask for a reset email, and finish the reset from the link in it */
+function srvForgotSheet() {
+  openSheet('Forgot password', '<div class="note">Type your username or the email on your account. If the account has an email, we\'ll send a link to choose a new password.</div>' +
+    '<input class="input" id="fp-who" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="username" placeholder="Username or email" aria-label="Username or email">' +
+    '<div class="note" id="fp-msg" style="min-height:0"></div><button class="btn primary block" data-act="srvForgotGo">Send reset link</button>');
+}
+function srvResetSheet(t) {
+  openSheet('Choose a new password', '<div class="note">This signs you out on your other phones. Sign in there again with the new password.</div>' +
+    '<input class="input" id="rp-1" type="password" autocomplete="new-password" placeholder="New password (6+ characters)" aria-label="New password">' +
+    '<input class="input" id="rp-2" type="password" autocomplete="new-password" placeholder="Type it again" aria-label="New password again">' +
+    '<div class="note" id="rp-err" style="color:var(--down);min-height:0"></div><button class="btn primary block" data-act="srvResetGo" data-t="' + esc(t) + '">Save and sign in</button>');
+}
+function srvResetCheck() {   // opened from the email's link: #reset=<token>
+  var m = /[#&]reset=([A-Za-z0-9_-]{20,80})/.exec(location.hash || ''); if (!m) return;
+  try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { }
+  setTimeout(function () { srvResetSheet(m[1]); }, 400);
+}
+async function srvResetDone(r) {   // signed in with the new password
+  var prev = SRV.uid; SRV.token = r.token; SRV.uid = r.uid; SRV.name = r.name; srvSave(); srvStop();
+  if (typeof acctSignedIn === 'function' && acctMode()) acctSignedIn(prev); else { S.settings.handle = r.name; persist({ settings: true }); }
+  srvStart();
+}
 function srvSave() { try { localStorage.setItem('il-auth', JSON.stringify({ url: SRV.url, token: SRV.token, uid: SRV.uid, name: SRV.name })); } catch (e) { } }
 function srvInvite() { return location.origin + location.pathname + '#s=' + encodeURIComponent(SRV.url); }
 async function srvRaw(method, path, body, auth, ms) {
@@ -92,9 +118,10 @@ function srvStop() {
   clearInterval(SRV.timer); SRV.timer = null; SRV.last = null; SRV.subs = { people: [], ch: [], cp: [], tg: [] };
   SOC.db = null; SOC.uid = null; SOC.people = {}; SOC.ch = {}; SOC.cp = {}; SOC.tg = {}; SOC.tgLoaded = false; SOC.state = 'pending'; SOC.lastPub = ''; SOC.lastProg = '';
 }
-async function srvAuth(kind, u, p) {
+async function srvAuth(kind, u, p, e) {
   try {
-    var r = await srvRaw('POST', '/' + kind, { u: u, p: p }, false);
+    var r = await srvRaw('POST', '/' + kind, kind === 'signup' && e ? { u: u, p: p, e: e } : { u: u, p: p }, false);
+    SRV.email = kind === 'signup' ? (e || '').trim().toLowerCase() : SRV.email;
     var prev = SRV.uid;
     SRV.token = r.token; SRV.uid = r.uid; SRV.name = r.name; srvSave();
     srvStop();
@@ -122,12 +149,12 @@ function srvPrivCol() {
   }
   return {
     srv: true,
-    get: async function () { var r = await srvRaw('GET', '/me', null, true, 20000), docs = r.docs || {}; return { docs: Object.keys(docs).map(function (id) { return { id: id, data: function () { return docs[id]; } }; }) }; },
+    get: async function () { var r = await srvRaw('GET', '/me', null, true, 20000), docs = r.docs || {}; if (typeof r.email === 'string') { SRV.email = r.email; SRV.mail = !!r.mail; } return { docs: Object.keys(docs).map(function (id) { return { id: id, data: function () { return docs[id]; } }; }) }; },
     doc: function (id) { return { set: function (d) { return put(id, d); }, delete: function () { return put(id, { v: 1, w: [] }); } }; }
   };
 }
 var acctWiping = false;
-function srvBoot() { srvLoad(); if (srvOn()) srvStart(); document.addEventListener('visibilitychange', function () { if (!document.hidden && srvOn()) srvPoll(); }); }
+function srvBoot() { srvLoad(); srvResetCheck(); window.addEventListener('hashchange', srvResetCheck); srvMailCheck(); if (srvOn()) srvStart(); document.addEventListener('visibilitychange', function () { if (!document.hidden && srvOn()) srvPoll(); }); }
 
 function viewFriendsAuth() {
   var head = '<div class="screen-head"><div><div class="sub">Compare strength, start challenges</div><h1>Friends</h1></div></div>', host = SRV.url.replace(/^https?:\/\//, '');
@@ -135,9 +162,10 @@ function viewFriendsAuth() {
     '<div class="note">Make a username and password to join the leaderboard and live challenges. Friends see your strength scores, which are adjusted for bodyweight and sex. Your height, weight and workouts stay on your phone.</div>' +
     '<input class="input" id="su" maxlength="16" autocapitalize="none" autocomplete="username" autocorrect="off" spellcheck="false" placeholder="Username" aria-label="Username">' +
     '<input class="input" id="sp" type="password" autocomplete="current-password" placeholder="Password (6+ characters)" aria-label="Password">' +
+    (SRV.mail ? '<input class="input" id="se" type="email" autocapitalize="none" autocomplete="email" placeholder="Email (optional, for password resets)" aria-label="Email, optional">' : '') +
     '<div class="note" id="s-err" style="color:var(--down);min-height:0"></div>' +
     '<div class="row"><button class="btn primary grow" data-act="srvIn">Sign in</button><button class="btn grow" data-act="srvUp">Create account</button></div>' +
-    '<div class="note">New here? Choose Create account. There is no password reset, so pick one you will remember.</div></div>' +
+        '<div class="note">New here? Choose Create account. ' + (SRV.mail ? 'Add an email so you can reset a forgotten password. <button class="linkbtn" data-act="srvForgot">Forgot password?</button>' : 'Pick a password you will remember.') + '</div></div>' +
     '<button class="btn block ghost" data-act="srvCodes">Use friend codes instead</button>' +
     '<div class="note">Server: ' + esc(host) + ' · <button class="linkbtn" data-act="srvForget">change</button></div></div>';
 }

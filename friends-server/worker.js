@@ -39,6 +39,27 @@ async function who(env, req) {
   return { uid: p[0], gen: p[1] };
 }
 const newGen = () => b64(crypto.getRandomValues(new Uint8Array(6)));
+/* ---- email for password resets ----
+   Email is optional. em:<email> points to the account so "forgot password" works with either the username or the email.
+   Sending goes through Brevo (free, 300 a day): set the secrets BREVO_KEY and MAIL_FROM (a sender address verified in Brevo). */
+const APP_URL = 'https://jakesilverthorn-a11y.github.io/iron-ledger/';
+const okEmail = e => /^[^\s@]{1,64}@[^\s@]{1,190}\.[A-Za-z]{2,24}$/.test(e) && e.length <= 254;
+const sha = async s => b64(await crypto.subtle.digest('SHA-256', enc.encode(s)));
+async function setEmail(env, un, rec, e) {   // returns an error message or null
+  e = String(e || '').trim().toLowerCase();
+  if (e && !okEmail(e)) return 'That email address does not look right.';
+  if (e && e !== rec.email) { const o = await env.DB.get('em:' + e); if (o && o !== un) return 'That email is already on another account.'; }
+  if (rec.email && rec.email !== e) await env.DB.delete('em:' + rec.email);
+  if (e) { rec.email = e; await env.DB.put('em:' + e, un); } else delete rec.email;
+  return null;
+}
+async function sendMail(env, to, subject, text, html) {
+  if (!env.BREVO_KEY || !env.MAIL_FROM) return false;
+  if (env.MAIL_LOG === '1') { await env.DB.put('lastmail', JSON.stringify({ to, subject, text })); return true; }   // local testing only
+  const r = await fetch('https://api.brevo.com/v3/smtp/email', { method: 'POST', headers: { 'api-key': env.BREVO_KEY, 'content-type': 'application/json', accept: 'application/json' },
+    body: JSON.stringify({ sender: { name: 'Iron Ledger', email: env.MAIL_FROM }, to: [{ email: to }], subject, textContent: text, htmlContent: html }) });
+  return r.ok;
+}
 /* a write needs the account to exist and the token's generation to be current */
 async function writer(env, tok) {
   const rec = await env.DB.get('u:' + tok.uid, 'json');
@@ -212,7 +233,7 @@ export default {
     if (!env.DB) return bad('The KV namespace is not connected. Bind a KV namespace named DB to this Worker.', 500);
     const url = new URL(req.url), path = url.pathname.replace(/\/+$/, '') || '/';
     try {
-      if (path === '/' || path === '/ping') return out({ ok: true, app: 'iron-ledger', v: 1 });
+      if (path === '/' || path === '/ping') return out({ ok: true, app: 'iron-ledger', v: 2, mail: !!(env.BREVO_KEY && env.MAIL_FROM) });
       if (path === '/push/key') return out({ key: (await vapid(env)).pub });
       if (req.method === 'POST' && (path === '/signup' || path === '/login')) {
         let b; try { b = await req.json(); } catch (e) { return bad('Bad request'); }
@@ -226,7 +247,9 @@ export default {
           if (await count(env, 'su:' + ip) >= 5) return bad('Too many new accounts from this network today. Try again tomorrow.', 429);
           if ((await readIdx(env)).length >= MAX_USERS) return bad('This group is full.', 403);
           const salt = b64(crypto.getRandomValues(new Uint8Array(16))), gen = newGen();
-          await env.DB.put('u:' + un, JSON.stringify({ name, salt, h: await hashPw(pw, salt), at: Date.now(), gen }));
+          const nrec = { name, salt, h: await hashPw(pw, salt), at: Date.now(), gen };
+          if (b.e) { const em = await setEmail(env, un, nrec, b.e); if (em) return bad(em); }
+          await env.DB.put('u:' + un, JSON.stringify(nrec));
           await hits(env, 'su:' + ip, DAYS);
           await addIdx(env, un); await bump(env);
           return out({ token: await mkToken(env, un, gen), uid: un, name });
@@ -235,6 +258,35 @@ export default {
         if (!rec || !same(await hashPw(pw, rec.salt), rec.h)) { await hits(env, 'lf:' + ip, 900); await hits(env, 'lu:' + un, 900); return bad('Wrong username or password.', 401); }
         await addIdx(env, un);
         return out({ token: await mkToken(env, un, rec.gen || '0'), uid: un, name: rec.name });
+      }
+      /* forgot password: always answers the same way, so nobody can find out which accounts or emails exist */
+      if (req.method === 'POST' && path === '/reset/request') {
+        const b = await req.json().catch(() => ({})), who = String(b.who || '').trim().toLowerCase().slice(0, 254);
+        const ip = req.headers.get('CF-Connecting-IP') || 'x', same_ = { ok: true, msg: 'If that account has an email address, a reset link is on its way. Check your spam folder too.' };
+        if (!env.BREVO_KEY || !env.MAIL_FROM) return bad('Password reset by email is not set up on this server yet.', 501);
+        if (await hits(env, 'rr:' + ip, 3600) > 6) return bad('Too many reset requests. Try again in an hour.', 429);
+        const un = who.indexOf('@') > 0 ? await env.DB.get('em:' + who) : who;
+        const rec = un && /^[a-z0-9_]{3,16}$/.test(un) ? await env.DB.get('u:' + un, 'json') : null;
+        if (!rec || !rec.email || await hits(env, 'ru:' + un, 3600) > 3) return out(same_);
+        const t = b64(crypto.getRandomValues(new Uint8Array(24)));
+        await env.DB.put('rs:' + await sha(t), JSON.stringify({ un, gen: rec.gen || '0' }), { expirationTtl: 1800 });
+        const link = APP_URL + '#reset=' + t;
+        await sendMail(env, rec.email, 'Reset your Iron Ledger password',
+          'Hi ' + rec.name + ',\n\nTap this link to choose a new password (it works for 30 minutes):\n' + link + '\n\nIf you did not ask for this, ignore this email. Your password stays the same.',
+          '<p>Hi ' + rec.name + ',</p><p>Tap the button to choose a new password. The link works for 30 minutes.</p><p><a href="' + link + '" style="display:inline-block;background:#f2c230;color:#111;padding:12px 20px;border-radius:10px;font-weight:600;text-decoration:none">Choose a new password</a></p><p style="color:#666">If you did not ask for this, ignore this email. Your password stays the same.</p>');
+        return out(same_);
+      }
+      if (req.method === 'POST' && path === '/reset/confirm') {
+        const b = await req.json().catch(() => ({})), t = String(b.t || ''), np = String(b.np || '');
+        if (np.length < 6 || np.length > 100) return bad('The new password needs at least 6 characters.');
+        const key = 'rs:' + await sha(t), job = t ? await env.DB.get(key, 'json') : null;
+        if (!job) return bad('This reset link has expired or was already used. Ask for a new one.', 410);
+        const rec = await env.DB.get('u:' + job.un, 'json');
+        if (!rec || (rec.gen || '0') !== job.gen) { await env.DB.delete(key); return bad('This reset link is no longer valid. Ask for a new one.', 410); }
+        const salt = b64(crypto.getRandomValues(new Uint8Array(16)));
+        rec.salt = salt; rec.h = await hashPw(np, salt); rec.gen = newGen();   // every device is signed out
+        await env.DB.put('u:' + job.un, JSON.stringify(rec)); await env.DB.delete(key);
+        return out({ ok: true, token: await mkToken(env, job.un, rec.gen), uid: job.un, name: rec.name });
       }
       /* rest alerts without an account: each phone registers its push address once and gets an id and a secret */
       if (path === '/push/dev' && req.method === 'POST') {
@@ -350,7 +402,7 @@ export default {
       if (path === '/me' || path.indexOf('/me/') === 0) {
         // your own data: needs a current token for reads too, since this is private
         const rec = await writer(env, tok); if (!rec) return bad('Sign in again.', 401);
-        if (req.method === 'GET' && path === '/me') return out({ ok: true, name: rec.name, docs: await pAll(env, uid) });
+        if (req.method === 'GET' && path === '/me') return out({ ok: true, name: rec.name, email: rec.email || '', mail: !!(env.BREVO_KEY && env.MAIL_FROM), docs: await pAll(env, uid) });
         const pm = path.match(/^\/me\/([a-z0-9_-]{1,20})$/);
         if (!pm || !PDOC.test(pm[1]) || req.method !== 'PUT') return bad('Not found', 404);
         const id = pm[1], txt = await req.text(); if (txt.length > MAX_PDOC) return bad('Too large', 413);
@@ -383,6 +435,13 @@ export default {
         await bump(env);
         return out({ ok: true });
       }
+      if (req.method === 'POST' && path === '/email') {
+        const b = await req.json().catch(() => ({})), rec = await env.DB.get('u:' + uid, 'json');
+        if (!rec || (rec.gen || '0') !== tok.gen) return bad('Sign in again.', 401);
+        const em = await setEmail(env, uid, rec, b.e); if (em) return bad(em);
+        await env.DB.put('u:' + uid, JSON.stringify(rec));
+        return out({ ok: true, email: rec.email || '' });
+      }
       if (req.method === 'POST' && path === '/password') {
         const b = await req.json().catch(() => ({})), rec = await env.DB.get('u:' + uid, 'json');
         if (!rec || (rec.gen || '0') !== tok.gen) return bad('Sign in again.', 401);
@@ -405,6 +464,7 @@ export default {
         if (!rec || (rec.gen || '0') !== tok.gen) return bad('Sign in again.', 401);
         if (!same(await hashPw(String(b.p || ''), rec.salt), rec.h)) return bad('Password is wrong.', 403);
         if (rec.hk) await env.DB.delete('hk:' + rec.hk);
+        if (rec.email) await env.DB.delete('em:' + rec.email);
         await env.DB.delete('u:' + uid); await env.DB.delete('d:' + uid); await env.DB.delete('ps:' + uid); await pDeleteAll(env, uid);
         const i = (await readIdx(env)).filter(x => x !== uid); await env.DB.put('idx', JSON.stringify(i));
         await bump(env);
